@@ -29,8 +29,14 @@ migrate-down: ## Revert the last Alembic migration
 migrate-create: ## Create a new migration: make migrate-create MSG="add reports table"
 	$(COMPOSE) exec backend alembic revision --autogenerate -m "$(MSG)"
 
-test: ## Run the backend test suite
-	$(COMPOSE) exec backend pytest -v
+test: ## Run the backend test suite (fast, free, deterministic)
+	$(COMPOSE) exec backend pytest -v -m "not eval"
+
+eval: ## Run the golden-set eval suite (costs real Anthropic/Groq API calls)
+	$(COMPOSE) exec backend pytest -v -m eval
 
 lint: ## Run ruff and mypy against the backend
 	$(COMPOSE) exec backend sh -c "ruff check . && mypy app"
+
+seed-demo: ## Seed a demo tenant with a self-generated template
+	$(COMPOSE) exec backend python scripts/seed_demo_tenant.py
