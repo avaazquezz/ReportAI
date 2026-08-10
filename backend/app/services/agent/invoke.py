@@ -1,0 +1,79 @@
+import uuid
+
+from fastapi import BackgroundTasks
+from langgraph.types import Command
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import AsyncSessionLocal
+from app.models.channel_connection import ChannelConnection
+from app.repositories.report_repository import ReportRepository
+from app.services.agent.graph import get_compiled_graph
+from app.services.agent.nodes.deliver import mark_report_failed
+from app.services.agent.state import AgentState
+from app.services.channels.base import IncomingMessage
+
+
+async def start_or_resume_pipeline(
+    *,
+    db: AsyncSession,
+    connection: ChannelConnection,
+    incoming: IncomingMessage,
+    background_tasks: BackgroundTasks,
+) -> uuid.UUID:
+    """Single entry point every webhook route calls. A new message from a sender with an
+    already-paused report is treated as the reply to that pause; otherwise a new run starts."""
+    report_repo = ReportRepository(db)
+    pending = await report_repo.find_pending_for_sender(
+        tenant_id=connection.tenant_id, requester_identifier=incoming.sender_id
+    )
+    if pending is not None:
+        background_tasks.add_task(_resume_graph, str(pending.id), incoming.text or "")
+        return pending.id
+
+    report = await report_repo.create(
+        tenant_id=connection.tenant_id,
+        status="pending",
+        requester_channel=incoming.channel_type,
+        requester_identifier=incoming.sender_id,
+    )
+    await db.commit()
+
+    initial_state = AgentState(
+        thread_id=str(report.id),
+        tenant_id=connection.tenant_id,
+        channel_connection_id=connection.id,
+        channel_type=incoming.channel_type,
+        sender_id=incoming.sender_id,
+        report_id=report.id,
+        raw_payload=incoming.raw_payload,
+        incoming_text=incoming.text,
+        media_reference=incoming.media_reference,
+    )
+    background_tasks.add_task(_run_graph, initial_state)
+    return report.id
+
+
+async def _run_graph(initial_state: AgentState) -> None:
+    try:
+        await get_compiled_graph().ainvoke(
+            initial_state,
+            config={"configurable": {"thread_id": initial_state.thread_id}},
+        )
+        # If the run paused on an interrupt, ainvoke() returns normally with the
+        # checkpoint already persisted — no exception, nothing more to do here.
+    except Exception as exc:
+        await mark_report_failed(report_id=initial_state.report_id, error_detail=str(exc))
+
+
+async def _resume_graph(thread_id: str, reply_text: str) -> None:
+    try:
+        await get_compiled_graph().ainvoke(
+            Command(resume=reply_text),
+            config={"configurable": {"thread_id": thread_id}},
+        )
+    except Exception as exc:
+        async with AsyncSessionLocal() as session:
+            report_repo = ReportRepository(session)
+            report = await report_repo.get_by_id(uuid.UUID(thread_id))
+            if report is not None:
+                await mark_report_failed(report_id=report.id, error_detail=str(exc))
