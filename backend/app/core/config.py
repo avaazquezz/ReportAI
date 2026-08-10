@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     MAX_VALIDATION_RETRIES: int = 3
     MAX_CORRECTION_RETRIES: int = 2
 
+    # ── Anthropic (extraction — the only node that uses Claude) ─────────
+    ANTHROPIC_API_KEY: str
+    EXTRACTION_MODEL: str = "claude-sonnet-5"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def DATABASE_URL(self) -> str:
