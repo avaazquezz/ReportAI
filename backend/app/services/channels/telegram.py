@@ -1,10 +1,17 @@
+import asyncio
 import uuid
+from pathlib import Path
 from typing import Any, ClassVar
 
 import httpx
 
 from app.services.agent.tools.retry import retry_async
-from app.services.channels.base import ChannelAdapter, ChannelAdapterError, IncomingMessage, OutgoingMessage
+from app.services.channels.base import (
+    ChannelAdapter,
+    ChannelAdapterError,
+    IncomingMessage,
+    OutgoingMessage,
+)
 
 
 class TelegramAdapter(ChannelAdapter):
@@ -41,7 +48,15 @@ class TelegramAdapter(ChannelAdapter):
                 await retry_async(lambda: self._post_text(client, message))
                 return
             for attachment_path in message.attachments:
-                await retry_async(lambda p=attachment_path: self._post_document(client, message, p))
+                await self._send_document_with_retry(client, message, attachment_path)
+
+    async def _send_document_with_retry(
+        self, client: httpx.AsyncClient, message: OutgoingMessage, attachment_path: str
+    ) -> None:
+        async def _call() -> httpx.Response:
+            return await self._post_document(client, message, attachment_path)
+
+        await retry_async(_call)
 
     async def _post_text(self, client: httpx.AsyncClient, message: OutgoingMessage) -> httpx.Response:
         response = await client.post(
@@ -54,12 +69,12 @@ class TelegramAdapter(ChannelAdapter):
     async def _post_document(
         self, client: httpx.AsyncClient, message: OutgoingMessage, attachment_path: str
     ) -> httpx.Response:
-        with open(attachment_path, "rb") as file_obj:
-            response = await client.post(
-                f"{self._api_base}/sendDocument",
-                data={"chat_id": message.recipient_id, "caption": message.text},
-                files={"document": file_obj},
-            )
+        file_bytes = await asyncio.to_thread(Path(attachment_path).read_bytes)
+        response = await client.post(
+            f"{self._api_base}/sendDocument",
+            data={"chat_id": message.recipient_id, "caption": message.text},
+            files={"document": (Path(attachment_path).name, file_bytes)},
+        )
         response.raise_for_status()
         return response
 
@@ -68,7 +83,7 @@ class TelegramAdapter(ChannelAdapter):
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(f"{self._api_base}/getFile", params={"file_id": media_reference})
                 response.raise_for_status()
-                return response.json()["result"]["file_path"]
+                return str(response.json()["result"]["file_path"])
 
         file_path = await retry_async(_get_file_path)
 

@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from fastapi import BackgroundTasks
@@ -8,9 +9,21 @@ from app.core.database import AsyncSessionLocal
 from app.models.channel_connection import ChannelConnection
 from app.repositories.report_repository import ReportRepository
 from app.services.agent.graph import get_compiled_graph
+from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.nodes.deliver import mark_report_failed
 from app.services.agent.state import AgentState
 from app.services.channels.base import IncomingMessage
+
+logger = logging.getLogger(__name__)
+
+_FAILURE_MESSAGE = "Sorry, we couldn't generate your report. Please try again or contact support."
+
+
+async def _notify_failure_best_effort(state: AgentState) -> None:
+    try:
+        await send_on_origin_channel(state, _FAILURE_MESSAGE)
+    except Exception:
+        logger.warning("Failed to notify sender %s of pipeline failure", state.sender_id, exc_info=True)
 
 
 async def start_or_resume_pipeline(
@@ -61,8 +74,10 @@ async def _run_graph(initial_state: AgentState) -> None:
         )
         # If the run paused on an interrupt, ainvoke() returns normally with the
         # checkpoint already persisted — no exception, nothing more to do here.
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — deliberate top-level catch: any unexpected
+        # node failure must mark the report failed, not crash the background task silently
         await mark_report_failed(report_id=initial_state.report_id, error_detail=str(exc))
+        await _notify_failure_best_effort(initial_state)
 
 
 async def _resume_graph(thread_id: str, reply_text: str) -> None:
@@ -71,9 +86,15 @@ async def _resume_graph(thread_id: str, reply_text: str) -> None:
             Command(resume=reply_text),
             config={"configurable": {"thread_id": thread_id}},
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — same deliberate top-level catch as _run_graph
         async with AsyncSessionLocal() as session:
             report_repo = ReportRepository(session)
             report = await report_repo.get_by_id(uuid.UUID(thread_id))
             if report is not None:
                 await mark_report_failed(report_id=report.id, error_detail=str(exc))
+
+        # Reconstruct enough state from the last checkpoint to notify the requester —
+        # _resume_graph only receives thread_id + reply text, not the full AgentState.
+        snapshot = await get_compiled_graph().aget_state({"configurable": {"thread_id": thread_id}})
+        if snapshot.values:
+            await _notify_failure_best_effort(AgentState.model_validate(snapshot.values))

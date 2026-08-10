@@ -61,3 +61,16 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Security"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
+
+[[tool.mypy.overrides]]
+# No published type stubs for this library.
+module = "docxtpl"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# LangGraph's StateGraph/add_node overloads are heavily generic (context, retry/cache
+# policies, destinations, timeouts) and don't resolve cleanly against a bare Pydantic
+# state model under strict mode — this is friction with the library's own typing, not
+# a type-safety gap in this module. Revisit if a future langgraph release simplifies this.
+module = "app.services.agent.graph"
+disable_error_code = ["call-overload", "type-arg"]

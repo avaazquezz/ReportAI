@@ -1,4 +1,3 @@
-import asyncio
 import functools
 import time
 import uuid
@@ -10,7 +9,9 @@ from app.core.database import AsyncSessionLocal
 from app.models.execution_log import ExecutionLog
 from app.services.agent.state import AgentState
 
-NodeFn = Callable[[AgentState], Awaitable[AgentState] | AgentState]
+# All nodes are async — including validate_node, which does no I/O but stays
+# async for interface uniformity so this wrapper doesn't need a sync branch.
+NodeFn = Callable[[AgentState], Awaitable[AgentState]]
 
 
 async def write_execution_log(
@@ -52,10 +53,7 @@ def observed_node(step: str) -> Callable[[NodeFn], Callable[[AgentState], Awaita
         async def wrapper(state: AgentState) -> AgentState:
             start = time.monotonic()
             try:
-                if asyncio.iscoroutinefunction(fn):
-                    new_state = await fn(state)
-                else:
-                    new_state = await asyncio.to_thread(fn, state)  # type: ignore[arg-type]
+                new_state = await fn(state)
 
                 usage = new_state.last_tool_usage
                 await write_execution_log(

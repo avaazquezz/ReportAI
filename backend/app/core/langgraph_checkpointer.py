@@ -1,12 +1,15 @@
-from psycopg_pool import AsyncConnectionPool
-from psycopg.rows import dict_row
+from typing import Any
+
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg import AsyncConnection
+from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 
 from app.core.config import settings
 
 # Separate driver/pool from SQLAlchemy's asyncpg engine, both pointed at the
 # same database — langgraph-checkpoint-postgres requires psycopg, not asyncpg.
-_pool: AsyncConnectionPool | None = None
+_pool: AsyncConnectionPool[AsyncConnection[dict[str, Any]]] | None = None
 _checkpointer: AsyncPostgresSaver | None = None
 
 
@@ -19,7 +22,7 @@ def _dsn() -> str:
 
 async def init_checkpointer() -> AsyncPostgresSaver:
     global _pool, _checkpointer
-    _pool = AsyncConnectionPool(
+    _pool = AsyncConnectionPool[AsyncConnection[dict[str, Any]]](
         _dsn(),
         max_size=10,
         kwargs={"autocommit": True, "row_factory": dict_row},

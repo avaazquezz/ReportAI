@@ -73,7 +73,7 @@ async def whatsapp_webhook(
     )
     try:
         incoming = await adapter.receive_message(payload)
-    except Exception:  # noqa: BLE001 — must always 200 fast or Meta disables the webhook
+    except Exception:
         logger.exception("Failed to parse WhatsApp payload")
         return {"status": "ignored"}
 

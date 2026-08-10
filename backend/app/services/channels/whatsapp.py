@@ -4,7 +4,12 @@ from typing import Any, ClassVar
 import httpx
 
 from app.services.agent.tools.retry import retry_async
-from app.services.channels.base import ChannelAdapter, ChannelAdapterError, IncomingMessage, OutgoingMessage
+from app.services.channels.base import (
+    ChannelAdapter,
+    ChannelAdapterError,
+    IncomingMessage,
+    OutgoingMessage,
+)
 
 _GRAPH_API_VERSION = "v21.0"
 
@@ -73,7 +78,7 @@ class WhatsAppAdapter(ChannelAdapter):
                     headers=self._auth_headers(),
                 )
                 response.raise_for_status()
-                return response.json()["url"]
+                return str(response.json()["url"])
 
         media_url = await retry_async(_get_media_url)
 

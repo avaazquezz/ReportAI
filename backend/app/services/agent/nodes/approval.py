@@ -1,3 +1,5 @@
+from typing import Any
+
 from langgraph.types import interrupt
 
 from app.services.agent.nodes._shared import send_on_origin_channel
@@ -7,7 +9,7 @@ from app.services.observability.execution_log import observed_node
 _CONFIRM_WORDS = {"confirm", "confirmar", "si", "sí", "yes", "ok", "vale"}
 
 
-def _format_summary(extracted_fields: dict) -> str:
+def _format_summary(extracted_fields: dict[str, Any]) -> str:
     lines = [f"- {key}: {value}" for key, value in extracted_fields.items()]
     return "\n".join(lines)
 
