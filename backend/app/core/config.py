@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     # ── Application ──────────────────────────────────────────────────────
     ENVIRONMENT: str = "development"
 
+    # ── Agent pipeline ───────────────────────────────────────────────────
+    DOCUMENT_STORAGE_PATH: str = "/app/storage"
+    MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3
+    MAX_VALIDATION_RETRIES: int = 3
+    MAX_CORRECTION_RETRIES: int = 2
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def DATABASE_URL(self) -> str:
