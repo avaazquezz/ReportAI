@@ -1,0 +1,19 @@
+{
+  "document_type_name": "Commercial Visit Report",
+  "field_schema": {
+    "visit_date": {"type": "date", "description": "Date of the client visit, ISO 8601", "required": true},
+    "client_name": {"type": "str", "description": "Name of the client company visited", "required": true},
+    "contacts": {"type": "list[str]", "description": "Names of people met at the client", "required": true},
+    "products_discussed": {"type": "list[str]", "description": "Products or services discussed", "required": false},
+    "next_steps": {"type": "str", "description": "Agreed next steps", "required": false}
+  },
+  "prompt_instructions": "Extract commercial visit report fields from a sales rep's voice note recap of a client visit.",
+  "input_text": "Buenas, os cuento la visita de hoy, 30 de marzo de 2026. Fui a las oficinas de Textiles Ribera, un cliente nuevo. Me atendió Beatriz Navarro, que es la directora de compras, y también estuvo un rato Manuel Prieto del departamento técnico. Estuvimos casi una hora hablando de sus necesidades: les interesa nuestra línea de tintes ecológicos y también preguntaron por el servicio de logística exprés. Beatriz dijo que lo iba a comentar internamente y que me confirmaría en un par de semanas si quieren avanzar con un pedido de prueba.",
+  "expected_fields": {
+    "visit_date": "2026-03-30",
+    "client_name": "Textiles Ribera",
+    "contacts": ["Beatriz Navarro", "Manuel Prieto"],
+    "products_discussed": ["tintes ecológicos", "servicio de logística exprés"],
+    "next_steps": "Beatriz confirmará en un par de semanas si avanzan con un pedido de prueba"
+  }
+}

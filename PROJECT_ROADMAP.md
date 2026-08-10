@@ -120,17 +120,18 @@ Core entities, all tenant-scoped from the first migration:
 - [x] `ChannelAdapter` interface defined (no implementation yet)
 
 ### Phase 1 — Agent core + initial channels
-- [ ] LangGraph pipeline: ingest → transcribe → resolve tenant/doc type → extract → validate → render → deliver → log
-- [ ] Telegram adapter implementing `ChannelAdapter`
-- [ ] WhatsApp Business Cloud API adapter implementing `ChannelAdapter` (start Meta Business verification early — 2-5 days typical, up to 4-8 weeks)
-- [ ] Email-in adapter implementing `ChannelAdapter` (inbound email parsing, e.g. Mailgun/Cloudflare Email Workers)
-- [ ] Claude structured-output extraction with per-tenant Pydantic schema
-- [ ] Retry-with-validation-error loop, bounded attempts
-- [ ] docxtpl + Gotenberg rendering pipeline
-- [ ] Email + in-channel delivery
-- [ ] Golden-set eval suite (synthetic data) + unit tests per node
-- [ ] Structured execution logging (cost, latency)
-- [ ] One seeded demo tenant with fictional data end to end
+- [x] LangGraph pipeline: ingest → transcribe → resolve tenant/doc type → extract → validate → render → deliver → log
+- [x] Telegram adapter implementing `ChannelAdapter`
+- [x] WhatsApp Business Cloud API adapter implementing `ChannelAdapter` (start Meta Business verification early — 2-5 days typical, up to 4-8 weeks)
+- [x] Email-in adapter implementing `ChannelAdapter` (inbound email parsing via Mailgun)
+- [x] Claude structured-output extraction with per-tenant Pydantic schema
+- [x] Retry-with-validation-error loop, bounded attempts
+- [x] docxtpl + Gotenberg rendering pipeline
+- [x] Email + in-channel delivery
+- [x] Golden-set eval suite (synthetic data) + unit tests per node
+- [x] Structured execution logging (cost, latency)
+- [x] One seeded demo tenant with fictional data end to end (`make seed-demo`)
+- [x] Mandatory human-approval interrupt before delivery (not in the original checklist — added per the `ai-agents` skill's non-negotiable rule that no agent sends on a client's behalf without an explicit checkpoint)
 
 ### Phase 2 — Admin panel
 - [ ] Auth (tenant admin login, super-admin role)
@@ -184,3 +185,6 @@ Core entities, all tenant-scoped from the first migration:
 | 2026-08-10 | Channel priority reordered: Telegram + WhatsApp Business Cloud API + Email-in for the initial build — the channels the target audience (non-technical SME field reps, Spain/LatAm) actually uses with zero IT gatekeeping. Slack and Microsoft Teams moved to on-demand, per-client build (Phase 3). Discord, Google Chat, SMS, and RCS evaluated and not prioritized. | Recommended — open for override |
 | 2026-08-10 | Frontend (Nuxt/Vuetify/Tailwind) scaffold deferred to the start of Phase 2 — Phase 0 ships backend + infra only, so three fast-moving frontend libraries don't sit installed and unused through all of Phase 1 | Confirmed |
 | 2026-08-10 | Document rendering: docxtpl + self-hosted Gotenberg | Confirmed |
+| 2026-08-11 | FastAPI `BackgroundTasks` for Phase 1's async pipeline execution, not Celery/arq | Confirmed — upgrade trigger: multiple backend instances, or need for durable retry of a crashed in-flight run |
+| 2026-08-11 | LangGraph's Postgres checkpointer is the durability mechanism for the human-approval pause/resume, not the task runner | Confirmed |
+| 2026-08-11 | `notification_emails` added as an `ARRAY(String)` column on `document_types` | Confirmed — the Phase 0 schema had no place to store report recipients |

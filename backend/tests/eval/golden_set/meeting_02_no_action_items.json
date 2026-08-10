@@ -1,0 +1,17 @@
+{
+  "document_type_name": "Meeting Minutes",
+  "field_schema": {
+    "meeting_date": {"type": "date", "description": "Date the meeting took place, ISO 8601", "required": true},
+    "attendees": {"type": "list[str]", "description": "Full names of attendees", "required": true},
+    "summary": {"type": "str", "description": "One-paragraph summary of the meeting", "required": true},
+    "action_items": {"type": "list[str]", "description": "Agreed action items", "required": false}
+  },
+  "prompt_instructions": "Extract meeting minutes fields from an internal company meeting transcript.",
+  "input_text": "Hoy 12 de enero de 2026 nos juntamos Carmen, Pedro y Sofía solo para poner al día el estado del proyecto de migración, sin acciones nuevas asignadas.",
+  "expected_fields": {
+    "meeting_date": "2026-01-12",
+    "attendees": ["Carmen", "Pedro", "Sofía"],
+    "summary": "Puesta al día del estado del proyecto de migración, sin acciones nuevas.",
+    "action_items": []
+  }
+}

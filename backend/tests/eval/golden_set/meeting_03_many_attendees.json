@@ -1,0 +1,20 @@
+{
+  "document_type_name": "Meeting Minutes",
+  "field_schema": {
+    "meeting_date": {"type": "date", "description": "Date the meeting took place, ISO 8601", "required": true},
+    "attendees": {"type": "list[str]", "description": "Full names of attendees", "required": true},
+    "summary": {"type": "str", "description": "One-paragraph summary of the meeting", "required": true},
+    "action_items": {"type": "list[str]", "description": "Agreed action items", "required": false}
+  },
+  "prompt_instructions": "Extract meeting minutes fields from an internal company meeting transcript.",
+  "input_text": "Reunión de comité el 20 de febrero de 2026. Asistieron María García, José Fernández, Laura Ruiz, Antonio López y Elena Torres. Se revisaron los KPIs del mes y se acordó que María preparará el informe trimestral y que Antonio contactará al proveedor antes del lunes.",
+  "expected_fields": {
+    "meeting_date": "2026-02-20",
+    "attendees": ["María García", "José Fernández", "Laura Ruiz", "Antonio López", "Elena Torres"],
+    "summary": "Revisión de los KPIs del mes.",
+    "action_items": [
+      "María preparará el informe trimestral",
+      "Antonio contactará al proveedor antes del lunes"
+    ]
+  }
+}

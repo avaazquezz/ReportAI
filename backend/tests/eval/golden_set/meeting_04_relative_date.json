@@ -1,0 +1,17 @@
+{
+  "document_type_name": "Meeting Minutes",
+  "field_schema": {
+    "meeting_date": {"type": "date", "description": "Date the meeting took place, ISO 8601", "required": true},
+    "attendees": {"type": "list[str]", "description": "Full names of attendees", "required": true},
+    "summary": {"type": "str", "description": "One-paragraph summary of the meeting", "required": true},
+    "action_items": {"type": "list[str]", "description": "Agreed action items", "required": false}
+  },
+  "prompt_instructions": "Extract meeting minutes fields from an internal company meeting transcript. If a date is stated explicitly in the text, use that exact date.",
+  "input_text": "Acta de la reunión del 1 de abril de 2026. Presentes: Diego y Marta. Se acordó revisar el contrato antes del 10 de abril y Diego se encarga de eso.",
+  "expected_fields": {
+    "meeting_date": "2026-04-01",
+    "attendees": ["Diego", "Marta"],
+    "summary": "Se acordó revisar el contrato antes del 10 de abril.",
+    "action_items": ["Diego revisará el contrato antes del 10 de abril"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "document_type_name": "Commercial Visit Report",
+  "field_schema": {
+    "visit_date": {"type": "date", "description": "Date of the client visit, ISO 8601", "required": true},
+    "client_name": {"type": "str", "description": "Name of the client company visited", "required": true},
+    "contacts": {"type": "list[str]", "description": "Names of people met at the client", "required": true},
+    "products_discussed": {"type": "list[str]", "description": "Products or services discussed", "required": false},
+    "next_steps": {"type": "str", "description": "Agreed next steps", "required": false}
+  },
+  "prompt_instructions": "Extract commercial visit report fields from a sales rep's voice note recap of a client visit.",
+  "input_text": "El 15 de enero de 2026 pasé por Distribuciones Alba a saludar a Carla Jiménez, solo fue una visita de cortesía, no se habló de productos ni de próximos pasos concretos.",
+  "expected_fields": {
+    "visit_date": "2026-01-15",
+    "client_name": "Distribuciones Alba",
+    "contacts": ["Carla Jiménez"],
+    "products_discussed": [],
+    "next_steps": null
+  }
+}
