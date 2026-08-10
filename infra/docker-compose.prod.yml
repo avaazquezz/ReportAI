@@ -22,11 +22,11 @@ services:
 
   backend:
     build:
-      context: ../backend
+      context: backend
       target: runtime
     container_name: reportai_backend
     env_file:
-      - ../.env
+      - .env
     restart: always
     depends_on:
       postgres:

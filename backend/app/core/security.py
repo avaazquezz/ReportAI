@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
@@ -20,7 +20,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 
 def _build_payload(data: dict[str, Any], expires_delta: timedelta) -> dict[str, Any]:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = data.copy()
     payload["iat"] = now
     payload["exp"] = now + expires_delta

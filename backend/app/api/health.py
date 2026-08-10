@@ -12,7 +12,7 @@ async def health(db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     try:
         await db.execute(text("SELECT 1"))
         database_status = "ok"
-    except Exception:
+    except Exception:  # noqa: BLE001 — a health probe reports status, it never propagates
         database_status = "degraded"
 
     return {
