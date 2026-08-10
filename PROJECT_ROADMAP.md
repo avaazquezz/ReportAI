@@ -112,12 +112,12 @@ Core entities, all tenant-scoped from the first migration:
 ## 5. Development phases
 
 ### Phase 0 — Foundations
-- [ ] Repo layout (`backend/`, `frontend/`, `infra/`, `docs/`)
-- [ ] FastAPI skeleton + Postgres via Docker Compose (local dev)
-- [ ] Alembic migrations for the core schema (§4), `tenant_id` on every scoped table
-- [ ] `.env.example`, secrets strictly via environment variables
-- [ ] Basic CI (lint + test) on push
-- [ ] `ChannelAdapter` interface defined (no implementation yet)
+- [x] Repo layout (`backend/`, `frontend/`, `infra/`, `docs/`)
+- [x] FastAPI skeleton + Postgres via Docker Compose (local dev)
+- [x] Alembic migrations for the core schema (§4), `tenant_id` on every scoped table
+- [x] `.env.example`, secrets strictly via environment variables
+- [x] Basic CI (lint + test) on push
+- [x] `ChannelAdapter` interface defined (no implementation yet)
 
 ### Phase 1 — Agent core + initial channels
 - [ ] LangGraph pipeline: ingest → transcribe → resolve tenant/doc type → extract → validate → render → deliver → log
@@ -182,4 +182,5 @@ Core entities, all tenant-scoped from the first migration:
 | 2026-08-10 | Multi-tenant admin panel is in scope for the initial build, not deferred | Confirmed |
 | 2026-08-10 | Microsoft Teams cannot be reached via MCP — MCP lets an agent call ReportAI as a tool, it is not a message-transport channel. Teams ingestion requires Azure Bot Service + Entra ID app registration + Teams app manifest, approved per-tenant by the client's IT admin (Microsoft disallowed new multi-tenant bots as of 2025-07-31) | Confirmed (Microsoft Learn) |
 | 2026-08-10 | Channel priority reordered: Telegram + WhatsApp Business Cloud API + Email-in for the initial build — the channels the target audience (non-technical SME field reps, Spain/LatAm) actually uses with zero IT gatekeeping. Slack and Microsoft Teams moved to on-demand, per-client build (Phase 3). Discord, Google Chat, SMS, and RCS evaluated and not prioritized. | Recommended — open for override |
+| 2026-08-10 | Frontend (Nuxt/Vuetify/Tailwind) scaffold deferred to the start of Phase 2 — Phase 0 ships backend + infra only, so three fast-moving frontend libraries don't sit installed and unused through all of Phase 1 | Confirmed |
 | 2026-08-10 | Document rendering: docxtpl + self-hosted Gotenberg | Confirmed |
