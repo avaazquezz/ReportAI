@@ -1,0 +1,31 @@
+# ── Environment ────────────────────────────────────────────────────────────
+.env
+.env.*.local
+
+# ── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# ── Node / Nuxt (Phase 2) ─────────────────────────────────────────────────
+node_modules/
+.nuxt/
+.output/
+.cache/
+
+# ── Docker ─────────────────────────────────────────────────────────────────
+postgres_data/
+
+# ── OS / IDE ───────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
