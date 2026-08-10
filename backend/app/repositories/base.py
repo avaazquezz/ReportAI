@@ -1,12 +1,15 @@
 import uuid
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import Base
 
-ModelType = TypeVar("ModelType", bound=Base)
+class _HasId(Protocol):
+    id: Any
+
+
+ModelType = TypeVar("ModelType", bound=_HasId)
 
 
 class BaseRepository(Generic[ModelType]):

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -24,7 +25,7 @@ class ChannelConnection(Base):
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
     # Credential storage as-is for Phase 0; encryption-at-rest is a flagged
     # future hardening item, not in scope now.
-    credentials: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    credentials: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

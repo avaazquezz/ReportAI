@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -24,7 +25,7 @@ class DocumentType(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Exact shape defined by Phase 1's extraction work — Phase 0 just owns the column.
-    field_schema: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    field_schema: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     prompt_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
