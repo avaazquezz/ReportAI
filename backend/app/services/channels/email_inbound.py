@@ -2,7 +2,12 @@ import uuid
 from pathlib import Path
 from typing import Any, ClassVar
 
-from app.services.channels.base import ChannelAdapter, ChannelAdapterError, IncomingMessage, OutgoingMessage
+from app.services.channels.base import (
+    ChannelAdapter,
+    ChannelAdapterError,
+    IncomingMessage,
+    OutgoingMessage,
+)
 from app.services.delivery.email import send_report_email
 
 

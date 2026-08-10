@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import httpx
@@ -9,13 +10,14 @@ _DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 
 
 async def convert_docx_to_pdf(docx_path: str, output_path: str) -> str:
+    docx_bytes = await asyncio.to_thread(Path(docx_path).read_bytes)
+
     async def _call() -> httpx.Response:
         async with httpx.AsyncClient(timeout=60) as client:
-            with open(docx_path, "rb") as f:
-                response = await client.post(
-                    f"{settings.GOTENBERG_URL}/forms/libreoffice/convert",
-                    files={"file": (Path(docx_path).name, f, _DOCX_MIME)},
-                )
+            response = await client.post(
+                f"{settings.GOTENBERG_URL}/forms/libreoffice/convert",
+                files={"file": (Path(docx_path).name, docx_bytes, _DOCX_MIME)},
+            )
             response.raise_for_status()
             return response
 

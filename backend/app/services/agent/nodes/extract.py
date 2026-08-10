@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from anthropic import AsyncAnthropic
 from pydantic import ValidationError
@@ -68,7 +68,7 @@ async def extract_node(state: AgentState) -> AgentState:
         ],
     )
     tool_use = next(block for block in response.content if block.type == "tool_use")
-    extracted_fields: dict[str, Any] = tool_use.input  # type: ignore[assignment]
+    extracted_fields = cast(dict[str, Any], tool_use.input)
 
     return state.model_copy(
         update={
@@ -88,7 +88,7 @@ async def extract_node(state: AgentState) -> AgentState:
 
 
 @observed_node("validate")
-def validate_node(state: AgentState) -> AgentState:
+async def validate_node(state: AgentState) -> AgentState:
     assert state.document_type_name is not None
     assert state.field_schema is not None
 

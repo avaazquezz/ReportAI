@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
 
 from app.core.database import AsyncSessionLocal
 from app.models.channel_connection import ChannelConnection
@@ -10,6 +11,8 @@ from app.services.channels.base import OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.delivery.email import send_report_email
 from app.services.observability.execution_log import observed_node
+
+logger = logging.getLogger(__name__)
 
 
 @observed_node("deliver_email")
@@ -52,9 +55,8 @@ async def finalize_report_node(state: AgentState) -> AgentState:
         repo = BaseRepository(Report, session)
         report = await repo.get_by_id(state.report_id)
         if report is not None:
-            await repo.update(
-                report, status="delivered", completed_at=datetime.now(timezone.utc)
-            )
+            await repo.update(report, status="delivered", completed_at=datetime.now(UTC))
+            await session.commit()
     return state
 
 
@@ -64,6 +66,7 @@ async def mark_report_failed(*, report_id: object, error_detail: str) -> None:
         report = await repo.get_by_id(report_id)  # type: ignore[arg-type]
         if report is not None:
             await repo.update(report, status="failed", error_detail=error_detail[:2000])
+            await session.commit()
 
 
 @observed_node("fail")
@@ -74,6 +77,6 @@ async def fail_node(state: AgentState) -> AgentState:
         await send_on_origin_channel(
             state, "Sorry, we couldn't generate your report. Please try again or contact support."
         )
-    except Exception:  # noqa: BLE001 — best-effort notification, the failure is already logged
-        pass
+    except Exception:
+        logger.warning("Failed to notify sender %s of pipeline failure", state.sender_id, exc_info=True)
     return state

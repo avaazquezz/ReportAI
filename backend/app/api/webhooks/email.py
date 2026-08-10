@@ -77,7 +77,7 @@ async def email_webhook(
     )
     try:
         incoming = await adapter.receive_message(payload)
-    except Exception:  # noqa: BLE001 — must not raise on a malformed inbound email
+    except Exception:
         logger.exception("Failed to parse inbound email payload")
         return {"status": "ignored"}
 

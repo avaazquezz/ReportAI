@@ -13,15 +13,15 @@ from app.services.agent.state import AgentState, DocumentTypeOption
 
 
 def _base_state(**overrides) -> AgentState:
-    defaults = dict(
-        thread_id="t",
-        tenant_id=uuid.uuid4(),
-        channel_connection_id=uuid.uuid4(),
-        channel_type="telegram",
-        sender_id="123",
-        report_id=uuid.uuid4(),
-        raw_payload={},
-    )
+    defaults = {
+        "thread_id": "t",
+        "tenant_id": uuid.uuid4(),
+        "channel_connection_id": uuid.uuid4(),
+        "channel_type": "telegram",
+        "sender_id": "123",
+        "report_id": uuid.uuid4(),
+        "raw_payload": {},
+    }
     defaults.update(overrides)
     return AgentState(**defaults)
 

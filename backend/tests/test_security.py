@@ -24,6 +24,11 @@ def test_access_token_roundtrip() -> None:
 
 def test_decode_token_rejects_tampered_token() -> None:
     token = create_access_token({"sub": "user-123"})
-    tampered = token[:-1] + ("a" if token[-1] != "a" else "b")
+    # Flip a character in the middle of the signature, not the last one — base64url's
+    # final character can land on padding-insensitive bits that don't always change the
+    # decoded byte value, which made this test flaky depending on token length.
+    middle = len(token) // 2
+    flipped = "a" if token[middle] != "a" else "b"
+    tampered = token[:middle] + flipped + token[middle + 1 :]
     with pytest.raises(ValueError):
         decode_token(tampered)

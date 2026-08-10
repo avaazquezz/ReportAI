@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 from groq import AsyncGroq
@@ -42,14 +43,14 @@ async def download_media_node(state: AgentState) -> AgentState:
 async def transcribe_node(state: AgentState) -> AgentState:
     assert state.media_local_path is not None
 
-    with open(state.media_local_path, "rb") as audio_file:
-        transcription = await _groq_client.audio.transcriptions.create(
-            file=(Path(state.media_local_path).name, audio_file.read()),
-            model=settings.TRANSCRIPTION_MODEL,
-            language=settings.TRANSCRIPTION_LANGUAGE,
-            response_format="json",
-            temperature=0,
-        )
+    audio_bytes = await asyncio.to_thread(Path(state.media_local_path).read_bytes)
+    transcription = await _groq_client.audio.transcriptions.create(
+        file=(Path(state.media_local_path).name, audio_bytes),
+        model=settings.TRANSCRIPTION_MODEL,
+        language=settings.TRANSCRIPTION_LANGUAGE,
+        response_format="json",
+        temperature=0,
+    )
 
     return state.model_copy(
         update={
