@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     TRANSCRIPTION_MODEL: str = "whisper-large-v3-turbo"
     TRANSCRIPTION_LANGUAGE: str = "es"
 
+    # ── Rendering ─────────────────────────────────────────────────────────
+    GOTENBERG_URL: str = "http://gotenberg:3000"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def DATABASE_URL(self) -> str:
