@@ -1,0 +1,17 @@
+{
+  "document_type_name": "Meeting Minutes",
+  "field_schema": {
+    "meeting_date": {"type": "date", "description": "Date the meeting took place, ISO 8601", "required": true},
+    "attendees": {"type": "list[str]", "description": "Full names of attendees", "required": true},
+    "summary": {"type": "str", "description": "One-paragraph summary of the meeting", "required": true},
+    "action_items": {"type": "list[str]", "description": "Agreed action items", "required": false}
+  },
+  "prompt_instructions": "Extract meeting minutes fields from an internal company meeting transcript.",
+  "input_text": "Reunión del 5 de marzo de 2026 con Ana y Luis. Hablamos del presupuesto del tercer trimestre y decidimos que Luis enviará la propuesta el viernes.",
+  "expected_fields": {
+    "meeting_date": "2026-03-05",
+    "attendees": ["Ana", "Luis"],
+    "summary": "Se discutió el presupuesto del tercer trimestre.",
+    "action_items": ["Luis enviará la propuesta el viernes"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "document_type_name": "Commercial Visit Report",
+  "field_schema": {
+    "visit_date": {"type": "date", "description": "Date of the client visit, ISO 8601", "required": true},
+    "client_name": {"type": "str", "description": "Name of the client company visited", "required": true},
+    "contacts": {"type": "list[str]", "description": "Names of people met at the client", "required": true},
+    "products_discussed": {"type": "list[str]", "description": "Products or services discussed", "required": false},
+    "next_steps": {"type": "str", "description": "Agreed next steps", "required": false}
+  },
+  "prompt_instructions": "Extract commercial visit report fields from a sales rep's voice note recap of a client visit.",
+  "input_text": "Informe de visita del 22 de febrero de 2026 a Grupo Ferretero Norte. Me reuní con el gerente Javier Molina y con la responsable de compras Isabel Ortega. Revisamos el catálogo de tornillería y de herramienta eléctrica. Acordamos una llamada de seguimiento el próximo martes.",
+  "expected_fields": {
+    "visit_date": "2026-02-22",
+    "client_name": "Grupo Ferretero Norte",
+    "contacts": ["Javier Molina", "Isabel Ortega"],
+    "products_discussed": ["tornillería", "herramienta eléctrica"],
+    "next_steps": "Llamada de seguimiento el próximo martes"
+  }
+}
