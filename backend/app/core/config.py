@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str
     EXTRACTION_MODEL: str = "claude-sonnet-5"
 
+    # ── Groq (transcription only) ────────────────────────────────────────
+    GROQ_API_KEY: str
+    TRANSCRIPTION_MODEL: str = "whisper-large-v3-turbo"
+    TRANSCRIPTION_LANGUAGE: str = "es"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def DATABASE_URL(self) -> str:
