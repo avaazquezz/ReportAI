@@ -46,6 +46,17 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str
     SMTP_FROM_ADDRESS: str
 
+    # ── WhatsApp Business Cloud API (platform-level; per-tenant piece
+    #    lives in channel_connections.credentials) ───────────────────────
+    WHATSAPP_APP_SECRET: str
+    WHATSAPP_VERIFY_TOKEN: str
+
+    # ── Mailgun inbound email (platform-level; per-tenant piece lives in
+    #    channel_connections.credentials) ────────────────────────────────
+    MAILGUN_API_KEY: str
+    MAILGUN_SIGNING_KEY: str
+    MAILGUN_INBOUND_DOMAIN: str
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def DATABASE_URL(self) -> str:
