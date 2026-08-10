@@ -32,6 +32,17 @@ jobs:
       POSTGRES_DB: reportai
       SECRET_KEY: ci-only-dummy-secret-key-not-used-anywhere-real
       ENVIRONMENT: testing
+      ANTHROPIC_API_KEY: ci-dummy
+      GROQ_API_KEY: ci-dummy
+      SMTP_HOST: localhost
+      SMTP_USER: ci
+      SMTP_PASSWORD: ci
+      SMTP_FROM_ADDRESS: ci@example.com
+      WHATSAPP_APP_SECRET: ci-dummy
+      WHATSAPP_VERIFY_TOKEN: ci-dummy
+      MAILGUN_API_KEY: ci-dummy
+      MAILGUN_SIGNING_KEY: ci-dummy
+      MAILGUN_INBOUND_DOMAIN: inbound.ci.example.com
 
     defaults:
       run:
