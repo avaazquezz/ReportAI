@@ -20,6 +20,18 @@ services:
     networks:
       - internal
 
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: reportai_gotenberg
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - internal
+
   backend:
     build:
       context: backend
@@ -27,9 +39,13 @@ services:
     container_name: reportai_backend
     env_file:
       - .env
+    volumes:
+      - reportai_storage_data:/app/storage
     restart: always
     depends_on:
       postgres:
+        condition: service_healthy
+      gotenberg:
         condition: service_healthy
     networks:
       - internal
@@ -59,3 +75,5 @@ networks:
 volumes:
   reportai_postgres_data:
     name: reportai_postgres_data
+  reportai_storage_data:
+    name: reportai_storage_data
