@@ -1,0 +1,61 @@
+# Structurally complete for Phase 4 (real server deployment) — untested until then.
+# Assumes an external Traefik reverse proxy already running on the "web" network,
+# with a certificate resolver named "le" already configured at the Traefik level.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: reportai_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - reportai_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ../backend
+      target: runtime
+    container_name: reportai_backend
+    env_file:
+      - ../.env
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.reportai-api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.reportai-api.entrypoints=websecure"
+      - "traefik.http.routers.reportai-api.tls.certresolver=le"
+      - "traefik.http.routers.reportai-api.middlewares=reportai-api-headers@docker"
+      - "traefik.http.services.reportai-api.loadbalancer.server.port=8000"
+      - "traefik.http.routers.reportai-api-http.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.reportai-api-http.entrypoints=web"
+      - "traefik.http.routers.reportai-api-http.middlewares=reportai-api-https-redirect@docker"
+      - "traefik.http.middlewares.reportai-api-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.X-Frame-Options=DENY"
+      - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
+
+networks:
+  web:
+    external: true
+  internal:
+    driver: bridge
+
+volumes:
+  reportai_postgres_data:
+    name: reportai_postgres_data
