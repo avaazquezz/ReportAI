@@ -6,18 +6,24 @@ import httpx
 
 T = TypeVar("T")
 
+_DEFAULT_RETRYABLE: tuple[type[Exception], ...] = (httpx.TransportError, httpx.HTTPStatusError)
 
-async def retry_async(fn: Callable[[], Awaitable[T]], attempts: int = 3, base_delay: float = 1.0) -> T:
-    """Retry with exponential backoff on transient HTTP failures (5xx, 429, connection errors).
 
-    Non-retryable HTTP errors (4xx other than 429) raise immediately — a
+async def retry_async(
+    fn: Callable[[], Awaitable[T]],
+    attempts: int = 3,
+    base_delay: float = 1.0,
+    retryable_exceptions: tuple[type[Exception], ...] = _DEFAULT_RETRYABLE,
+) -> T:
+    """Retry with exponential backoff on transient failures (connection errors, 5xx/429 for
+    HTTP callers). Non-retryable HTTP errors (4xx other than 429) raise immediately — a
     malformed request won't succeed just because we tried it again.
     """
     last_exc: Exception | None = None
     for attempt in range(attempts):
         try:
             return await fn()
-        except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+        except retryable_exceptions as exc:
             last_exc = exc
             if isinstance(exc, httpx.HTTPStatusError):
                 status = exc.response.status_code

@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     # ── Rendering ─────────────────────────────────────────────────────────
     GOTENBERG_URL: str = "http://gotenberg:3000"
 
+    # ── SMTP delivery ────────────────────────────────────────────────────
+    SMTP_HOST: str
+    SMTP_PORT: int = 587
+    SMTP_USER: str
+    SMTP_PASSWORD: str
+    SMTP_FROM_ADDRESS: str
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def DATABASE_URL(self) -> str:
