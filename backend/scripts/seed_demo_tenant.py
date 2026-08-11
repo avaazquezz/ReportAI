@@ -5,17 +5,24 @@ Usage: make seed-demo
 """
 
 import asyncio
+import uuid
 from pathlib import Path
 
 from docx import Document
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.security import hash_password
 from app.models.channel_connection import ChannelConnection
 from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
 from app.models.tenant import Tenant
+from app.models.tenant_user import TenantUser
 from app.repositories.base import BaseRepository
+
+DEMO_USER_EMAIL = "demo@reportai.dev"
+DEMO_USER_PASSWORD = "DemoPass123!"
 
 FIELD_SCHEMA = {
     "meeting_date": {"type": "date", "description": "Date the meeting took place, ISO 8601", "required": True},
@@ -40,12 +47,30 @@ def _generate_template(output_path: Path) -> None:
     document.save(str(output_path))
 
 
+async def _ensure_demo_user(session: AsyncSession, tenant_id: uuid.UUID) -> None:
+    user_repo = BaseRepository(TenantUser, session)
+    existing = await user_repo.list(filters={"email": DEMO_USER_EMAIL}, limit=1)
+    if existing:
+        return
+    await user_repo.create(
+        tenant_id=tenant_id,
+        email=DEMO_USER_EMAIL,
+        hashed_password=hash_password(DEMO_USER_PASSWORD),
+        full_name="Demo Admin",
+        role="tenant_admin",
+        is_active=True,
+    )
+    await session.commit()
+    print(f"Demo login: {DEMO_USER_EMAIL} / {DEMO_USER_PASSWORD}")
+
+
 async def seed_demo_tenant() -> None:
     async with AsyncSessionLocal() as session:
         tenant_repo = BaseRepository(Tenant, session)
         existing = await tenant_repo.list(filters={"slug": "demo"}, limit=1)
         if existing:
-            print("Demo tenant already exists — nothing to do.")
+            print("Demo tenant already exists — checking demo user.")
+            await _ensure_demo_user(session, existing[0].id)
             return
 
         tenant = await tenant_repo.create(name="Demo Consulting S.L.", slug="demo", is_active=True)
@@ -85,6 +110,8 @@ async def seed_demo_tenant() -> None:
         await session.commit()
         print(f"Seeded demo tenant {tenant.id} with document type {document_type.id}.")
         print("Replace the fake bot_token in channel_connections before sending real messages.")
+
+        await _ensure_demo_user(session, tenant.id)
 
 
 if __name__ == "__main__":
