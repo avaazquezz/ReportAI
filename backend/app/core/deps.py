@@ -23,6 +23,9 @@ async def get_current_user(
     except ValueError as exc:
         raise AuthenticationException(str(exc)) from exc
 
+    if payload.get("type") != "access":
+        raise AuthenticationException("Invalid token type")
+
     user_id = payload.get("sub")
     if user_id is None:
         raise AuthenticationException("Token missing subject")

@@ -135,14 +135,14 @@ Core entities, all tenant-scoped from the first migration:
 
 ### Phase 2 — Admin panel
 - [x] Auth — login real (JWT contra `tenant_users`), dashboard placeholder protegido — adelantado junto con la landing (ver §8, 2026-08-11)
-  - [ ] UI de gestión de tenants para super-admin
-  - [ ] Recuperación de contraseña / magic link
-- [ ] Tenant management (create/list/deactivate) — super-admin only
-- [ ] Document type & template management (upload .docx, define field schema) — tenant admin
-- [ ] Channel connection management (link bots per channel, manage allowed users) — tenant admin
-- [ ] Recipients / notification settings — tenant admin
-- [ ] Report history view with status
-- [ ] Usage/cost dashboard per tenant
+  - [x] UI de gestión de tenants para super-admin
+  - [x] Recuperación de contraseña / magic link
+- [x] Tenant management (create/list/deactivate) — super-admin only
+- [x] Document type & template management (upload .docx, define field schema) — tenant admin
+- [x] Channel connection management (link bots per channel, manage allowed users) — tenant admin
+- [x] Recipients / notification settings — tenant admin
+- [x] Report history view with status
+- [x] Usage/cost dashboard per tenant
 
 ### Phase 3 — On-demand channel adapters
 - [ ] Slack adapter — build when a specific client requests it (self-service OAuth install, low effort)
@@ -190,3 +190,4 @@ Core entities, all tenant-scoped from the first migration:
 | 2026-08-11 | LangGraph's Postgres checkpointer is the durability mechanism for the human-approval pause/resume, not the task runner | Confirmed |
 | 2026-08-11 | `notification_emails` added as an `ARRAY(String)` column on `document_types` | Confirmed — the Phase 0 schema had no place to store report recipients |
 | 2026-08-11 | Public landing page (previously Phase 5) and minimal real auth (first item of Phase 2 — JWT login against `tenant_users`, protected placeholder dashboard) built now, ahead of their original order. The rest of the admin panel (tenant management, template management, channel management, recipients, report history, usage dashboard) remains pending in Phase 2. No brand investment (no logo); the landing deliberately avoids generic AI-look defaults (cream+serif, black+neon, broadsheet+hairlines) with a token system anchored in the product's real mechanism. | Confirmed |
+| 2026-08-11 | Phase 2 completed end-to-end: password recovery (DB-backed single-use reset/invite tokens, reused for both forgot-password and tenant-admin invites), super-admin tenant management, tenant-admin document type/field-schema/template management (`.docx` upload validated against the Jinja tags it actually contains), channel connection management with a per-tenant sender allow-list enforced once in the pipeline's single entry point, report history with download, and a usage/cost dashboard shared between the tenant-admin view and a super-admin per-tenant drill-in. Migrations `0003`–`0006`. Every tenant-scoped endpoint resolves `tenant_id` from the authenticated user, never from client input; cross-tenant access renders as 404. Fixed two pre-existing defects found while building this: a JWT `type`-claim check missing from `get_current_user` (a refresh token could authenticate like an access token), and a `useCookie`/`nextTick` race in the login flow that could send `/auth/me` before the session cookie was written. | Confirmed |

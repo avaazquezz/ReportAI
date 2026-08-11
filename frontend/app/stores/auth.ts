@@ -1,16 +1,4 @@
-interface User {
-  id: string
-  email: string
-  full_name: string
-  role: string
-  tenant_id: string | null
-}
-
-interface TokenResponse {
-  access_token: string
-  refresh_token: string
-  token_type: string
-}
+import type { TokenResponse, User } from '~/types'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -29,6 +17,10 @@ export const useAuthStore = defineStore('auth', {
         body: { email, password }
       })
       useCookie('reportai_token', { sameSite: 'strict' }).value = tokens.access_token
+      // useCookie() writes document.cookie via an async watcher (not synchronously on
+      // assignment) — without this, fetchMe() below can read the cookie before that
+      // write lands and send /auth/me with no Authorization header.
+      await nextTick()
       await this.fetchMe()
     },
 

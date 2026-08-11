@@ -1,23 +1,56 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
+const { state: snackbar } = useSnackbar()
+
+const navItems = computed(() => {
+  if (authStore.user?.role === 'super_admin') {
+    return [{ title: 'Empresas', to: '/admin/tenants', icon: 'mdi-domain' }]
+  }
+  return [
+    { title: 'Tipos de documento', to: '/admin/document-types', icon: 'mdi-file-document-outline' },
+    { title: 'Canales', to: '/admin/channels', icon: 'mdi-message-processing-outline' },
+    { title: 'Informes', to: '/admin/reports', icon: 'mdi-file-chart-outline' },
+    { title: 'Uso y coste', to: '/admin/usage', icon: 'mdi-chart-line' }
+  ]
+})
+
+const drawer = ref(true)
 </script>
 
 <template>
-  <div class="min-h-screen bg-paper-50 font-body text-ink-900">
-    <header class="border-b border-slate-300 bg-surface-0">
-      <div class="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
-        <NuxtLink to="/" class="font-display text-lg font-bold text-ink-900">ReportAI</NuxtLink>
-        <button
-          type="button"
-          class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium transition-transform hover:scale-[1.02]"
-          @click="authStore.logout()"
-        >
-          Salir
-        </button>
-      </div>
-    </header>
-    <main>
-      <slot />
-    </main>
-  </div>
+  <v-app>
+    <v-navigation-drawer v-model="drawer" color="surface" border>
+      <v-list-item to="/dashboard" class="py-4">
+        <span class="font-display text-lg font-bold text-ink-900">ReportAI</span>
+      </v-list-item>
+      <v-divider />
+      <v-list nav density="comfortable">
+        <v-list-item
+          v-for="item in navItems"
+          :key="item.to"
+          :to="item.to"
+          :prepend-icon="item.icon"
+          :title="item.title"
+        />
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-app-bar color="surface" flat border>
+      <v-app-bar-nav-icon @click="drawer = !drawer" />
+      <v-app-bar-title>{{ authStore.user?.full_name }}</v-app-bar-title>
+      <v-spacer />
+      <v-chip class="mr-4" size="small" variant="tonal">{{ authStore.user?.role }}</v-chip>
+      <v-btn variant="text" @click="authStore.logout()">Salir</v-btn>
+    </v-app-bar>
+
+    <v-main>
+      <v-container fluid class="max-w-[1400px] py-8">
+        <slot />
+      </v-container>
+    </v-main>
+
+    <v-snackbar v-model="snackbar.visible" :color="snackbar.color" location="bottom right">
+      {{ snackbar.text }}
+    </v-snackbar>
+  </v-app>
 </template>
