@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # ── Application ──────────────────────────────────────────────────────
     ENVIRONMENT: str = "development"
 
+    # ── Frontend / CORS ──────────────────────────────────────────────────
+    FRONTEND_ORIGIN: str = "http://localhost:3000"
+
     # ── Agent pipeline ───────────────────────────────────────────────────
     DOCUMENT_STORAGE_PATH: str = "/app/storage"
     MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3
