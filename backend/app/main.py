@@ -2,8 +2,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import health
+from app.api import auth, health
 from app.api.webhooks import email as email_webhook
 from app.api.webhooks import telegram as telegram_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
@@ -19,7 +20,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title="ReportAI API", version="0.1.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_ORIGIN],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)
