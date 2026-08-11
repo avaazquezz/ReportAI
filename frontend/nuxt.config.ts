@@ -25,6 +25,12 @@ export default defineNuxtConfig({
               surface: '#FFFFFF',
               primary: '#FF6A45',
               success: '#1C8F6A',
+              // Mirror tailwind.config.ts's semantic tokens so v-chip/v-btn `color`
+              // props can use the same names as Tailwind classes — Vuetify's theme
+              // and Tailwind's config are two separate systems that don't share values.
+              approved: '#1C8F6A',
+              pending: '#B8860B',
+              failed: '#C0392B',
               'on-background': '#12151C',
               'on-surface': '#12151C'
             }

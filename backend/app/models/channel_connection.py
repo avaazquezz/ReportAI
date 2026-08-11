@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -26,6 +26,8 @@ class ChannelConnection(Base):
     # Credential storage as-is for Phase 0; encryption-at-rest is a flagged
     # future hardening item, not in scope now.
     credentials: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # Empty = allow all senders (unchanged behavior for existing connections).
+    allowed_senders: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

@@ -54,6 +54,9 @@ async function onSubmit() {
       >
         {{ loading ? 'Accediendo…' : 'Acceder' }}
       </button>
+      <NuxtLink to="/forgot-password" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-500">
+        ¿Olvidaste tu contraseña?
+      </NuxtLink>
     </form>
   </div>
 </template>
