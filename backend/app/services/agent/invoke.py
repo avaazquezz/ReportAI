@@ -12,11 +12,13 @@ from app.services.agent.graph import get_compiled_graph
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.nodes.deliver import mark_report_failed
 from app.services.agent.state import AgentState
-from app.services.channels.base import IncomingMessage
+from app.services.channels.base import IncomingMessage, OutgoingMessage
+from app.services.channels.factory import get_channel_adapter
 
 logger = logging.getLogger(__name__)
 
 _FAILURE_MESSAGE = "Sorry, we couldn't generate your report. Please try again or contact support."
+_REJECTED_SENDER_MESSAGE = "Sorry, you're not authorized to use this channel. Contact your administrator."
 
 
 async def _notify_failure_best_effort(state: AgentState) -> None:
@@ -26,15 +28,37 @@ async def _notify_failure_best_effort(state: AgentState) -> None:
         logger.warning("Failed to notify sender %s of pipeline failure", state.sender_id, exc_info=True)
 
 
+async def _reject_sender_best_effort(connection: ChannelConnection, incoming: IncomingMessage) -> None:
+    try:
+        adapter = get_channel_adapter(connection)
+        await adapter.send_message(
+            OutgoingMessage(recipient_id=incoming.sender_id, text=_REJECTED_SENDER_MESSAGE)
+        )
+    except Exception:
+        logger.warning(
+            "Failed to notify unauthorized sender %s on connection %s",
+            incoming.sender_id,
+            connection.id,
+            exc_info=True,
+        )
+
+
 async def start_or_resume_pipeline(
     *,
     db: AsyncSession,
     connection: ChannelConnection,
     incoming: IncomingMessage,
     background_tasks: BackgroundTasks,
-) -> uuid.UUID:
+) -> uuid.UUID | None:
     """Single entry point every webhook route calls. A new message from a sender with an
-    already-paused report is treated as the reply to that pause; otherwise a new run starts."""
+    already-paused report is treated as the reply to that pause; otherwise a new run starts.
+    Returns None (no report created, no LLM invoked) if the sender isn't on this
+    connection's allow-list — checked here so both the new-report and resume paths are
+    covered by one guard, not one per webhook route."""
+    if connection.allowed_senders and incoming.sender_id not in connection.allowed_senders:
+        await _reject_sender_best_effort(connection, incoming)
+        return None
+
     report_repo = ReportRepository(db)
     pending = await report_repo.find_pending_for_sender(
         tenant_id=connection.tenant_id, requester_identifier=incoming.sender_id

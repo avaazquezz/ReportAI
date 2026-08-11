@@ -7,7 +7,7 @@ from aiosmtplib.errors import SMTPConnectError, SMTPServerDisconnected, SMTPTime
 from app.core.config import settings
 from app.services.agent.tools.retry import retry_async
 
-_RETRYABLE_SMTP_ERRORS = (SMTPConnectError, SMTPServerDisconnected, SMTPTimeoutError)
+RETRYABLE_SMTP_ERRORS = (SMTPConnectError, SMTPServerDisconnected, SMTPTimeoutError)
 
 
 async def send_report_email(*, to: list[str], subject: str, body: str, attachment_path: str) -> None:
@@ -35,4 +35,4 @@ async def send_report_email(*, to: list[str], subject: str, body: str, attachmen
             start_tls=True,
         )
 
-    await retry_async(_send, retryable_exceptions=_RETRYABLE_SMTP_ERRORS)
+    await retry_async(_send, retryable_exceptions=RETRYABLE_SMTP_ERRORS)

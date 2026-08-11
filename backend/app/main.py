@@ -5,6 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth, health
+from app.api.admin import channel_connections as admin_channel_connections
+from app.api.admin import document_types as admin_document_types
+from app.api.admin import reports as admin_reports
+from app.api.admin import tenants as admin_tenants
+from app.api.admin import usage as admin_usage
 from app.api.webhooks import email as email_webhook
 from app.api.webhooks import telegram as telegram_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
@@ -28,6 +33,11 @@ app.add_middleware(
 )
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(admin_tenants.router)
+app.include_router(admin_document_types.router)
+app.include_router(admin_channel_connections.router)
+app.include_router(admin_reports.router)
+app.include_router(admin_usage.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)

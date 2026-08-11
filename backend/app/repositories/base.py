@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Generic, Protocol, TypeVar
 
-from sqlalchemy import select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -19,6 +19,12 @@ class BaseRepository(Generic[ModelType]):
         self.model = model
         self.db = db
 
+    def _apply_filters(self, query: Select[Any], filters: dict[str, Any] | None) -> Select[Any]:
+        if filters:
+            for field, value in filters.items():
+                query = query.where(getattr(self.model, field) == value)
+        return query
+
     async def get_by_id(self, id_: uuid.UUID) -> ModelType | None:
         result = await self.db.execute(select(self.model).where(self.model.id == id_))
         return result.scalar_one_or_none()
@@ -30,13 +36,15 @@ class BaseRepository(Generic[ModelType]):
         limit: int = 100,
         filters: dict[str, Any] | None = None,
     ) -> list[ModelType]:
-        query = select(self.model)
-        if filters:
-            for field, value in filters.items():
-                query = query.where(getattr(self.model, field) == value)
+        query = self._apply_filters(select(self.model), filters)
         query = query.offset(skip).limit(limit)
         result = await self.db.execute(query)
         return list(result.scalars().all())
+
+    async def count(self, *, filters: dict[str, Any] | None = None) -> int:
+        query = self._apply_filters(select(func.count()).select_from(self.model), filters)
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
 
     async def create(self, **kwargs: Any) -> ModelType:
         obj = self.model(**kwargs)

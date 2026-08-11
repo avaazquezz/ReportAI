@@ -1,8 +1,10 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.repositories.base import BaseRepository
 
@@ -28,3 +30,47 @@ class ReportRepository(BaseRepository[Report]):
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+
+    async def get_with_document_type_name(
+        self, report_id: uuid.UUID
+    ) -> tuple[Report, str | None] | None:
+        query = (
+            select(Report, DocumentType.name)
+            .outerjoin(DocumentType, Report.document_type_id == DocumentType.id)
+            .where(Report.id == report_id)
+        )
+        result = await self.db.execute(query)
+        row = result.first()
+        return None if row is None else (row[0], row[1])
+
+    async def list_with_document_type_name(
+        self, *, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100, status: str | None = None
+    ) -> list[tuple[Report, str | None]]:
+        query = (
+            select(Report, DocumentType.name)
+            .outerjoin(DocumentType, Report.document_type_id == DocumentType.id)
+            .where(Report.tenant_id == tenant_id)
+        )
+        if status is not None:
+            query = query.where(Report.status == status)
+        query = query.order_by(Report.created_at.desc()).offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        return [(row[0], row[1]) for row in result.all()]
+
+    async def count_scoped(self, *, tenant_id: uuid.UUID, status: str | None = None) -> int:
+        query = select(func.count()).select_from(Report).where(Report.tenant_id == tenant_id)
+        if status is not None:
+            query = query.where(Report.status == status)
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
+
+    async def count_by_status(self, *, tenant_id: uuid.UUID, since: datetime) -> dict[str, int]:
+        """Report-outcome counts come from `reports.status`, not `execution_logs` — a
+        report has one row here but many in execution_logs (one per pipeline node)."""
+        query = (
+            select(Report.status, func.count())
+            .where(Report.tenant_id == tenant_id, Report.created_at >= since)
+            .group_by(Report.status)
+        )
+        result = await self.db.execute(query)
+        return {status: count for status, count in result.all()}

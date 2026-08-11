@@ -10,7 +10,10 @@ from app.core.database import Base
 
 class ExecutionLog(Base):
     __tablename__ = "execution_logs"
-    __table_args__ = (Index("ix_execution_logs_tenant_id", "tenant_id"),)
+    __table_args__ = (
+        Index("ix_execution_logs_tenant_id", "tenant_id"),
+        Index("ix_execution_logs_tenant_id_created_at", "tenant_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
