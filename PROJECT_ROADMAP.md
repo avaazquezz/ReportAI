@@ -134,7 +134,9 @@ Core entities, all tenant-scoped from the first migration:
 - [x] Mandatory human-approval interrupt before delivery (not in the original checklist — added per the `ai-agents` skill's non-negotiable rule that no agent sends on a client's behalf without an explicit checkpoint)
 
 ### Phase 2 — Admin panel
-- [ ] Auth (tenant admin login, super-admin role)
+- [x] Auth — login real (JWT contra `tenant_users`), dashboard placeholder protegido — adelantado junto con la landing (ver §8, 2026-08-11)
+  - [ ] UI de gestión de tenants para super-admin
+  - [ ] Recuperación de contraseña / magic link
 - [ ] Tenant management (create/list/deactivate) — super-admin only
 - [ ] Document type & template management (upload .docx, define field schema) — tenant admin
 - [ ] Channel connection management (link bots per channel, manage allowed users) — tenant admin
@@ -159,7 +161,6 @@ Core entities, all tenant-scoped from the first migration:
 - Billing / payment integration
 - Corporate SSO / OAuth for the admin panel
 - Multi-region / high-availability infra
-- Marketing landing page
 
 ## 6. Explicitly out of scope for now
 
@@ -188,3 +189,4 @@ Core entities, all tenant-scoped from the first migration:
 | 2026-08-11 | FastAPI `BackgroundTasks` for Phase 1's async pipeline execution, not Celery/arq | Confirmed — upgrade trigger: multiple backend instances, or need for durable retry of a crashed in-flight run |
 | 2026-08-11 | LangGraph's Postgres checkpointer is the durability mechanism for the human-approval pause/resume, not the task runner | Confirmed |
 | 2026-08-11 | `notification_emails` added as an `ARRAY(String)` column on `document_types` | Confirmed — the Phase 0 schema had no place to store report recipients |
+| 2026-08-11 | Public landing page (previously Phase 5) and minimal real auth (first item of Phase 2 — JWT login against `tenant_users`, protected placeholder dashboard) built now, ahead of their original order. The rest of the admin panel (tenant management, template management, channel management, recipients, report history, usage dashboard) remains pending in Phase 2. No brand investment (no logo); the landing deliberately avoids generic AI-look defaults (cream+serif, black+neon, broadsheet+hairlines) with a token system anchored in the product's real mechanism. | Confirmed |
