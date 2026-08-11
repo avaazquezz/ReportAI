@@ -14,6 +14,8 @@ export default <Partial<Config>>{
         surface: { 0: '#FFFFFF' },
         capture: { 500: '#FF6A45' },
         approved: { 600: '#1C8F6A' },
+        pending: { 600: '#B8860B' },
+        failed: { 600: '#C0392B' },
         slate: { 300: '#C6CCD3' }
       },
       fontFamily: {
