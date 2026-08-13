@@ -18,6 +18,10 @@ def _format_summary(extracted_fields: dict[str, Any]) -> str:
 async def human_approval_prompt_node(state: AgentState) -> AgentState:
     assert state.extracted_fields is not None
     summary = _format_summary(state.extracted_fields)
+    # ponytail: a delivery failure here kills the whole report even though
+    # extraction+validation already succeeded — acceptable while channel
+    # tokens are demo/rarely-flaky; revisit (e.g. don't let this abort before
+    # reaching the interrupt) if it's ever hit with a real, live channel token.
     await send_on_origin_channel(
         state,
         f"Here's what I extracted for your {state.document_type_name}:\n\n{summary}\n\n"
