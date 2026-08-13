@@ -144,19 +144,22 @@ Core entities, all tenant-scoped from the first migration:
 - [x] Report history view with status
 - [x] Usage/cost dashboard per tenant
 
-### Phase 3 — On-demand channel adapters
+### Phase 3 — On-demand channel adapters (reactive backlog — no work starts here without a specific client request)
 - [ ] Slack adapter — build when a specific client requests it (self-service OAuth install, low effort)
 - [ ] Microsoft Teams adapter — build only when a specific paying Microsoft 365 client requests it; register as a single-tenant Azure Bot scoped to that client (not a multi-tenant Teams Store app — Microsoft disallowed new multi-tenant bots as of 2025-07-31). Requires that client's IT admin to sideload the app package or approve a store listing; budget 1-2 weeks dev plus client-side admin approval time.
 - [ ] Evaluated and explicitly not prioritized: Discord (no fit with formal corporate reporting for this audience), Google Chat (same IT-gated integration cost as Teams, far smaller footprint in this market), SMS (can't carry voice notes — breaks the core "send a voice note" flow), RCS (fragmented, immature cross-carrier/OS support). Revisit only if a specific client asks.
 
 ### Phase 4 — Deployment & launch
 - [ ] Provision private server, Docker Compose + Traefik + TLS
-- [ ] Sanitize repo for public release (verify zero real tenant data anywhere in history)
+- [ ] Public demo domain: `reportai.is-a.dev` → A record to server, Traefik/Let's Encrypt TLS
 - [ ] Public demo tenant, one-click accessible
 - [ ] README with architecture and setup instructions
-- [ ] First white-label client deployments sold through existing consulting relationships
 
-### Phase 5 — Deferred (explicitly not now)
+Separately, not a code deliverable: first white-label client deployments sold
+through existing consulting relationships — a sales outcome dependent on
+those relationships, not something a checklist item completes.
+
+### Phase 5 — Explicitly deferred (not a scheduled future phase — no date, no trigger; see also §6)
 - Public self-serve signup
 - Billing / payment integration
 - Corporate SSO / OAuth for the admin panel
@@ -191,3 +194,7 @@ Core entities, all tenant-scoped from the first migration:
 | 2026-08-11 | `notification_emails` added as an `ARRAY(String)` column on `document_types` | Confirmed — the Phase 0 schema had no place to store report recipients |
 | 2026-08-11 | Public landing page (previously Phase 5) and minimal real auth (first item of Phase 2 — JWT login against `tenant_users`, protected placeholder dashboard) built now, ahead of their original order. The rest of the admin panel (tenant management, template management, channel management, recipients, report history, usage dashboard) remains pending in Phase 2. No brand investment (no logo); the landing deliberately avoids generic AI-look defaults (cream+serif, black+neon, broadsheet+hairlines) with a token system anchored in the product's real mechanism. | Confirmed |
 | 2026-08-11 | Phase 2 completed end-to-end: password recovery (DB-backed single-use reset/invite tokens, reused for both forgot-password and tenant-admin invites), super-admin tenant management, tenant-admin document type/field-schema/template management (`.docx` upload validated against the Jinja tags it actually contains), channel connection management with a per-tenant sender allow-list enforced once in the pipeline's single entry point, report history with download, and a usage/cost dashboard shared between the tenant-admin view and a super-admin per-tenant drill-in. Migrations `0003`–`0006`. Every tenant-scoped endpoint resolves `tenant_id` from the authenticated user, never from client input; cross-tenant access renders as 404. Fixed two pre-existing defects found while building this: a JWT `type`-claim check missing from `get_current_user` (a refresh token could authenticate like an access token), and a `useCookie`/`nextTick` race in the login flow that could send `/auth/me` before the session cookie was written. | Confirmed |
+| 2026-08-13 | Fixed a CI regression from the Phase 2 merge: `DOCUMENT_STORAGE_PATH` defaulted to `/app/storage`, a Docker-only path, which broke 4 tests on the bare GitHub Actions runner. Default changed to a relative `storage`, which still resolves to `/app/storage` in Docker (WORKDIR is `/app`) and to `backend/storage` in CI — zero behavior change in Docker/prod, no other files needed changing. | Confirmed |
+| 2026-08-13 | Reaffirmed the 2026-08-11 no-logo / no-brand-investment decision after review: the current design system (typographic wordmark, a 7-token color palette + Space Grotesk/IBM Plex type mirrored between Tailwind config and the Vuetify theme, used consistently across the landing page, auth flow, and all seven admin/dashboard pages) is complete and reads as professional as-is. Revisit only if a paying client asks for brand collateral. | Confirmed |
+| 2026-08-13 | Public demo domain: a free `is-a.dev` subdomain (`reportai.is-a.dev`) with an A record to the private server, chosen over `eu.org` (manual review takes days to weeks, plus mandatory annual reconfirmation) and Freenom (discontinued 2023). Revisit a paid domain once real traction or a real client justifies it. | Confirmed |
+| 2026-08-13 | Found via a real end-to-end run (not a unit test): `human_approval_prompt_node` sends the approval request on the origin channel with no try/except — if that send fails (seen here as a 404 from the demo's fake Telegram token), the exception kills the whole report before it ever reaches the `await_human_approval` interrupt, discarding an already-completed, already-paid-for extraction. Deferred: a real bot token essentially never 404s this way, and the correct fix (should a send failure still let the graph reach the interrupt so approval remains possible from the admin panel?) is a real design call, not a one-line patch. Revisit if this is ever hit with a live channel token in production. | Confirmed — deferred |
