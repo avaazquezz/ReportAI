@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     FRONTEND_ORIGIN: str = "http://localhost:3000"
 
     # ── Agent pipeline ───────────────────────────────────────────────────
-    DOCUMENT_STORAGE_PATH: str = "/app/storage"
+    DOCUMENT_STORAGE_PATH: str = "storage"
     MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3
     MAX_VALIDATION_RETRIES: int = 3
     MAX_CORRECTION_RETRIES: int = 2
