@@ -156,12 +156,13 @@ Scope confirmed 2026-08-15: this phase plus the demo hardening below is the
 existing triggers.
 
 **A. Demo-readiness (code, runs locally first)**
-- [ ] Frontend production build: Dockerfile + Nuxt service in `docker-compose.prod.yml`; single-domain Traefik routing (`/api` prefix → backend, everything else → Nuxt) so prod needs no CORS config and no extra subdomain
-- [ ] Fix the 2026-08-13 deferred finding: an approval-prompt send failure must still reach the `await_human_approval` interrupt so the report stays approvable from the admin panel
-- [ ] Real Telegram demo bot (BotFather) wired to the demo tenant via config
-- [ ] One-click demo access from the landing (demo tenant login without typing credentials)
-- [ ] Abuse/cost controls for the public demo: per-sender rate limit, global daily spend cap computed from `execution_logs.cost_usd`, audio duration limit
-- [ ] Scheduled reset of the demo tenant to a clean seeded state
+- [x] Frontend production build: Dockerfile + Nuxt service in `docker-compose.prod.yml`; single-domain Traefik routing (`/api` prefix → backend, everything else → Nuxt) so prod needs no CORS config and no extra subdomain
+- [x] Fix the 2026-08-13 deferred finding: an approval-prompt send failure must still reach the `await_human_approval` interrupt so the report stays approvable from the admin panel — grew into the full resume-cycle fix (see 2026-08-15 decisions-log entry)
+- [ ] Real Telegram demo bot (BotFather) wired to the demo tenant via config — config path (`DEMO_TELEGRAM_BOT_TOKEN`) and webhook registration script shipped; needs the real token at deploy
+- [x] One-click demo access from the landing (demo tenant login without typing credentials) — `POST /auth/demo-login` + read-only guard for the demo account
+- [x] Abuse/cost controls for the public demo: per-sender rate limit, global daily spend cap computed from `execution_logs.cost_usd`, audio size limit
+- [x] Scheduled reset of the demo tenant to a clean seeded state — `make reset-demo` + cron line in `infra/README.md`
+- [x] Telegram webhook hardening (not in the original checklist — found during Phase 4 exploration): secret-token verification (the other two channels already verified HMAC) and an `is_active` check
 
 **B. Infra (existing VPS with shared Traefik + Let's Encrypt)**
 - [ ] `reportai.is-a.dev` registration PR (open early — external review takes days)
@@ -221,3 +222,4 @@ those relationships, not something a checklist item completes.
 | 2026-08-15 | Deployment target: the existing VPS already running the shared Traefik + Let's Encrypt stack — no new server provisioning | Confirmed |
 | 2026-08-15 | Single-domain prod routing: `reportai.is-a.dev` serves both the Nuxt frontend and, under the `/api` path prefix (Traefik StripPrefix), the FastAPI backend — removes prod CORS and any dependency on nested is-a.dev subdomains | Confirmed |
 | 2026-08-15 | The 2026-08-13 deferred approval-prompt finding's revisit trigger is met (a public demo is a live channel) — fix scheduled in Phase 4.A | Confirmed |
+| 2026-08-15 | Phase 4 exploration found the resume branch was dead code: nothing ever wrote `reports.status = "awaiting_approval"` / `"awaiting_doctype_selection"` (and the column was `String(20)`, too narrow for the latter), so a CONFIRM reply started a new run with a new extraction instead of resuming, and the paused run stayed orphaned in the checkpointer. Fix: migration `0007` widens the column; `_run_graph`/`_resume_graph` mark the pause status after `ainvoke` returns with `__interrupt__` (single choke point, correct for re-interrupts after corrections); resumes go through an atomic `claim_for_resume` (`UPDATE … WHERE status IN pending`) so duplicate replies can't double-resume one thread; both prompt sends are now best-effort try/except; new `POST /reports/{id}/approve` and `/reject` panel endpoints. Covered by tests that do NOT hand-insert the status (the old test's blind spot). | Confirmed |
