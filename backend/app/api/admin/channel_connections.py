@@ -1,3 +1,4 @@
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -27,11 +28,15 @@ async def create_channel_connection(
 ) -> ChannelConnectionResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(ChannelConnection, db)
+    credentials = dict(payload.credentials)
+    if payload.channel_type == "telegram":
+        # Echoed back by Telegram on every webhook update and verified there.
+        credentials.setdefault("secret_token", secrets.token_urlsafe(32))
     connection = await repo.create(
         tenant_id=tenant_id,
         channel_type=payload.channel_type,
         display_name=payload.display_name,
-        credentials=payload.credentials,
+        credentials=credentials,
         allowed_senders=payload.allowed_senders,
         is_active=True,
     )

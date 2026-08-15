@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     #    empty in dev, where the API is reached directly) ─────────────────
     API_ROOT_PATH: str = ""
 
+    # ── Public origin webhooks are registered under (e.g. Telegram setWebhook).
+    #    Empty in dev — scripts that need it fail loudly instead of guessing. ──
+    PUBLIC_BASE_URL: str = ""
+
     # ── Agent pipeline ───────────────────────────────────────────────────
     DOCUMENT_STORAGE_PATH: str = "storage"
     MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3
