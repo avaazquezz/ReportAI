@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from langgraph.types import interrupt
@@ -5,6 +6,8 @@ from langgraph.types import interrupt
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.state import AgentState
 from app.services.observability.execution_log import observed_node
+
+logger = logging.getLogger(__name__)
 
 _CONFIRM_WORDS = {"confirm", "confirmar", "si", "sí", "yes", "ok", "vale"}
 
@@ -18,15 +21,16 @@ def _format_summary(extracted_fields: dict[str, Any]) -> str:
 async def human_approval_prompt_node(state: AgentState) -> AgentState:
     assert state.extracted_fields is not None
     summary = _format_summary(state.extracted_fields)
-    # ponytail: a delivery failure here kills the whole report even though
-    # extraction+validation already succeeded — acceptable while channel
-    # tokens are demo/rarely-flaky; revisit (e.g. don't let this abort before
-    # reaching the interrupt) if it's ever hit with a real, live channel token.
-    await send_on_origin_channel(
-        state,
-        f"Here's what I extracted for your {state.document_type_name}:\n\n{summary}\n\n"
-        "Reply CONFIRM to generate the document, or send a correction as free text.",
-    )
+    try:
+        await send_on_origin_channel(
+            state,
+            f"Here's what I extracted for your {state.document_type_name}:\n\n{summary}\n\n"
+            "Reply CONFIRM to generate the document, or send a correction as free text.",
+        )
+    except Exception:
+        # Reaching the interrupt matters more than this send: the extraction is already
+        # paid for, and a paused report stays approvable from the admin panel.
+        logger.warning("Failed to send approval prompt to %s", state.sender_id, exc_info=True)
     return state
 
 
