@@ -28,13 +28,9 @@ from app.services.agent.nodes.media import transcribe_node
 from app.services.agent.state import AgentState
 from app.services.rendering.docx_render import fill_template
 from app.services.rendering.gotenberg_client import convert_docx_to_pdf
-from scripts.seed_demo_tenant import FIELD_SCHEMA, _generate_template
+from scripts.seed_demo_tenant import FIELD_SCHEMA, PROMPT_INSTRUCTIONS, _generate_template
 
 OUTPUT_DIR = Path(__file__).parent / "_landing_demo_output"
-
-PROMPT_INSTRUCTIONS = (
-    "Extract meeting minutes fields from an internal company meeting transcript."
-)
 
 
 def _base_state(audio_path: Path) -> AgentState:
