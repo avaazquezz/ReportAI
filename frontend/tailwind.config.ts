@@ -12,6 +12,10 @@ export default <Partial<Config>>{
         ink: { 900: '#12151C' },
         paper: { 50: '#EEF1F4' },
         surface: { 0: '#FFFFFF' },
+        // Warm frame color for header/footer — echoes the capture-orange accent
+        // family without its saturation, so the page's neutral bookends feel
+        // tied to the brand instead of the cooler blue-grey paper-50.
+        cream: { 50: '#FBEEE7' },
         // 600 is a contrast-safe darker step for text/icons/button fills on light
         // backgrounds — white-on-500 and 500-as-text-on-white both fail WCAG (~2.5-2.8:1).
         capture: { 500: '#FF6A45', 600: '#C0432A' },
