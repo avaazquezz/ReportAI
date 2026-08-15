@@ -6,8 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import get_current_user
-from app.core.exceptions import AuthenticationException, ValidationException
+from app.core.deps import get_current_user, is_demo_user
+from app.core.exceptions import (
+    AuthenticationException,
+    ResourceNotFoundException,
+    ValidationException,
+)
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -51,9 +55,35 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> To
     )
 
 
+@router.post("/auth/demo-login")
+async def demo_login(db: AsyncSession = Depends(get_db)) -> TokenResponse:
+    """One-click access to the public demo tenant. 404 unless DEMO_USER_EMAIL is
+    configured — keeps the endpoint inert outside the demo deployment."""
+    if not settings.DEMO_USER_EMAIL:
+        raise ResourceNotFoundException()
+    result = await db.execute(
+        select(TenantUser).where(TenantUser.email == settings.DEMO_USER_EMAIL)
+    )
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        raise ResourceNotFoundException()
+
+    token_payload = {
+        "sub": str(user.id),
+        "role": user.role,
+        "tenant_id": str(user.tenant_id) if user.tenant_id else None,
+    }
+    return TokenResponse(
+        access_token=create_access_token(token_payload),
+        refresh_token=create_refresh_token({"sub": str(user.id)}),
+    )
+
+
 @router.get("/auth/me")
 async def me(current_user: TenantUser = Depends(get_current_user)) -> UserResponse:
-    return UserResponse.model_validate(current_user)
+    response = UserResponse.model_validate(current_user)
+    response.is_demo = is_demo_user(current_user)
+    return response
 
 
 @router.post("/auth/forgot-password")

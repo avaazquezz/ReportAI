@@ -24,7 +24,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await close_checkpointer()
 
 
-app = FastAPI(title="ReportAI API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="ReportAI API",
+    version="0.1.0",
+    lifespan=lifespan,
+    # Behind Traefik's StripPrefix in prod — keeps /docs, openapi.json and
+    # trailing-slash redirects generating /api-prefixed URLs.
+    root_path=settings.API_ROOT_PATH,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_ORIGIN],

@@ -1,3 +1,5 @@
+import logging
+
 from langgraph.types import interrupt
 
 from app.core.database import AsyncSessionLocal
@@ -6,6 +8,8 @@ from app.repositories.base import BaseRepository
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.state import AgentState, DocumentTypeOption
 from app.services.observability.execution_log import observed_node
+
+logger = logging.getLogger(__name__)
 
 
 def _apply_document_type(state: AgentState, document_type: DocumentType) -> AgentState:
@@ -43,9 +47,14 @@ async def resolve_tenant_doctype_node(state: AgentState) -> AgentState:
 @observed_node("send_document_type_prompt")
 async def send_document_type_prompt_node(state: AgentState) -> AgentState:
     lines = [f"{i + 1}. {opt.name}" for i, opt in enumerate(state.available_document_types)]
-    await send_on_origin_channel(
-        state, "Which document type do you want to generate?\n" + "\n".join(lines)
-    )
+    try:
+        await send_on_origin_channel(
+            state, "Which document type do you want to generate?\n" + "\n".join(lines)
+        )
+    except Exception:
+        # Same rationale as the approval prompt: reaching the interrupt keeps the report
+        # resumable; an unanswered prompt burns one selection attempt at worst.
+        logger.warning("Failed to send document type prompt to %s", state.sender_id, exc_info=True)
     return state
 
 

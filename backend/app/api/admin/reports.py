@@ -1,19 +1,21 @@
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_tenant_admin
-from app.core.exceptions import ResourceNotFoundException
+from app.core.exceptions import ConflictException, ResourceNotFoundException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.report import Report
 from app.models.tenant_user import TenantUser
-from app.repositories.report_repository import ReportRepository
+from app.repositories.report_repository import PENDING_STATUSES, ReportRepository
 from app.schemas.common import PaginatedResponse
 from app.schemas.report import ReportResponse
+from app.services.agent.invoke import resume_pipeline
 
 router = APIRouter(prefix="/reports", tags=["admin:reports"])
 
@@ -68,6 +70,55 @@ async def get_report(
     if row is None or row[0].tenant_id != tenant_id:
         raise ResourceNotFoundException()
     report, document_type_name = row
+    return _to_response(report, document_type_name)
+
+
+@router.post("/{report_id}/approve", status_code=202)
+async def approve_report(
+    report_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ReportResponse:
+    """Resume a paused report as if the requester had replied CONFIRM on the channel —
+    the recovery path when the approval prompt never reached them."""
+    tenant_id = require_tenant_id(current_user)
+    repo = ReportRepository(db)
+    row = await repo.get_with_document_type_name(report_id)
+    if row is None or row[0].tenant_id != tenant_id:
+        raise ResourceNotFoundException()
+    report, document_type_name = row
+    if report.status != "awaiting_approval":
+        raise ConflictException("Report is not awaiting approval")
+    if not await resume_pipeline(
+        db=db, report=report, reply_text="CONFIRM", background_tasks=background_tasks
+    ):
+        raise ConflictException("Report was already resumed")
+    await db.refresh(report)
+    return _to_response(report, document_type_name)
+
+
+@router.post("/{report_id}/reject")
+async def reject_report(
+    report_id: uuid.UUID,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> ReportResponse:
+    """Mark a paused report failed without resuming the graph. Unblocks the sender:
+    their next message would otherwise be captured as a reply to this report. The
+    abandoned LangGraph checkpoint stays orphaned and inert."""
+    tenant_id = require_tenant_id(current_user)
+    repo = ReportRepository(db)
+    row = await repo.get_with_document_type_name(report_id)
+    if row is None or row[0].tenant_id != tenant_id:
+        raise ResourceNotFoundException()
+    report, document_type_name = row
+    if report.status not in PENDING_STATUSES:
+        raise ConflictException("Report is not awaiting a reply")
+    await repo.update(
+        report, status="failed", error_detail="Rejected by admin", completed_at=datetime.now(UTC)
+    )
+    await db.commit()
     return _to_response(report, document_type_name)
 
 

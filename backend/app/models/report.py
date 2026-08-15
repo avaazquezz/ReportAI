@@ -22,7 +22,8 @@ class Report(Base):
     document_type_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("document_types.id", ondelete="SET NULL"), nullable=True
     )
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    # 30, not 20: "awaiting_doctype_selection" is 26 chars (migration 0007)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
     requester_channel: Mapped[str] = mapped_column(String(50), nullable=False)
     requester_identifier: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
