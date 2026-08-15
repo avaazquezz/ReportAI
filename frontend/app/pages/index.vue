@@ -6,7 +6,6 @@
     <LandingDifferentiatorSection />
     <LandingTemplateFidelitySection />
     <LandingApprovalSection />
-    <LandingChannelsSection />
     <LandingFinalCtaSection />
   </div>
 </template>

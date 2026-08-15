@@ -57,8 +57,8 @@ onMounted(() => {
       </div>
       <p ref="subheadline" class="mt-6 max-w-md font-body text-lg text-ink-900/80">
         ReportAI transcribe la reunión, rellena el documento exacto que ya usas en tu empresa y lo
-        envía a quien corresponde — por Telegram, WhatsApp o email. Sin unirse a videollamadas, sin
-        plantillas genéricas, sin instalar nada.
+        envía a quien corresponde — por Telegram, el canal por defecto, o el que ya uses. Sin unirse
+        a videollamadas, sin plantillas genéricas, sin instalar nada.
       </p>
       <div ref="ctas" class="mt-8">
         <a
