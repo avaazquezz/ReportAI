@@ -7,6 +7,8 @@ const route = useRoute()
 const documentTypeId = String(route.params.id)
 const { getById, update, listTemplates, uploadTemplate } = useDocumentTypes()
 const { show } = useSnackbar()
+const authStore = useAuthStore()
+const isDemo = computed(() => authStore.user?.is_demo ?? false)
 
 const FIELD_TYPES: FieldType[] = ['str', 'int', 'float', 'bool', 'date', 'list[str]', 'list[int]']
 
@@ -145,12 +147,13 @@ onMounted(async () => {
       <v-card class="mb-6">
         <v-card-title>Información básica</v-card-title>
         <v-card-text>
-          <v-text-field v-model="name" label="Nombre" required class="mb-2" />
-          <v-textarea v-model="description" label="Descripción" rows="2" class="mb-2" />
+          <v-text-field v-model="name" label="Nombre" required :disabled="isDemo" class="mb-2" />
+          <v-textarea v-model="description" label="Descripción" rows="2" :disabled="isDemo" class="mb-2" />
           <v-textarea
             v-model="promptInstructions"
             label="Instrucciones para la extracción"
             rows="3"
+            :disabled="isDemo"
             class="mb-2"
           />
           <v-combobox
@@ -159,30 +162,39 @@ onMounted(async () => {
             multiple
             chips
             closable-chips
+            :disabled="isDemo"
             hint="Emails que reciben cada informe generado con este tipo"
             persistent-hint
           />
-          <v-switch v-model="isActive" label="Activo" color="primary" class="mt-2" />
+          <v-switch v-model="isActive" label="Activo" color="primary" :disabled="isDemo" class="mt-2" />
         </v-card-text>
       </v-card>
 
       <v-card class="mb-6">
         <v-card-title class="flex items-center justify-between">
           Campos a extraer
-          <v-btn size="small" variant="text" @click="addField">+ Añadir campo</v-btn>
+          <v-btn v-if="!isDemo" size="small" variant="text" @click="addField">+ Añadir campo</v-btn>
         </v-card-title>
         <v-card-text>
           <div v-if="!fieldRows.length" class="py-4 text-center text-sm text-ink-900/60">
             Sin campos todavía. Añade al menos uno para poder generar informes.
           </div>
           <div v-for="(row, index) in fieldRows" :key="index" class="mb-3 flex items-start gap-2">
-            <v-text-field v-model="row.name" label="Nombre del campo" density="compact" hide-details class="flex-1" />
+            <v-text-field
+              v-model="row.name"
+              label="Nombre del campo"
+              density="compact"
+              hide-details
+              :disabled="isDemo"
+              class="flex-1"
+            />
             <v-select
               v-model="row.type"
               :items="FIELD_TYPES"
               label="Tipo"
               density="compact"
               hide-details
+              :disabled="isDemo"
               class="w-40"
             />
             <v-text-field
@@ -190,15 +202,22 @@ onMounted(async () => {
               label="Descripción"
               density="compact"
               hide-details
+              :disabled="isDemo"
               class="flex-1"
             />
-            <v-checkbox v-model="row.required" label="Obligatorio" density="compact" hide-details />
-            <v-btn icon="mdi-delete" size="small" variant="text" @click="removeField(index)" />
+            <v-checkbox
+              v-model="row.required"
+              label="Obligatorio"
+              density="compact"
+              hide-details
+              :disabled="isDemo"
+            />
+            <v-btn v-if="!isDemo" icon="mdi-delete" size="small" variant="text" @click="removeField(index)" />
           </div>
         </v-card-text>
       </v-card>
 
-      <div class="mb-6 flex justify-end">
+      <div v-if="!isDemo" class="mb-6 flex justify-end">
         <v-btn color="primary" :loading="saving" @click="onSave">Guardar cambios</v-btn>
       </div>
 
@@ -222,7 +241,7 @@ onMounted(async () => {
             </template>
           </AdminResourceTable>
 
-          <div class="mt-4 flex items-start gap-2">
+          <div v-if="!isDemo" class="mt-4 flex items-start gap-2">
             <v-file-input
               v-model="fileInput"
               label="Subir nueva plantilla (.docx)"
