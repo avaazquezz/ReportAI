@@ -96,7 +96,9 @@ async def seed_demo_tenant(*, reset: bool = False) -> None:
             description="Internal meeting minutes",
             field_schema=FIELD_SCHEMA,
             prompt_instructions="Extract meeting minutes fields from an internal company meeting transcript.",
-            notification_emails=["demo-reports@example.com"],
+            # example.com is an RFC 2606 reserved domain (dev only) — a live public demo
+            # needs a real monitored inbox so the email leg of the demo actually works.
+            notification_emails=[settings.DEMO_NOTIFICATION_EMAIL or "demo-reports@example.com"],
             is_active=True,
         )
 
