@@ -31,6 +31,21 @@ class ReportRepository(BaseRepository[Report]):
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
+    async def count_recent_for_sender(
+        self, *, tenant_id: uuid.UUID, requester_identifier: str, since: datetime
+    ) -> int:
+        query = (
+            select(func.count())
+            .select_from(Report)
+            .where(
+                Report.tenant_id == tenant_id,
+                Report.requester_identifier == requester_identifier,
+                Report.created_at >= since,
+            )
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
+
     async def claim_for_resume(self, report_id: uuid.UUID) -> bool:
         """Atomically flip a paused report back to 'pending' (commits). Returns True if
         this call won the claim — the loser of a concurrent duplicate reply must not

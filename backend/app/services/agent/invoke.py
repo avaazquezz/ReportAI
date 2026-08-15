@@ -1,14 +1,17 @@
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import BackgroundTasks
 from langgraph.types import Command
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.channel_connection import ChannelConnection
 from app.models.report import Report
+from app.repositories.execution_log_repository import ExecutionLogRepository
 from app.repositories.report_repository import ReportRepository
 from app.services.agent.graph import get_compiled_graph
 from app.services.agent.nodes._shared import send_on_origin_channel
@@ -21,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 _FAILURE_MESSAGE = "Sorry, we couldn't generate your report. Please try again or contact support."
 _REJECTED_SENDER_MESSAGE = "Sorry, you're not authorized to use this channel. Contact your administrator."
+_RATE_LIMITED_MESSAGE = "You've reached the hourly report limit. Please try again later."
+_SPEND_CAPPED_MESSAGE = "The service has reached its daily usage cap. Please try again tomorrow."
 
 _INTERRUPT_KIND_TO_STATUS = {
     "select_document_type": "awaiting_doctype_selection",
@@ -69,11 +74,15 @@ async def _notify_failure_best_effort(state: AgentState) -> None:
         logger.warning("Failed to notify sender %s of pipeline failure", state.sender_id, exc_info=True)
 
 
-async def _reject_sender_best_effort(connection: ChannelConnection, incoming: IncomingMessage) -> None:
+async def _reject_sender_best_effort(
+    connection: ChannelConnection,
+    incoming: IncomingMessage,
+    message: str = _REJECTED_SENDER_MESSAGE,
+) -> None:
     try:
         adapter = get_channel_adapter(connection)
         await adapter.send_message(
-            OutgoingMessage(recipient_id=incoming.sender_id, text=_REJECTED_SENDER_MESSAGE)
+            OutgoingMessage(recipient_id=incoming.sender_id, text=message)
         )
     except Exception:
         logger.warning(
@@ -100,6 +109,14 @@ async def start_or_resume_pipeline(
         await _reject_sender_best_effort(connection, incoming)
         return None
 
+    # Global wallet guard — checked before both paths (a correction reply re-extracts).
+    if settings.DAILY_SPEND_CAP_USD > 0:
+        midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        spent = await ExecutionLogRepository(db).total_cost_since(midnight)
+        if spent >= settings.DAILY_SPEND_CAP_USD:
+            await _reject_sender_best_effort(connection, incoming, _SPEND_CAPPED_MESSAGE)
+            return None
+
     report_repo = ReportRepository(db)
     pending = await report_repo.find_pending_for_sender(
         tenant_id=connection.tenant_id, requester_identifier=incoming.sender_id
@@ -111,6 +128,17 @@ async def start_or_resume_pipeline(
             db=db, report=pending, reply_text=incoming.text or "", background_tasks=background_tasks
         )
         return pending.id
+
+    # New runs only — a reply to a paused report must never be rate-limited away.
+    if settings.SENDER_RATE_LIMIT_PER_HOUR > 0:
+        recent = await report_repo.count_recent_for_sender(
+            tenant_id=connection.tenant_id,
+            requester_identifier=incoming.sender_id,
+            since=datetime.now(UTC) - timedelta(hours=1),
+        )
+        if recent >= settings.SENDER_RATE_LIMIT_PER_HOUR:
+            await _reject_sender_best_effort(connection, incoming, _RATE_LIMITED_MESSAGE)
+            return None
 
     report = await report_repo.create(
         tenant_id=connection.tenant_id,
