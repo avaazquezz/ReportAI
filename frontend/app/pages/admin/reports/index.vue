@@ -3,27 +3,35 @@ import type { Report } from '~/types'
 
 definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
 
-const { items, total, loading, error, fetchList, download } = useReports()
+const { items, total, loading, error, fetchList, approve, reject, download } = useReports()
 const { show } = useSnackbar()
 
 const STATUS_OPTIONS = [
   { title: 'Todos', value: null },
   { title: 'Pendiente', value: 'pending' },
+  { title: 'Esperando aprobación', value: 'awaiting_approval' },
+  { title: 'Esperando selección', value: 'awaiting_doctype_selection' },
   { title: 'Entregado', value: 'delivered' },
   { title: 'Fallido', value: 'failed' }
 ]
 
 const STATUS_COLOR: Record<string, string> = {
   pending: 'pending',
+  awaiting_approval: 'pending',
+  awaiting_doctype_selection: 'pending',
   delivered: 'approved',
   failed: 'failed'
 }
 
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Pendiente',
+  awaiting_approval: 'Esperando aprobación',
+  awaiting_doctype_selection: 'Esperando selección',
   delivered: 'Entregado',
   failed: 'Fallido'
 }
+
+const AWAITING_STATUSES = ['awaiting_approval', 'awaiting_doctype_selection']
 
 const statusFilter = ref<string | null>(null)
 const lastOptions = ref({ page: 1, itemsPerPage: 10 })
@@ -57,6 +65,28 @@ async function onDownload(report: Report) {
   } catch {
     show('No se pudo descargar el informe.', 'error')
   }
+}
+
+async function onApprove(report: Report) {
+  try {
+    await approve(report.id)
+    show('Informe aprobado — generando el documento.', 'success')
+  } catch {
+    show('No se pudo aprobar el informe.', 'error')
+  }
+  detailDialog.value = false
+  await refetch(lastOptions.value)
+}
+
+async function onReject(report: Report) {
+  try {
+    await reject(report.id)
+    show('Informe rechazado.', 'success')
+  } catch {
+    show('No se pudo rechazar el informe.', 'error')
+  }
+  detailDialog.value = false
+  await refetch(lastOptions.value)
 }
 </script>
 
@@ -119,6 +149,21 @@ async function onDownload(report: Report) {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
+          <v-btn
+            v-if="selectedReport.status === 'awaiting_approval'"
+            color="success"
+            @click="onApprove(selectedReport)"
+          >
+            Aprobar
+          </v-btn>
+          <v-btn
+            v-if="AWAITING_STATUSES.includes(selectedReport.status)"
+            color="failed"
+            variant="text"
+            @click="onReject(selectedReport)"
+          >
+            Rechazar
+          </v-btn>
           <v-btn v-if="selectedReport.download_url" color="primary" @click="onDownload(selectedReport)">
             Descargar PDF
           </v-btn>
