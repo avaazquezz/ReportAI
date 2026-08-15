@@ -1,5 +1,8 @@
 html {
   font-family: 'IBM Plex Sans', sans-serif;
+  /* Sticky header is ~68px tall — without this, anchor nav (#como-funciona,
+     #diferencia, #ejemplo-real) lands section content underneath it. */
+  scroll-padding-top: 88px;
 }
 
 /* Non-negotiable regardless of how "spectacular" the landing's motion is meant to be. */

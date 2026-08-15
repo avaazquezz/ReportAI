@@ -34,7 +34,6 @@ const FIELDS = [
   }
 ]
 
-const EXTRACTION_COST_USD = 0.018147
 const eyebrowTag = '{{ ejemplo_real }}'
 
 // One reveal "line" per sentence — natural caption-style stagger, and a clean
@@ -150,8 +149,8 @@ function onLoadedMetadata() {
         </p>
         <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">Esto no es una maqueta.</h2>
         <p class="mx-auto mt-3 max-w-xl font-body text-base text-ink-900/70">
-          Es la salida real del sistema: una nota de voz de verdad, transcrita por Groq Whisper,
-          extraída por Claude y rellenada en la plantilla — sin editar nada después. Dale a play.
+          Es la salida real del sistema: una nota de voz de verdad, transcrita, extraída y rellenada
+          en tu plantilla por la IA — sin editar nada después. Dale a play.
         </p>
       </div>
 
@@ -205,7 +204,7 @@ function onLoadedMetadata() {
 
           <div class="mt-6 min-h-[7rem] border-t border-slate-300 pt-4">
             <p class="mb-2 font-mono text-xs uppercase tracking-wide text-ink-900/40">
-              Transcripción (Groq Whisper)
+              Transcripción automática
             </p>
             <p v-if="!played" class="font-body text-sm text-ink-900/40">
               Dale a play para ver la transcripción real aparecer aquí.
@@ -240,10 +239,7 @@ function onLoadedMetadata() {
           <div class="flex-1 overflow-hidden rounded-lg border border-slate-300">
             <iframe src="/demo/informe.pdf" title="Informe generado" class="h-full min-h-[320px] w-full" />
           </div>
-          <div class="mt-4 flex items-center justify-between">
-            <p class="font-mono text-xs text-ink-900/50">
-              Generado con Claude Sonnet 5 · ${{ EXTRACTION_COST_USD.toFixed(6) }}
-            </p>
+          <div class="mt-4 flex items-center justify-end">
             <a
               href="/demo/informe.pdf"
               download
