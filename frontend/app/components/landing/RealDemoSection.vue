@@ -1,32 +1,40 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-// Real pipeline output, generated once via backend/scripts/generate_landing_demo_asset.py
-// (real Groq Whisper transcription, real Claude extraction, real docxtpl+Gotenberg render).
-// Not a live call — see PROJECT_ROADMAP.md decisions log, 2026-08-15.
+// Real pipeline output, generated once via backend/scripts/generate_landing_demo_audio.py
+// (real OpenAI TTS) + generate_landing_demo_asset.py (real Groq Whisper transcription,
+// real Claude extraction, real docxtpl+Gotenberg render). Not a live call — see
+// PROJECT_ROADMAP.md decisions log, 2026-08-15.
 const TRANSCRIPT =
-  'Hola, acabo de salir de la reunión con Global Suministros Ibéricos, en Valencia. Estaban ' +
-  'Marta Delgado, la directora de compras, y Óscar Ferreira, del departamento técnico. ' +
-  'Aceptan subir el volumen un 15% a partir de octubre, a cambio de reducir el plazo de ' +
-  'entrega a dos semanas. Tengo que mandarles la propuesta actualizada antes del viernes, y ' +
-  'Óscar confirmará la disponibilidad de almacén la semana que viene. La reunión ha ido muy bien.'
+  'Hola, buenas tardes. Soy Javier Molina. Hoy, 18 de agosto, acabo de terminar la ' +
+  'reunión con Construcciones Marítimas del Levante, en sus oficinas de Alicante. Han ' +
+  'asistido Marta Delgado, la directora de compras, Oscar Ferreira, del departamento ' +
+  'técnico, y Laura Sanz, responsable de logística. Hemos repasado tres puntos. Primero, ' +
+  'el pedido trimestral, que sube un 15% a partir de octubre. Segundo, la ampliación del ' +
+  'contrato de mantenimiento a dos años. Y tercero, el cambio de proveedor de transporte ' +
+  'para las entregas del sur. Se ha decidido aceptar el incremento de volumen, reduciendo ' +
+  'el plazo de entrega a dos semanas, y renovar el contrato de mantenimiento con las ' +
+  'condiciones actuales. Como acciones, yo, Javier Molina, debo enviar la propuesta ' +
+  'actualizada a Marta antes del viernes 21 de agosto. Oscar confirmará la disponibilidad ' +
+  'de almacén el lunes 24 de agosto. Y Laura tiene que contactar con el nuevo ' +
+  'transportista antes de fin de mes. Quedamos en vernos otra vez el 15 de septiembre ' +
+  'para cerrar el tema del transporte. En general, muy buena reunión.'
 
 const FIELDS = [
-  { label: 'fecha_reunión', value: '2024-01-01' },
-  { label: 'asistentes', value: 'Marta Delgado, Óscar Ferreira' },
+  { label: 'company_name', value: 'Construcciones Marítimas del Levante' },
+  { label: 'meeting_date', value: '2025-08-18' },
+  { label: 'attendees', value: 'Javier Molina, Marta Delgado, Óscar Ferreira, Laura Sanz' },
   {
-    label: 'resumen',
-    value:
-      'Reunión con Global Suministros Ibéricos en Valencia. Se acordó incrementar el volumen ' +
-      'un 15% a partir de octubre a cambio de reducir el plazo de entrega a dos semanas.'
+    label: 'decisions',
+    value: 'Aceptar el incremento de volumen (15%), reduciendo el plazo de entrega a dos semanas'
   },
   {
-    label: 'acciones',
-    value: 'Enviar la propuesta antes del viernes · Óscar confirma almacén la semana que viene'
+    label: 'action_items',
+    value: 'Enviar la propuesta a Marta — Javier Molina, 21/08'
   }
 ]
 
-const EXTRACTION_COST_USD = 0.007905
+const EXTRACTION_COST_USD = 0.018147
 const eyebrowTag = '{{ ejemplo_real }}'
 
 // One reveal "line" per sentence — natural caption-style stagger, and a clean
@@ -107,10 +115,13 @@ function revealSequence() {
     )
 }
 
-function onPlay() {
+async function onPlay() {
   playing.value = true
   if (!played.value) {
     played.value = true
+    // The transcript spans only exist in the DOM once Vue re-renders the v-else
+    // branch this flips on — GSAP would otherwise animate an empty ref array.
+    await nextTick()
     revealSequence()
   }
 }
