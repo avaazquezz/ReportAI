@@ -1,6 +1,8 @@
 import tempfile
 from pathlib import Path
+from unittest.mock import AsyncMock
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +10,7 @@ from app.core.security import hash_password
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
+from app.services.agent import invoke
 
 
 async def _create_tenant_admin(db: AsyncSession, *, name: str = "Acme", slug: str = "acme") -> TenantUser:
@@ -93,6 +96,93 @@ async def test_get_report_cross_tenant_returns_404(client: AsyncClient, db: Asyn
     )
 
     assert response.status_code == 404
+
+
+async def test_approve_resumes_awaiting_report(
+    client: AsyncClient, db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user = await _create_tenant_admin(db)
+    token = await _login(client, user.email)
+    report = _make_report(user.tenant_id, status="awaiting_approval")
+    db.add(report)
+    await db.commit()
+    await db.refresh(report)
+
+    resume_mock = AsyncMock()
+    monkeypatch.setattr(invoke, "_resume_graph", resume_mock)
+
+    response = await client.post(
+        f"/reports/{report.id}/approve", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 202
+    assert response.json()["status"] == "pending"  # claimed for the in-flight resume
+    resume_mock.assert_awaited_once_with(str(report.id), "CONFIRM")
+
+
+async def test_approve_conflict_when_not_awaiting(client: AsyncClient, db: AsyncSession) -> None:
+    user = await _create_tenant_admin(db)
+    token = await _login(client, user.email)
+    report = _make_report(user.tenant_id, status="delivered")
+    db.add(report)
+    await db.commit()
+    await db.refresh(report)
+
+    response = await client.post(
+        f"/reports/{report.id}/approve", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 409
+
+
+async def test_approve_cross_tenant_returns_404(client: AsyncClient, db: AsyncSession) -> None:
+    owner = await _create_tenant_admin(db, name="Acme", slug="acme")
+    other = await _create_tenant_admin(db, name="Other Co", slug="other")
+    report = _make_report(owner.tenant_id, status="awaiting_approval")
+    db.add(report)
+    await db.commit()
+    await db.refresh(report)
+
+    other_token = await _login(client, other.email)
+    response = await client.post(
+        f"/reports/{report.id}/approve", headers={"Authorization": f"Bearer {other_token}"}
+    )
+
+    assert response.status_code == 404
+
+
+async def test_reject_marks_paused_report_failed(client: AsyncClient, db: AsyncSession) -> None:
+    user = await _create_tenant_admin(db)
+    token = await _login(client, user.email)
+    report = _make_report(user.tenant_id, status="awaiting_approval")
+    db.add(report)
+    await db.commit()
+    await db.refresh(report)
+
+    response = await client.post(
+        f"/reports/{report.id}/reject", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["error_detail"] == "Rejected by admin"
+    assert body["completed_at"] is not None
+
+
+async def test_reject_conflict_when_not_paused(client: AsyncClient, db: AsyncSession) -> None:
+    user = await _create_tenant_admin(db)
+    token = await _login(client, user.email)
+    report = _make_report(user.tenant_id, status="delivered")
+    db.add(report)
+    await db.commit()
+    await db.refresh(report)
+
+    response = await client.post(
+        f"/reports/{report.id}/reject", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 409
 
 
 async def test_download_report_returns_file_for_own_tenant(client: AsyncClient, db: AsyncSession) -> None:

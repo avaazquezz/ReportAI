@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document_type import DocumentType
@@ -30,6 +30,35 @@ class ReportRepository(BaseRepository[Report]):
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+
+    async def count_recent_for_sender(
+        self, *, tenant_id: uuid.UUID, requester_identifier: str, since: datetime
+    ) -> int:
+        query = (
+            select(func.count())
+            .select_from(Report)
+            .where(
+                Report.tenant_id == tenant_id,
+                Report.requester_identifier == requester_identifier,
+                Report.created_at >= since,
+            )
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
+
+    async def claim_for_resume(self, report_id: uuid.UUID) -> bool:
+        """Atomically flip a paused report back to 'pending' (commits). Returns True if
+        this call won the claim — the loser of a concurrent duplicate reply must not
+        schedule a second resume of the same thread."""
+        result = await self.db.execute(
+            update(Report)
+            .where(Report.id == report_id, Report.status.in_(PENDING_STATUSES))
+            .values(status="pending")
+            .returning(Report.id)
+        )
+        claimed = result.scalar_one_or_none() is not None
+        await self.db.commit()
+        return claimed
 
     async def get_with_document_type_name(
         self, report_id: uuid.UUID

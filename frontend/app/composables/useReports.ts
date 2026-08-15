@@ -29,6 +29,16 @@ export function useReports() {
     return await api<Report>(`/reports/${id}`)
   }
 
+  async function approve(id: string): Promise<Report> {
+    const api = useApi()
+    return await api<Report>(`/reports/${id}/approve`, { method: 'POST' })
+  }
+
+  async function reject(id: string): Promise<Report> {
+    const api = useApi()
+    return await api<Report>(`/reports/${id}/reject`, { method: 'POST' })
+  }
+
   async function download(id: string, suggestedName: string) {
     const api = useApi()
     const blob = await api<Blob>(`/reports/${id}/download`, { responseType: 'blob' })
@@ -40,5 +50,5 @@ export function useReports() {
     URL.revokeObjectURL(url)
   }
 
-  return { items, total, loading, error, fetchList, getById, download }
+  return { items, total, loading, error, fetchList, getById, approve, reject, download }
 }

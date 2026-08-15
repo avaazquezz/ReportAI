@@ -84,3 +84,41 @@ async def test_me_rejects_missing_token(client: AsyncClient) -> None:
     response = await client.get("/auth/me")
 
     assert response.status_code == 401
+
+
+async def test_demo_login_404_when_not_configured(client: AsyncClient) -> None:
+    response = await client.post("/auth/demo-login")
+
+    assert response.status_code == 404
+
+
+async def test_demo_login_returns_working_readonly_session(
+    client: AsyncClient, db: AsyncSession, monkeypatch
+) -> None:
+    from app.core.config import settings
+
+    await _create_user(db)
+    monkeypatch.setattr(settings, "DEMO_USER_EMAIL", "user@acme.test")
+
+    login = await client.post("/auth/demo-login")
+    assert login.status_code == 200
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    me = await client.get("/auth/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["is_demo"] is True
+
+    # Reads work, writes are blocked by the single guard in get_current_user.
+    reads = await client.get("/channels", headers=headers)
+    assert reads.status_code == 200
+    write = await client.post(
+        "/channels",
+        headers=headers,
+        json={
+            "channel_type": "telegram",
+            "display_name": "x",
+            "credentials": {"bot_token": "t"},
+            "allowed_senders": [],
+        },
+    )
+    assert write.status_code == 403

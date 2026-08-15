@@ -1,8 +1,12 @@
 export function useApi() {
   const config = useRuntimeConfig()
+  // In prod apiBase is the relative '/api', which has no origin during SSR —
+  // server-side fetches use the container-internal backend URL instead.
+  const baseURL =
+    import.meta.server && config.apiBaseServer ? config.apiBaseServer : config.public.apiBase
 
   return $fetch.create({
-    baseURL: config.public.apiBase,
+    baseURL,
     onRequest({ options }) {
       const token = useCookie('reportai_token').value
       if (token) {

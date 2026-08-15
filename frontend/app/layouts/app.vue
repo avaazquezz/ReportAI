@@ -45,6 +45,16 @@ const drawer = ref(true)
 
     <v-main>
       <v-container fluid class="max-w-[1400px] py-8">
+        <v-alert
+          v-if="authStore.user?.is_demo"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-6"
+        >
+          Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe
+          aparecer aquí.
+        </v-alert>
         <slot />
       </v-container>
     </v-main>

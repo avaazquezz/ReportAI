@@ -4,6 +4,8 @@ definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
 const { items, total, loading, error, fetchList, create } = useDocumentTypes()
 const { show } = useSnackbar()
 const router = useRouter()
+const authStore = useAuthStore()
+const isDemo = computed(() => authStore.user?.is_demo ?? false)
 
 const headers = [
   { title: 'Nombre', key: 'name' },
@@ -44,7 +46,7 @@ async function onCreate() {
   <div>
     <div class="mb-6 flex items-center justify-between">
       <h1 class="font-display text-2xl font-bold text-ink-900">Tipos de documento</h1>
-      <v-btn color="primary" @click="createDialog = true">Nuevo tipo</v-btn>
+      <v-btn v-if="!isDemo" color="primary" @click="createDialog = true">Nuevo tipo</v-btn>
     </div>
 
     <AdminResourceTable
@@ -61,7 +63,9 @@ async function onCreate() {
         </v-chip>
       </template>
       <template #item.actions="{ item }">
-        <v-btn size="small" variant="text" :to="`/admin/document-types/${item.id}`">Editar</v-btn>
+        <v-btn size="small" variant="text" :to="`/admin/document-types/${item.id}`">
+          {{ isDemo ? 'Ver' : 'Editar' }}
+        </v-btn>
       </template>
     </AdminResourceTable>
 

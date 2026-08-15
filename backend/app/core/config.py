@@ -24,11 +24,31 @@ class Settings(BaseSettings):
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
 
+    # ── Reverse proxy (prod serves the API under this stripped prefix;
+    #    empty in dev, where the API is reached directly) ─────────────────
+    API_ROOT_PATH: str = ""
+
+    # ── Public origin webhooks are registered under (e.g. Telegram setWebhook).
+    #    Empty in dev — scripts that need it fail loudly instead of guessing. ──
+    PUBLIC_BASE_URL: str = ""
+
     # ── Agent pipeline ───────────────────────────────────────────────────
     DOCUMENT_STORAGE_PATH: str = "storage"
     MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3
     MAX_VALIDATION_RETRIES: int = 3
     MAX_CORRECTION_RETRIES: int = 2
+
+    # ── Abuse/cost guards (0 = disabled; enable for the public demo) ─────
+    SENDER_RATE_LIMIT_PER_HOUR: int = 0
+    DAILY_SPEND_CAP_USD: float = 0.0
+    MAX_AUDIO_BYTES: int = 10 * 1024 * 1024
+
+    # ── Public demo. Setting DEMO_USER_EMAIL enables one-click demo login
+    #    and makes that account read-only. The others feed the seed script. ─
+    DEMO_USER_EMAIL: str = ""
+    DEMO_USER_PASSWORD: str = ""
+    DEMO_TELEGRAM_BOT_TOKEN: str = ""
+    DEMO_NOTIFICATION_EMAIL: str = ""
 
     # ── Anthropic (extraction — the only node that uses Claude) ─────────
     ANTHROPIC_API_KEY: str

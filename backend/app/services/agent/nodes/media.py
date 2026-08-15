@@ -31,6 +31,12 @@ async def download_media_node(state: AgentState) -> AgentState:
     adapter = get_channel_adapter(connection)
     media_bytes = await adapter.download_media(state.media_reference)
 
+    # Single choke point for all three channels — caps what reaches Groq.
+    if len(media_bytes) > settings.MAX_AUDIO_BYTES:
+        raise ValueError(
+            f"Audio too large: {len(media_bytes)} bytes (limit {settings.MAX_AUDIO_BYTES})"
+        )
+
     storage_dir = Path(settings.DOCUMENT_STORAGE_PATH) / str(state.report_id)
     storage_dir.mkdir(parents=True, exist_ok=True)
     audio_path = storage_dir / "audio.ogg"

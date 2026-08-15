@@ -5,6 +5,8 @@ definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
 
 const { items, total, loading, error, fetchList, create, update } = useChannelConnections()
 const { show } = useSnackbar()
+const authStore = useAuthStore()
+const isDemo = computed(() => authStore.user?.is_demo ?? false)
 
 const CHANNEL_TYPES: { value: ChannelType; title: string }[] = [
   { value: 'telegram', title: 'Telegram' },
@@ -128,7 +130,7 @@ async function confirmToggle() {
   <div>
     <div class="mb-6 flex items-center justify-between">
       <h1 class="font-display text-2xl font-bold text-ink-900">Canales</h1>
-      <v-btn color="primary" @click="openCreate">Nuevo canal</v-btn>
+      <v-btn v-if="!isDemo" color="primary" @click="openCreate">Nuevo canal</v-btn>
     </div>
 
     <AdminResourceTable
@@ -152,10 +154,12 @@ async function confirmToggle() {
         </v-chip>
       </template>
       <template #item.actions="{ item }">
-        <v-btn size="small" variant="text" @click="openEdit(item)">Editar</v-btn>
-        <v-btn size="small" variant="text" @click="askToggle(item)">
-          {{ item.is_active ? 'Desactivar' : 'Reactivar' }}
-        </v-btn>
+        <template v-if="!isDemo">
+          <v-btn size="small" variant="text" @click="openEdit(item)">Editar</v-btn>
+          <v-btn size="small" variant="text" @click="askToggle(item)">
+            {{ item.is_active ? 'Desactivar' : 'Reactivar' }}
+          </v-btn>
+        </template>
       </template>
     </AdminResourceTable>
 
