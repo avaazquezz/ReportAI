@@ -41,5 +41,8 @@ lint: ## Run ruff and mypy against the backend
 seed-demo: ## Seed a demo tenant with a self-generated template
 	$(COMPOSE) exec backend python scripts/seed_demo_tenant.py
 
+reset-demo: ## Delete the demo tenant (cascades all its data) and re-seed clean
+	$(COMPOSE) exec backend python scripts/seed_demo_tenant.py --reset
+
 set-webhook: ## Register the Telegram webhook with the Bot API (needs PUBLIC_BASE_URL)
 	$(COMPOSE) exec backend python scripts/set_telegram_webhook.py

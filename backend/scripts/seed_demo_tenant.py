@@ -1,10 +1,16 @@
 """Seeds a demo tenant with a self-generated document template — no manual asset creation.
 Idempotent: safe to run repeatedly, does nothing if the demo tenant already exists.
 
-Usage: make seed-demo
+Usage: make seed-demo            # seed if missing
+       make reset-demo           # DELETE the demo tenant (cascades) and re-seed clean
+
+Credentials come from DEMO_USER_EMAIL / DEMO_USER_PASSWORD / DEMO_TELEGRAM_BOT_TOKEN
+when set (prod), with dev-only fallbacks otherwise.
 """
 
 import asyncio
+import secrets
+import sys
 import uuid
 from pathlib import Path
 
@@ -21,8 +27,9 @@ from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.repositories.base import BaseRepository
 
-DEMO_USER_EMAIL = "demo@reportai.dev"
-DEMO_USER_PASSWORD = "DemoPass123!"
+DEMO_USER_EMAIL = settings.DEMO_USER_EMAIL or "demo@reportai.dev"
+DEMO_USER_PASSWORD = settings.DEMO_USER_PASSWORD or "DemoPass123!"
+DEMO_BOT_TOKEN = settings.DEMO_TELEGRAM_BOT_TOKEN or "TEST_TOKEN_NOT_REAL_REPLACE_BEFORE_USE"
 
 FIELD_SCHEMA = {
     "meeting_date": {"type": "date", "description": "Date the meeting took place, ISO 8601", "required": True},
@@ -64,10 +71,17 @@ async def _ensure_demo_user(session: AsyncSession, tenant_id: uuid.UUID) -> None
     print(f"Demo login: {DEMO_USER_EMAIL} / {DEMO_USER_PASSWORD}")
 
 
-async def seed_demo_tenant() -> None:
+async def seed_demo_tenant(*, reset: bool = False) -> None:
     async with AsyncSessionLocal() as session:
         tenant_repo = BaseRepository(Tenant, session)
         existing = await tenant_repo.list(filters={"slug": "demo"}, limit=1)
+        if existing and reset:
+            # Every tenant-scoped FK cascades — one DELETE wipes reports, logs,
+            # connections, templates and users, then we re-seed from scratch.
+            await tenant_repo.delete(existing[0])
+            await session.commit()
+            print("Demo tenant deleted — re-seeding clean.")
+            existing = []
         if existing:
             print("Demo tenant already exists — checking demo user.")
             await _ensure_demo_user(session, existing[0].id)
@@ -99,20 +113,25 @@ async def seed_demo_tenant() -> None:
         )
 
         connection_repo = BaseRepository(ChannelConnection, session)
-        await connection_repo.create(
+        connection = await connection_repo.create(
             tenant_id=tenant.id,
             channel_type="telegram",
             display_name="Demo Telegram Bot",
-            credentials={"bot_token": "TEST_TOKEN_NOT_REAL_REPLACE_BEFORE_USE"},
+            credentials={
+                "bot_token": DEMO_BOT_TOKEN,
+                "secret_token": secrets.token_urlsafe(32),
+            },
             is_active=True,
         )
 
         await session.commit()
         print(f"Seeded demo tenant {tenant.id} with document type {document_type.id}.")
-        print("Replace the fake bot_token in channel_connections before sending real messages.")
+        if not settings.DEMO_TELEGRAM_BOT_TOKEN:
+            print("DEMO_TELEGRAM_BOT_TOKEN not set — seeded a fake bot_token (dev only).")
+        print(f"Telegram connection {connection.id} — register with scripts/set_telegram_webhook.py")
 
         await _ensure_demo_user(session, tenant.id)
 
 
 if __name__ == "__main__":
-    asyncio.run(seed_demo_tenant())
+    asyncio.run(seed_demo_tenant(reset="--reset" in sys.argv[1:]))

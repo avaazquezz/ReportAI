@@ -33,3 +33,4 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     tenant_id: uuid.UUID | None
+    is_demo: bool = False

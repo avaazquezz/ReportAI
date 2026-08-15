@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     DAILY_SPEND_CAP_USD: float = 0.0
     MAX_AUDIO_BYTES: int = 10 * 1024 * 1024
 
+    # ── Public demo. Setting DEMO_USER_EMAIL enables one-click demo login
+    #    and makes that account read-only. The others feed the seed script. ─
+    DEMO_USER_EMAIL: str = ""
+    DEMO_USER_PASSWORD: str = ""
+    DEMO_TELEGRAM_BOT_TOKEN: str = ""
+
     # ── Anthropic (extraction — the only node that uses Claude) ─────────
     ANTHROPIC_API_KEY: str
     EXTRACTION_MODEL: str = "claude-sonnet-5"
