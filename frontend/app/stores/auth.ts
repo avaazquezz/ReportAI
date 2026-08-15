@@ -16,6 +16,16 @@ export const useAuthStore = defineStore('auth', {
         method: 'POST',
         body: { email, password }
       })
+      await this.applySession(tokens)
+    },
+
+    async demoLogin() {
+      const api = useApi()
+      const tokens = await api<TokenResponse>('/auth/demo-login', { method: 'POST' })
+      await this.applySession(tokens)
+    },
+
+    async applySession(tokens: TokenResponse) {
       useCookie('reportai_token', { sameSite: 'strict', secure: !import.meta.dev }).value =
         tokens.access_token
       // useCookie() writes document.cookie via an async watcher (not synchronously on

@@ -4,6 +4,7 @@ export interface User {
   full_name: string
   role: string
   tenant_id: string | null
+  is_demo: boolean
 }
 
 export interface TokenResponse {

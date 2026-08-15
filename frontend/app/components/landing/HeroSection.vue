@@ -6,6 +6,22 @@ const subheadline = ref<HTMLElement | null>(null)
 const ctas = ref<HTMLElement | null>(null)
 const demo = ref<HTMLElement | null>(null)
 
+const authStore = useAuthStore()
+const demoLoading = ref(false)
+
+async function tryDemo() {
+  demoLoading.value = true
+  try {
+    await authStore.demoLogin()
+    await navigateTo('/dashboard')
+  } catch {
+    // Demo login not available on this deployment — fall back to the login page.
+    await navigateTo('/login')
+  } finally {
+    demoLoading.value = false
+  }
+}
+
 onMounted(() => {
   const targets = [headline.value, subheadline.value, ctas.value, demo.value]
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -32,9 +48,17 @@ onMounted(() => {
         plantillas genéricas, sin instalar nada.
       </p>
       <div ref="ctas" class="mt-8 flex flex-wrap items-center gap-5">
+        <button
+          type="button"
+          :disabled="demoLoading"
+          class="rounded-md bg-capture-500 px-6 py-3 font-body text-base font-semibold text-white transition-transform hover:scale-[1.02] disabled:opacity-60"
+          @click="tryDemo"
+        >
+          {{ demoLoading ? 'Entrando…' : 'Probar la demo' }}
+        </button>
         <NuxtLink
           to="/login"
-          class="rounded-md bg-capture-500 px-6 py-3 font-body text-base font-semibold text-white transition-transform hover:scale-[1.02]"
+          class="rounded-md border border-ink-900/20 px-6 py-3 font-body text-base font-semibold text-ink-900 transition-colors hover:border-capture-500 hover:text-capture-500"
         >
           Acceder
         </NuxtLink>
