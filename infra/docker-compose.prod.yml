@@ -1,6 +1,7 @@
-# Structurally complete for Phase 4 (real server deployment) — untested until then.
 # Assumes an external Traefik reverse proxy already running on the "web" network,
 # with a certificate resolver named "le" already configured at the Traefik level.
+# Single-domain routing: ${APP_DOMAIN}/api/* → backend (prefix stripped, backend
+# runs with API_ROOT_PATH=/api), everything else → the Nuxt frontend.
 services:
   postgres:
     image: postgres:16-alpine
@@ -53,18 +54,44 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=web"
-      - "traefik.http.routers.reportai-api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.reportai-api.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.reportai-api.entrypoints=websecure"
       - "traefik.http.routers.reportai-api.tls.certresolver=le"
-      - "traefik.http.routers.reportai-api.middlewares=reportai-api-headers@docker"
+      - "traefik.http.routers.reportai-api.priority=10"
+      - "traefik.http.routers.reportai-api.middlewares=reportai-api-strip@docker,reportai-api-headers@docker"
       - "traefik.http.services.reportai-api.loadbalancer.server.port=8000"
-      - "traefik.http.routers.reportai-api-http.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.reportai-api-http.entrypoints=web"
-      - "traefik.http.routers.reportai-api-http.middlewares=reportai-api-https-redirect@docker"
-      - "traefik.http.middlewares.reportai-api-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.reportai-api-strip.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.X-Frame-Options=DENY"
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
+
+  frontend:
+    build:
+      context: frontend
+    container_name: reportai_frontend
+    environment:
+      NUXT_PUBLIC_API_BASE: /api
+      NUXT_API_BASE_SERVER: http://backend:8000
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - internal
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.reportai-web.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.reportai-web.entrypoints=websecure"
+      - "traefik.http.routers.reportai-web.tls.certresolver=le"
+      - "traefik.http.routers.reportai-web.priority=1"
+      - "traefik.http.services.reportai-web.loadbalancer.server.port=3000"
+      # One http→https redirect for the whole host — /api requests redirect here
+      # too, then the https routers split them by prefix.
+      - "traefik.http.routers.reportai-web-http.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.reportai-web-http.entrypoints=web"
+      - "traefik.http.routers.reportai-web-http.middlewares=reportai-https-redirect@docker"
+      - "traefik.http.middlewares.reportai-https-redirect.redirectscheme.scheme=https"
 
 networks:
   web:
