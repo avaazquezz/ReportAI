@@ -5,6 +5,8 @@ definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
 
 const { items, total, loading, error, fetchList, approve, reject, download } = useReports()
 const { show } = useSnackbar()
+const authStore = useAuthStore()
+const isDemo = computed(() => authStore.user?.is_demo ?? false)
 
 const STATUS_OPTIONS = [
   { title: 'Todos', value: null },
@@ -150,14 +152,14 @@ async function onReject(report: Report) {
         <v-card-actions>
           <v-spacer />
           <v-btn
-            v-if="selectedReport.status === 'awaiting_approval'"
+            v-if="!isDemo && selectedReport.status === 'awaiting_approval'"
             color="success"
             @click="onApprove(selectedReport)"
           >
             Aprobar
           </v-btn>
           <v-btn
-            v-if="AWAITING_STATUSES.includes(selectedReport.status)"
+            v-if="!isDemo && AWAITING_STATUSES.includes(selectedReport.status)"
             color="failed"
             variant="text"
             @click="onReject(selectedReport)"
