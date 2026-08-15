@@ -1,6 +1,7 @@
 <template>
   <div>
     <LandingHeroSection />
+    <LandingRealDemoSection />
     <LandingHowItWorksSection />
     <LandingDifferentiatorSection />
     <LandingTemplateFidelitySection />
