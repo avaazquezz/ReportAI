@@ -37,12 +37,17 @@
 make seed-demo   # demo tenant, one document type, a self-generated template
 ```
 
-Get the demo Telegram connection id and simulate an incoming text message:
+Get the demo Telegram connection id and its webhook secret (seeded connections
+carry one, and the route rejects requests without it) and simulate an incoming
+text message:
 ```
 CONN_ID=$(docker compose exec postgres psql -U reportai -d reportai -tAc \
   "select id from channel_connections where channel_type='telegram' limit 1;")
+SECRET=$(docker compose exec postgres psql -U reportai -d reportai -tAc \
+  "select credentials->>'secret_token' from channel_connections where id='${CONN_ID}';")
 curl -s -X POST "http://localhost:8000/webhooks/telegram/${CONN_ID}" \
   -H "Content-Type: application/json" \
+  -H "X-Telegram-Bot-Api-Secret-Token: ${SECRET}" \
   -d '{"message":{"chat":{"id":123456},"text":"Meeting today with Ana and Luis, discussed Q3 budget, action item: send proposal by Friday"}}'
 ```
 Expect an immediate `200` — the pipeline runs in a background task, proving the webhook isn't blocked on it.
@@ -62,9 +67,16 @@ Reply to resume:
 ```
 curl -s -X POST "http://localhost:8000/webhooks/telegram/${CONN_ID}" \
   -H "Content-Type: application/json" \
+  -H "X-Telegram-Bot-Api-Secret-Token: ${SECRET}" \
   -d '{"message":{"chat":{"id":123456},"text":"CONFIRM"}}'
 ```
-`reports.status` should end at `delivered` (the demo bot token is fake, so the actual Telegram send will fail loudly and log — that's expected without a real token; everything up to and including rendering the PDF can still be verified).
+Alternatively, approve from the API instead of the channel (the recovery path
+when the approval prompt never reached the requester): log in as the demo user
+and `POST /reports/{id}/approve`.
+
+With dev placeholder credentials the run ends `failed` at `deliver_email`
+(fake SMTP host) — expected; everything up to and including rendering the PDF
+via Gotenberg is still verified in the `execution_logs` trail.
 
 ## Common commands
 
