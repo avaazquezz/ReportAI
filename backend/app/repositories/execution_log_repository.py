@@ -29,6 +29,15 @@ class ExecutionLogRepository:
             "avg_latency_ms": float(avg_latency) if avg_latency is not None else None,
         }
 
+    async def total_cost_since(self, since: datetime) -> float:
+        """Platform-wide (no tenant filter) — feeds the global daily spend cap.
+        ponytail: seq scan, fine at demo scale; index created_at if it ever hurts."""
+        query = select(func.coalesce(func.sum(ExecutionLog.cost_usd), 0)).where(
+            ExecutionLog.created_at >= since
+        )
+        result = await self.db.execute(query)
+        return float(result.scalar_one() or 0)
+
     async def daily_cost_series(
         self, *, tenant_id: uuid.UUID, since: datetime
     ) -> list[tuple[str, float]]:

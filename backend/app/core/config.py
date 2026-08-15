@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     MAX_VALIDATION_RETRIES: int = 3
     MAX_CORRECTION_RETRIES: int = 2
 
+    # ── Abuse/cost guards (0 = disabled; enable for the public demo) ─────
+    SENDER_RATE_LIMIT_PER_HOUR: int = 0
+    DAILY_SPEND_CAP_USD: float = 0.0
+    MAX_AUDIO_BYTES: int = 10 * 1024 * 1024
+
     # ── Anthropic (extraction — the only node that uses Claude) ─────────
     ANTHROPIC_API_KEY: str
     EXTRACTION_MODEL: str = "claude-sonnet-5"
