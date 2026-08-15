@@ -67,8 +67,14 @@ onMounted(() => {
         </a>
       </div>
     </div>
-    <div ref="demo" class="flex justify-center md:justify-end">
+    <div ref="demo" class="flex flex-col items-center gap-3 md:items-end">
       <LandingVoiceToDocDemo />
+      <a
+        href="#ejemplo-real"
+        class="font-body text-sm text-ink-900/60 transition-colors hover:text-capture-500"
+      >
+        Mira un ejemplo real ↓
+      </a>
     </div>
   </section>
 </template>
