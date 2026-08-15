@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     DEMO_USER_EMAIL: str = ""
     DEMO_USER_PASSWORD: str = ""
     DEMO_TELEGRAM_BOT_TOKEN: str = ""
+    DEMO_NOTIFICATION_EMAIL: str = ""
 
     # ── Anthropic (extraction — the only node that uses Claude) ─────────
     ANTHROPIC_API_KEY: str
