@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
 
+    # ── Reverse proxy (prod serves the API under this stripped prefix;
+    #    empty in dev, where the API is reached directly) ─────────────────
+    API_ROOT_PATH: str = ""
+
     # ── Agent pipeline ───────────────────────────────────────────────────
     DOCUMENT_STORAGE_PATH: str = "storage"
     MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3

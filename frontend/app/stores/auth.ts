@@ -16,7 +16,8 @@ export const useAuthStore = defineStore('auth', {
         method: 'POST',
         body: { email, password }
       })
-      useCookie('reportai_token', { sameSite: 'strict' }).value = tokens.access_token
+      useCookie('reportai_token', { sameSite: 'strict', secure: !import.meta.dev }).value =
+        tokens.access_token
       // useCookie() writes document.cookie via an async watcher (not synchronously on
       // assignment) — without this, fetchMe() below can read the cookie before that
       // write lands and send /auth/me with no Authorization header.

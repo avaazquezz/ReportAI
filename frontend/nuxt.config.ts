@@ -8,6 +8,10 @@ export default defineNuxtConfig({
   modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxt/eslint'],
   css: ['@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
   runtimeConfig: {
+    // Server-side base for SSR fetches: inside Docker the public domain isn't
+    // reachable from the container, so SSR talks to the backend service directly.
+    // Empty means "use the public apiBase" (local dev).
+    apiBaseServer: process.env.NUXT_API_BASE_SERVER || '',
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
     }
