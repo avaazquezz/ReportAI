@@ -150,10 +150,28 @@ Core entities, all tenant-scoped from the first migration:
 - [ ] Evaluated and explicitly not prioritized: Discord (no fit with formal corporate reporting for this audience), Google Chat (same IT-gated integration cost as Teams, far smaller footprint in this market), SMS (can't carry voice notes — breaks the core "send a voice note" flow), RCS (fragmented, immature cross-carrier/OS support). Revisit only if a specific client asks.
 
 ### Phase 4 — Deployment & launch
-- [ ] Provision private server, Docker Compose + Traefik + TLS
-- [ ] Public demo domain: `reportai.is-a.dev` → A record to server, Traefik/Let's Encrypt TLS
-- [ ] Public demo tenant, one-click accessible
-- [ ] README with architecture and setup instructions
+
+Scope confirmed 2026-08-15: this phase plus the demo hardening below is the
+"finish line" of the project; Phases 3 and 5 stay deferred with their
+existing triggers.
+
+**A. Demo-readiness (code, runs locally first)**
+- [ ] Frontend production build: Dockerfile + Nuxt service in `docker-compose.prod.yml`; single-domain Traefik routing (`/api` prefix → backend, everything else → Nuxt) so prod needs no CORS config and no extra subdomain
+- [ ] Fix the 2026-08-13 deferred finding: an approval-prompt send failure must still reach the `await_human_approval` interrupt so the report stays approvable from the admin panel
+- [ ] Real Telegram demo bot (BotFather) wired to the demo tenant via config
+- [ ] One-click demo access from the landing (demo tenant login without typing credentials)
+- [ ] Abuse/cost controls for the public demo: per-sender rate limit, global daily spend cap computed from `execution_logs.cost_usd`, audio duration limit
+- [ ] Scheduled reset of the demo tenant to a clean seeded state
+
+**B. Infra (existing VPS with shared Traefik + Let's Encrypt)**
+- [ ] `reportai.is-a.dev` registration PR (open early — external review takes days)
+- [ ] Deploy: compose up on the VPS, migrations, demo seed
+- [ ] Real end-to-end smoke test in prod: voice note → PDF → email delivery
+- [ ] Postgres backup job + minimal monitoring
+
+**C. Presentation**
+- [ ] README: architecture, setup instructions, live demo link, flow GIF
+- [ ] Final verification pass: tests, lint, mypy, eval suite, synthetic-data-only check (§7)
 
 Separately, not a code deliverable: first white-label client deployments sold
 through existing consulting relationships — a sales outcome dependent on
@@ -198,3 +216,8 @@ those relationships, not something a checklist item completes.
 | 2026-08-13 | Reaffirmed the 2026-08-11 no-logo / no-brand-investment decision after review: the current design system (typographic wordmark, a 7-token color palette + Space Grotesk/IBM Plex type mirrored between Tailwind config and the Vuetify theme, used consistently across the landing page, auth flow, and all seven admin/dashboard pages) is complete and reads as professional as-is. Revisit only if a paying client asks for brand collateral. | Confirmed |
 | 2026-08-13 | Public demo domain: a free `is-a.dev` subdomain (`reportai.is-a.dev`) with an A record to the private server, chosen over `eu.org` (manual review takes days to weeks, plus mandatory annual reconfirmation) and Freenom (discontinued 2023). Revisit a paid domain once real traction or a real client justifies it. | Confirmed |
 | 2026-08-13 | Found via a real end-to-end run (not a unit test): `human_approval_prompt_node` sends the approval request on the origin channel with no try/except — if that send fails (seen here as a 404 from the demo's fake Telegram token), the exception kills the whole report before it ever reaches the `await_human_approval` interrupt, discarding an already-completed, already-paid-for extraction. Deferred: a real bot token essentially never 404s this way, and the correct fix (should a send failure still let the graph reach the interrupt so approval remains possible from the admin panel?) is a real design call, not a one-line patch. Revisit if this is ever hit with a live channel token in production. | Confirmed — deferred |
+| 2026-08-15 | "Finish the project" scope confirmed: Phase 4 + public-demo hardening only; Phases 3 and 5 remain deferred with their existing triggers | Confirmed |
+| 2026-08-15 | Public demo is fully interactive: a real Telegram bot open to anyone plus one-click demo login to the panel, protected by a per-sender rate limit, a global daily spend cap (computed from `execution_logs.cost_usd`), and an audio duration limit — not a read-only showcase | Confirmed |
+| 2026-08-15 | Deployment target: the existing VPS already running the shared Traefik + Let's Encrypt stack — no new server provisioning | Confirmed |
+| 2026-08-15 | Single-domain prod routing: `reportai.is-a.dev` serves both the Nuxt frontend and, under the `/api` path prefix (Traefik StripPrefix), the FastAPI backend — removes prod CORS and any dependency on nested is-a.dev subdomains | Confirmed |
+| 2026-08-15 | The 2026-08-13 deferred approval-prompt finding's revisit trigger is met (a public demo is a live channel) — fix scheduled in Phase 4.A | Confirmed |
