@@ -27,6 +27,7 @@ const FIELDS = [
 ]
 
 const EXTRACTION_COST_USD = 0.007905
+const eyebrowTag = '{{ ejemplo_real }}'
 
 // One reveal "line" per sentence — natural caption-style stagger, and a clean
 // 1:1 index into transcriptLines (no word-grouping math to get wrong).
@@ -125,9 +126,17 @@ function onLoadedMetadata() {
 </script>
 
 <template>
-  <section id="ejemplo-real" ref="root" class="mx-auto max-w-[1200px] px-6 py-16 md:py-24">
+  <section
+    id="ejemplo-real"
+    ref="root"
+    class="mx-auto max-w-[1200px] px-6 py-16 md:py-24"
+    style="background: radial-gradient(circle at 30% 20%, rgba(18, 21, 28, 0.04), transparent 60%)"
+  >
     <LandingRevealOnScroll>
       <div class="mb-10 text-center">
+        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">
+          {{ eyebrowTag }}
+        </p>
         <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">Esto no es una maqueta.</h2>
         <p class="mx-auto mt-3 max-w-xl font-body text-base text-ink-900/70">
           Es la salida real del sistema: una nota de voz de verdad, transcrita por Groq Whisper,
@@ -135,7 +144,10 @@ function onLoadedMetadata() {
         </p>
       </div>
 
-      <div class="grid gap-8 rounded-2xl bg-surface-0 p-6 shadow-xl md:grid-cols-2 md:p-10">
+      <div
+        class="grid gap-8 rounded-2xl bg-surface-0 p-6 shadow-2xl md:grid-cols-2 md:p-10"
+        style="box-shadow: 0 20px 60px -15px rgba(255, 106, 69, 0.25)"
+      >
         <!-- Left: audio + transcript -->
         <div>
           <audio
@@ -152,7 +164,7 @@ function onLoadedMetadata() {
           <div class="flex items-center gap-4">
             <button
               type="button"
-              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-capture-500 text-white transition-transform hover:scale-105"
+              class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-capture-600 text-white transition-transform hover:scale-105"
               :aria-label="playing ? 'Pausar' : 'Reproducir'"
               @click="togglePlay"
             >
