@@ -1,6 +1,8 @@
 <script setup lang="ts">
+const { t } = useI18n()
+
 useHead({
-  title: 'ReportAI — Del audio al informe, sin tocar una plantilla',
+  title: computed(() => t('landing.seo.title')),
   link: [
     {
       rel: 'stylesheet',
