@@ -42,7 +42,7 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> To
     user = result.scalar_one_or_none()
 
     if user is None or not user.is_active or not verify_password(payload.password, user.hashed_password):
-        raise AuthenticationException("Email o contraseña incorrectos")
+        raise AuthenticationException("Incorrect email or password")
 
     token_payload = {
         "sub": str(user.id),
