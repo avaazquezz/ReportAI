@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const email = ref('')
 const password = ref('')
@@ -13,7 +14,7 @@ async function onSubmit() {
     await authStore.login(email.value, password.value)
     await navigateTo('/dashboard')
   } catch {
-    error.value = 'Email o contraseña incorrectos'
+    error.value = t('auth.login.error')
   } finally {
     loading.value = false
   }
@@ -22,10 +23,10 @@ async function onSubmit() {
 
 <template>
   <div class="mx-auto flex max-w-md flex-col justify-center px-6 py-24">
-    <h1 class="font-display text-2xl font-bold text-ink-900">Acceder</h1>
+    <h1 class="font-display text-2xl font-bold text-ink-900">{{ t('auth.login.title') }}</h1>
     <form class="mt-8 space-y-5" @submit.prevent="onSubmit">
       <div>
-        <label for="email" class="font-body text-sm font-medium text-ink-900">Email</label>
+        <label for="email" class="font-body text-sm font-medium text-ink-900">{{ t('auth.login.emailLabel') }}</label>
         <input
           id="email"
           v-model="email"
@@ -36,7 +37,7 @@ async function onSubmit() {
         >
       </div>
       <div>
-        <label for="password" class="font-body text-sm font-medium text-ink-900">Contraseña</label>
+        <label for="password" class="font-body text-sm font-medium text-ink-900">{{ t('auth.login.passwordLabel') }}</label>
         <input
           id="password"
           v-model="password"
@@ -52,10 +53,10 @@ async function onSubmit() {
         :disabled="loading"
         class="w-full rounded-md bg-capture-500 px-4 py-2.5 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
       >
-        {{ loading ? 'Accediendo…' : 'Acceder' }}
+        {{ loading ? t('auth.login.submitting') : t('auth.login.submit') }}
       </button>
       <NuxtLink to="/forgot-password" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-500">
-        ¿Olvidaste tu contraseña?
+        {{ t('auth.login.forgotPassword') }}
       </NuxtLink>
     </form>
   </div>

@@ -8,29 +8,23 @@
 Prerequisites on the server: Docker + Compose, the shared Traefik already running
 on the external `web` network with a certificate resolver named `le`.
 
-### 1. Domain — `reportai.is-a.dev`
+### 1. Domain — `reportai.vazquezdev.pro`
 
-Registered via a PR to [is-a-dev/register](https://github.com/is-a-dev/register):
-fork the repo and add `domains/reportai.json` (A record pointing at the server,
-no Cloudflare proxy — Traefik terminates TLS via Let's Encrypt):
-
-```json
-{
-  "owner": {
-    "username": "avaazquezz",
-    "email": "adrianvazvaz.2117@gmail.com"
-  },
-  "records": {
-    "A": ["<SERVER_IP>"]
-  }
-}
-```
-
-External review takes days — open this PR before anything else.
+`reportai.is-a.dev` was the original plan (see the 2026-08-13 decisions-log
+entry) but is-a.dev's Terms of Service rule it out on multiple counts:
+commercial/for-profit use is explicitly prohibited (§4.8), AI-agent products
+are called out by name as disallowed (§4.15), and PRs authored by an AI
+coding tool are explicitly rejected on sight (§5) — see the 2026-08-16
+decisions-log entry. Using a subdomain of `vazquezdev.pro` (already owned,
+already pointed at this server for the portfolio site) avoids all three: add
+an `A` record for `reportai` → the server's IP through whatever DNS host
+manages `vazquezdev.pro` (nameservers `ns1/ns2.dns-parking.com` at the time
+of writing). No external review, no separate registration step.
 
 ### 2. Server checkout + environment
 
 ```bash
+cd /home/vazquezdev/proyectos   # convention this server already uses for every other project
 git clone https://github.com/avaazquezz/ReportAI.git && cd ReportAI
 cp .env.example .env   # then fill EVERY value with real production secrets
 ```
@@ -47,35 +41,39 @@ the server; it is never committed.
 ```bash
 docker compose --project-directory . -f infra/docker-compose.prod.yml up -d --build
 docker compose --project-directory . -f infra/docker-compose.prod.yml exec backend alembic upgrade head
-docker compose --project-directory . -f infra/docker-compose.prod.yml exec backend python scripts/seed_demo_tenant.py
-docker compose --project-directory . -f infra/docker-compose.prod.yml exec backend python scripts/set_telegram_webhook.py
 ```
+
+Deliberately **not** run here: `scripts/seed_demo_tenant.py` and
+`scripts/set_telegram_webhook.py`. The public interactive demo (Telegram bot
++ demo-login tenant) stays dormant until a real paying client needs it — see
+the 2026-08-16 decisions-log entry. The landing page's own pre-generated
+static demo (`frontend/public/demo/`) needs neither. Seeding without
+`DEMO_USER_EMAIL`/`DEMO_USER_PASSWORD` set would also create a full-write
+account under a publicly-known default password (`seed_demo_tenant.py`'s
+fallback), reachable through the normal login form — a real gap, not just an
+unwanted feature. To activate the demo later: set `DEMO_USER_EMAIL`,
+`DEMO_USER_PASSWORD`, `DEMO_TELEGRAM_BOT_TOKEN`, `DEMO_NOTIFICATION_EMAIL`,
+restart, then run both scripts above.
 
 ### 4. Smoke test (the real thing, not curl)
 
-Send a voice note to the demo Telegram bot → reply CONFIRM → the PDF comes back
-on the channel and lands in the notification inbox. Then check the panel:
-report visible with its cost in the usage dashboard, and a second run approved
-from the panel instead of the channel.
+`curl https://reportai.vazquezdev.pro/api/health` returns 200, and the
+landing page loads with its static demo audio/PDF playing and the language
+auto-detecting/toggling correctly. No Telegram round-trip test — the bot
+stays off (see above).
 
 ### 5. Cron jobs (host crontab)
 
 ```cron
-# Nightly demo reset — wipes the demo tenant (cascade) and re-seeds it clean
-0 4 * * * cd /path/to/ReportAI && docker compose --project-directory . -f infra/docker-compose.prod.yml exec -T backend python scripts/seed_demo_tenant.py --reset
-
 # Nightly Postgres backup, 7-day rotation ($POSTGRES_* resolve inside the container)
 30 4 * * * docker exec reportai_postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip > /var/backups/reportai/reportai-$(date +\%u).sql.gz
 ```
 
 (`%u` = day of week 1–7, so the rotation overwrites itself weekly. Create
-`/var/backups/reportai` first.)
-
-The demo reset regenerates the Telegram `secret_token`, so re-register the
-webhook after each reset — or append `&& docker compose ... exec -T backend
-python scripts/set_telegram_webhook.py` to the reset cron line.
+`/var/backups/reportai` first.) No demo-reset cron line — there is no demo
+tenant to reset while the public demo stays dormant.
 
 ### 6. Monitoring (minimal, deliberate)
 
 - Container health: every service defines a Docker healthcheck — `docker compose ps` shows it.
-- External uptime: a free UptimeRobot monitor on `https://reportai.is-a.dev/api/health`.
+- External uptime: a free UptimeRobot monitor on `https://reportai.vazquezdev.pro/api/health`.

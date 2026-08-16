@@ -1,0 +1,192 @@
+{
+  "admin": {
+    "layout": {
+      "logout": "Salir",
+      "nav": {
+        "tenants": "Empresas",
+        "documentTypes": "Tipos de documento",
+        "channels": "Canales",
+        "reports": "Informes",
+        "usage": "Uso y coste"
+      },
+      "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí."
+    },
+    "common": {
+      "nameLabel": "Nombre",
+      "descriptionLabel": "Descripción",
+      "statusLabel": "Estado",
+      "createdLabel": "Creado",
+      "edit": "Editar",
+      "view": "Ver",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "create": "Crear",
+      "close": "Cerrar",
+      "confirm": "Confirmar",
+      "deactivate": "Desactivar",
+      "reactivate": "Reactivar",
+      "changeStatus": "Cambiar estado",
+      "toastStatusUpdated": "Estado actualizado.",
+      "noResults": "Sin resultados todavía.",
+      "status": {
+        "active": "Activo",
+        "inactive": "Inactivo"
+      },
+      "confirmToggle": {
+        "deactivate": "¿Desactivar {name}?",
+        "reactivate": "¿Reactivar {name}?"
+      }
+    },
+    "dashboard": {
+      "greeting": "Hola, {name}",
+      "hint": "Usa el menú de la izquierda para gestionar tu cuenta."
+    },
+    "channels": {
+      "new": "Nuevo canal",
+      "headers": {
+        "channelType": "Canal",
+        "allowedSenders": "Remitentes permitidos"
+      },
+      "allSenders": "Todos",
+      "dialog": {
+        "editTitle": "Editar canal",
+        "channelTypeLabel": "Tipo de canal",
+        "botTokenLabel": "Bot token",
+        "phoneNumberIdLabel": "Phone number ID",
+        "accessTokenLabel": "Access token",
+        "inboundSlugLabel": "Inbound slug",
+        "leaveBlank": "Dejar en blanco para no cambiar",
+        "allowedSendersHint": "Vacío = permitir a cualquier remitente"
+      },
+      "errors": {
+        "list": "No se pudieron cargar los canales.",
+        "save": "No se pudo guardar. Revisa las credenciales requeridas para este canal."
+      },
+      "toast": {
+        "saved": "Canal guardado."
+      }
+    },
+    "documentTypes": {
+      "new": "Nuevo tipo",
+      "dialog": {
+        "newTitle": "Nuevo tipo de documento"
+      },
+      "basicInfo": {
+        "title": "Información básica",
+        "promptInstructionsLabel": "Instrucciones para la extracción",
+        "notificationEmailsLabel": "Destinatarios de notificación",
+        "notificationEmailsHint": "Emails que reciben cada informe generado con este tipo"
+      },
+      "fields": {
+        "title": "Campos a extraer",
+        "add": "+ Añadir campo",
+        "empty": "Sin campos todavía. Añade al menos uno para poder generar informes.",
+        "nameLabel": "Nombre del campo",
+        "typeLabel": "Tipo",
+        "requiredLabel": "Obligatorio"
+      },
+      "saveChanges": "Guardar cambios",
+      "templates": {
+        "title": "Plantillas",
+        "uploadLabel": "Subir nueva plantilla (.docx)",
+        "uploadButton": "Subir"
+      },
+      "templateHeaders": {
+        "file": "Archivo",
+        "version": "Versión",
+        "uploaded": "Subido"
+      },
+      "templateStatus": {
+        "active": "Activa",
+        "previous": "Anterior"
+      },
+      "errors": {
+        "list": "No se pudieron cargar los tipos de documento.",
+        "create": "No se pudo crear. Revisa que el nombre no esté en uso.",
+        "load": "No se pudo cargar el tipo de documento.",
+        "saveForm": "No se pudo guardar. Revisa los datos del formulario.",
+        "uploadTemplate": "No se pudo subir la plantilla."
+      },
+      "toast": {
+        "created": "Tipo de documento creado.",
+        "saved": "Cambios guardados.",
+        "templateUploaded": "Plantilla subida."
+      }
+    },
+    "tenants": {
+      "new": "Nueva empresa",
+      "headers": {
+        "slug": "Slug"
+      },
+      "status": {
+        "active": "Activa",
+        "inactive": "Inactiva"
+      },
+      "dialog": {
+        "slugHint": "minúsculas, números y guiones",
+        "adminNameLabel": "Nombre del admin",
+        "adminEmailLabel": "Email del admin"
+      },
+      "detail": {
+        "slug": "Slug: {slug}",
+        "created": "Creada: {date}",
+        "resendInvite": "Reenviar invitación"
+      },
+      "errors": {
+        "list": "No se pudieron cargar las empresas.",
+        "create": "No se pudo crear la empresa. Revisa que el slug no esté en uso.",
+        "load": "No se pudo cargar la empresa.",
+        "resendInvite": "No se pudo reenviar la invitación."
+      },
+      "toast": {
+        "created": "Empresa creada. Invitación enviada.",
+        "createdInviteFailed": "Empresa creada, pero el envío de la invitación falló — puedes reenviarla desde la ficha."
+      }
+    },
+    "reports": {
+      "status": {
+        "all": "Todos",
+        "pending": "Pendiente",
+        "awaitingApproval": "Esperando aprobación",
+        "awaitingDoctypeSelection": "Esperando selección",
+        "delivered": "Entregado",
+        "failed": "Fallido"
+      },
+      "headers": {
+        "documentType": "Tipo de documento"
+      },
+      "dialog": {
+        "title": "Informe",
+        "type": "Tipo: {type}",
+        "channel": "Canal: {channel} ({identifier})"
+      },
+      "actions": {
+        "approve": "Aprobar",
+        "reject": "Rechazar",
+        "downloadPdf": "Descargar PDF"
+      },
+      "errors": {
+        "list": "No se pudieron cargar los informes.",
+        "download": "No se pudo descargar el informe.",
+        "approve": "No se pudo aprobar el informe.",
+        "reject": "No se pudo rechazar el informe."
+      },
+      "toast": {
+        "approved": "Informe aprobado — generando el documento.",
+        "rejected": "Informe rechazado."
+      }
+    },
+    "usageSummary": {
+      "costLabel": "Coste (30 días)",
+      "reportsGeneratedLabel": "Informes generados",
+      "avgLatencyLabel": "Latencia media",
+      "dailyCostTitle": "Coste diario",
+      "noActivity": "Sin actividad en este periodo.",
+      "byStatusTitle": "Informes por estado",
+      "noReports": "Sin informes en este periodo.",
+      "errors": {
+        "load": "No se pudo cargar el resumen de uso."
+      }
+    }
+  }
+}

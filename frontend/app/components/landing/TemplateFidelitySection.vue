@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const eyebrowTag = '{{ tu_plantilla }}'
+const { t } = useI18n()
+// Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
+// expression as an unterminated nested interpolation — building the string in
+// script and interpolating the result avoids that.
+const eyebrowTag = computed(() => `{{ ${t('landing.templateFidelity.eyebrowTag')} }}`)
 
 // Filled values reuse the RealDemoSection story (same fictional client across
 // the whole page), so the panel shows the template resolving into that acta.
@@ -66,27 +70,27 @@ watch(inView, (visible) => {
           <span class="h-2.5 w-2.5 rounded-full bg-slate-300/30" />
           <span class="h-2.5 w-2.5 rounded-full bg-slate-300/30" />
           <span class="h-2.5 w-2.5 rounded-full bg-slate-300/30" />
-          <span class="ml-3 font-mono text-xs text-white/50">acta_reunion.docx</span>
+          <span class="ml-3 font-mono text-xs text-white/50">{{ t('landing.templateFidelity.filename') }}</span>
         </div>
         <div class="space-y-3 p-6 font-mono text-sm">
           <!-- Static initial clip (not just the GSAP "from" state) avoids a flash of
                fully-revealed text before the reveal timeline runs. Tag and value are
                stacked in the same inline-grid cell so the swap never shifts layout. -->
           <p :ref="(el) => setLineRef(el, 0)" class="[clip-path:inset(0_100%_0_0)]">
-            <span class="text-white/70">Fecha: </span>
+            <span class="text-white/70">{{ t('landing.templateFidelity.labels.date') }} </span>
             <span class="inline-grid align-top">
               <span :ref="(el) => setTagSpanRef(el, 0)" class="col-start-1 row-start-1 text-capture-500">{{ dateTag }}</span>
               <span :ref="(el) => setValueSpanRef(el, 0)" class="col-start-1 row-start-1 text-white/90 opacity-0">{{ dateValue }}</span>
             </span>
           </p>
           <p :ref="(el) => setLineRef(el, 1)" class="[clip-path:inset(0_100%_0_0)]">
-            <span class="text-white/70">Asistentes: </span>
+            <span class="text-white/70">{{ t('landing.templateFidelity.labels.attendees') }} </span>
             <span class="inline-grid align-top">
               <span :ref="(el) => setTagSpanRef(el, 1)" class="col-start-1 row-start-1 text-capture-500">{{ attendeesTag }}</span>
               <span :ref="(el) => setValueSpanRef(el, 1)" class="col-start-1 row-start-1 text-white/90 opacity-0">{{ attendeesValue }}</span>
             </span>
           </p>
-          <p :ref="(el) => setLineRef(el, 2)" class="pt-2 text-slate-300 [clip-path:inset(0_100%_0_0)]">Resumen</p>
+          <p :ref="(el) => setLineRef(el, 2)" class="pt-2 text-slate-300 [clip-path:inset(0_100%_0_0)]">{{ t('landing.templateFidelity.labels.summary') }}</p>
           <p :ref="(el) => setLineRef(el, 3)" class="[clip-path:inset(0_100%_0_0)]">
             <span class="inline-grid align-top">
               <span :ref="(el) => setTagSpanRef(el, 2)" class="col-start-1 row-start-1 text-capture-500">{{ summaryTag }}</span>
@@ -97,10 +101,9 @@ watch(inView, (visible) => {
       </div>
       <div ref="textCol" class="opacity-0 md:order-2">
         <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">{{ eyebrowTag }}</p>
-        <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">Tu plantilla, no la nuestra.</h2>
+        <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">{{ t('landing.templateFidelity.heading') }}</h2>
         <p class="mt-6 font-body text-lg text-ink-900/80">
-          Subes el .docx que ya usáis en la empresa. ReportAI rellena esos mismos campos, con ese
-          mismo formato — nada de un PDF genérico con vuestro logo pegado encima.
+          {{ t('landing.templateFidelity.paragraph') }}
         </p>
       </div>
     </div>

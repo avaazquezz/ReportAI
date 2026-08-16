@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n()
+
 const email = ref('')
 const loading = ref(false)
 const submitted = ref(false)
@@ -19,20 +21,20 @@ async function onSubmit() {
 
 <template>
   <div class="mx-auto flex max-w-md flex-col justify-center px-6 py-24">
-    <h1 class="font-display text-2xl font-bold text-ink-900">Recuperar contraseña</h1>
+    <h1 class="font-display text-2xl font-bold text-ink-900">{{ t('auth.forgotPassword.title') }}</h1>
 
     <div v-if="submitted" class="mt-8 rounded-md border border-slate-300 bg-surface-0 p-6">
       <p class="font-body text-sm text-ink-900">
-        Si ese email tiene una cuenta, hemos enviado instrucciones para restablecer la contraseña.
+        {{ t('auth.forgotPassword.confirmation') }}
       </p>
       <NuxtLink to="/login" class="mt-4 inline-block font-body text-sm font-medium text-capture-500">
-        Volver a acceder
+        {{ t('auth.forgotPassword.backToLogin') }}
       </NuxtLink>
     </div>
 
     <form v-else class="mt-8 space-y-5" @submit.prevent="onSubmit">
       <div>
-        <label for="email" class="font-body text-sm font-medium text-ink-900">Email</label>
+        <label for="email" class="font-body text-sm font-medium text-ink-900">{{ t('auth.forgotPassword.emailLabel') }}</label>
         <input
           id="email"
           v-model="email"
@@ -47,7 +49,7 @@ async function onSubmit() {
         :disabled="loading"
         class="w-full rounded-md bg-capture-500 px-4 py-2.5 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
       >
-        {{ loading ? 'Enviando…' : 'Enviar enlace de recuperación' }}
+        {{ loading ? t('auth.forgotPassword.submitting') : t('auth.forgotPassword.submit') }}
       </button>
     </form>
   </div>

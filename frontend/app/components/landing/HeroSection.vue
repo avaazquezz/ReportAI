@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const placeholderTag = '{{ tu_informe }}'
+const { t } = useI18n()
+// Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
+// expression as an unterminated nested interpolation — building the string in
+// script and interpolating the result avoids that.
+const placeholderTag = computed(() => `{{ ${t('landing.hero.placeholderTag')} }}`)
 
 const headlinePlaceholder = ref<HTMLElement | null>(null)
 const headline = ref<HTMLElement | null>(null)
@@ -52,20 +56,18 @@ onMounted(() => {
           ref="headline"
           class="font-display text-4xl font-bold leading-[1.05] tracking-tight text-ink-900 sm:text-5xl md:text-6xl lg:text-7xl"
         >
-          Manda una nota de voz.<br>Recibe el acta en tu propia plantilla.
+          {{ t('landing.hero.headlineLine1') }}<br>{{ t('landing.hero.headlineLine2') }}
         </h1>
       </div>
       <p ref="subheadline" class="mt-6 max-w-md font-body text-lg text-ink-900/80">
-        ReportAI transcribe la reunión, rellena el documento exacto que ya usas en tu empresa y lo
-        envía a quien corresponde — por Telegram, el canal por defecto, o el que ya uses. Sin unirse
-        a videollamadas, sin plantillas genéricas, sin instalar nada.
+        {{ t('landing.hero.subheadline') }}
       </p>
       <div ref="ctas" class="mt-8">
         <a
           href="mailto:adrian@vazquezdev.pro"
           class="inline-block rounded-md bg-capture-600 px-8 py-4 font-body text-lg font-semibold text-white transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-capture-600 focus-visible:ring-offset-2"
         >
-          Quiero ser cliente
+          {{ t('landing.cta.becomeClient') }}
         </a>
       </div>
     </div>
@@ -77,7 +79,7 @@ onMounted(() => {
         href="#ejemplo-real"
         class="font-body text-sm text-ink-900/60 transition-colors hover:text-capture-500"
       >
-        Mira un ejemplo real ↓
+        {{ t('landing.hero.demoLink') }}
       </a>
     </div>
   </section>
