@@ -18,6 +18,8 @@ const emit = defineEmits<{
   'update:options': [options: { page: number; itemsPerPage: number }]
 }>()
 
+const { t } = useI18n()
+
 // Forward every slot the caller passes through to the underlying table (custom
 // columns, row actions, …) except `no-data`, which this component owns so every
 // list view gets a real empty state without repeating it at every call site.
@@ -51,7 +53,7 @@ function onUpdateOptions(options: { page: number; itemsPerPage: number }) {
         <slot :name="slotName" v-bind="scope ?? {}" />
       </template>
       <template #no-data>
-        <div class="py-10 text-center text-ink-900/60">Sin resultados todavía.</div>
+        <div class="py-10 text-center text-ink-900/60">{{ t('admin.common.noResults') }}</div>
       </template>
     </v-data-table-server>
   </div>

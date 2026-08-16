@@ -6,6 +6,7 @@ import type {
 } from '~/types'
 
 export function useDocumentTypes() {
+  const { t } = useI18n()
   const items = ref<DocumentType[]>([])
   const total = ref(0)
   const loading = ref(false)
@@ -23,7 +24,7 @@ export function useDocumentTypes() {
       items.value = response.items
       total.value = response.total
     } catch {
-      error.value = 'No se pudieron cargar los tipos de documento.'
+      error.value = t('admin.documentTypes.errors.list')
     } finally {
       loading.value = false
     }

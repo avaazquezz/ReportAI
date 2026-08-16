@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 const scrolled = ref(false)
 
 function onScroll() {
@@ -40,9 +41,10 @@ onUnmounted(() => {
         <span class="font-display text-lg font-bold text-ink-900">ReportAI</span>
       </NuxtLink>
       <nav class="hidden items-center gap-8 font-body text-sm md:flex">
-        <a href="#ejemplo-real" class="text-ink-900 hover:text-capture-500">Ejemplo real</a>
-        <a href="#como-funciona" class="text-ink-900 hover:text-capture-500">Cómo funciona</a>
-        <a href="#diferencia" class="text-ink-900 hover:text-capture-500">Diferencia</a>
+        <a href="#ejemplo-real" class="text-ink-900 hover:text-capture-500">{{ t('landing.header.nav.realExample') }}</a>
+        <a href="#como-funciona" class="text-ink-900 hover:text-capture-500">{{ t('landing.header.nav.howItWorks') }}</a>
+        <a href="#diferencia" class="text-ink-900 hover:text-capture-500">{{ t('landing.header.nav.difference') }}</a>
+        <LanguageSwitcher />
       </nav>
     </div>
   </header>

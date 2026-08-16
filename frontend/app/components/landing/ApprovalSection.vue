@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const eyebrowTag = '{{ tu_aprobacion }}'
+const { t } = useI18n()
+// Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
+// expression as an unterminated nested interpolation — building the string in
+// script and interpolating the result avoids that.
+const eyebrowTag = computed(() => `{{ ${t('landing.approval.eyebrowTag')} }}`)
 
 // Static waveform for the voice-note bubble — the motion here is the
 // conversation itself popping in, not the bars.
@@ -42,23 +46,21 @@ watch(inView, (visible) => {
       <div ref="textCol" class="opacity-0">
         <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">{{ eyebrowTag }}</p>
         <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">
-          Nada sale sin que lo apruebes.
+          {{ t('landing.approval.heading') }}
         </h2>
         <p class="mt-6 font-body text-lg text-ink-900/80">
-          Cada informe pasa por una revisión humana obligatoria antes de entregarse. Si algo no
-          cuadra, corriges con una simple respuesta y ReportAI vuelve a intentarlo.
+          {{ t('landing.approval.paragraph1') }}
         </p>
         <p class="mt-4 font-body text-lg text-ink-900/80">
-          Por defecto, todo pasa por Telegram. Si tu equipo usa otro canal, lo adaptamos contigo al
-          darte de alta — cada implementación es a medida.
+          {{ t('landing.approval.paragraph2') }}
         </p>
         <div class="mt-8 flex flex-wrap items-center gap-3">
           <span
             class="rounded-full border border-capture-600 bg-surface-0 px-5 py-2 font-body text-sm font-semibold text-capture-600"
           >
-            Telegram · canal por defecto
+            {{ t('landing.approval.defaultChannelBadge') }}
           </span>
-          <span class="font-body text-sm text-ink-900/60">+ el canal que ya uses, si lo prefieres</span>
+          <span class="font-body text-sm text-ink-900/60">{{ t('landing.approval.otherChannelNote') }}</span>
         </div>
       </div>
 
@@ -97,15 +99,15 @@ watch(inView, (visible) => {
             :ref="(el) => setBubbleRef(el, 1)"
             class="w-fit max-w-[85%] rounded-2xl rounded-bl-md bg-paper-50 px-4 py-3 opacity-0"
           >
-            <p class="font-body text-sm font-medium text-ink-900">Borrador del acta listo:</p>
+            <p class="font-body text-sm font-medium text-ink-900">{{ t('landing.approval.mockup.draftReady') }}</p>
             <div class="mt-2 space-y-1 font-mono text-xs text-ink-900">
               <p><span class="text-ink-900/70">company_name:</span> Construcciones Marítimas</p>
               <p><span class="text-ink-900/70">meeting_date:</span> 18/08/2025</p>
               <p><span class="text-ink-900/70">decisions:</span> 3</p>
             </div>
             <div class="mt-3 flex gap-2">
-              <span class="rounded-md border border-approved-600 px-2.5 py-1 font-body text-xs font-medium text-approved-600">✓ Aprobar</span>
-              <span class="rounded-md border border-slate-300 px-2.5 py-1 font-body text-xs text-ink-900/60">Corregir</span>
+              <span class="rounded-md border border-approved-600 px-2.5 py-1 font-body text-xs font-medium text-approved-600">{{ t('landing.approval.mockup.approve') }}</span>
+              <span class="rounded-md border border-slate-300 px-2.5 py-1 font-body text-xs text-ink-900/60">{{ t('landing.approval.mockup.correct') }}</span>
             </div>
           </div>
 
@@ -113,7 +115,7 @@ watch(inView, (visible) => {
             :ref="(el) => setBubbleRef(el, 2)"
             class="ml-auto w-fit rounded-2xl rounded-br-md bg-capture-600 px-4 py-2 font-body text-sm text-white opacity-0"
           >
-            ✓ Aprobar
+            {{ t('landing.approval.mockup.approve') }}
           </div>
 
           <div
@@ -127,8 +129,8 @@ watch(inView, (visible) => {
                 </svg>
               </span>
               <div>
-                <p class="font-mono text-xs text-ink-900">acta_reunion.pdf</p>
-                <p class="mt-0.5 font-body text-xs font-medium text-approved-600">Enviado a Marta Delgado ✓</p>
+                <p class="font-mono text-xs text-ink-900">{{ t('landing.approval.mockup.filename') }}</p>
+                <p class="mt-0.5 font-body text-xs font-medium text-approved-600">{{ t('landing.approval.mockup.sentTo') }}</p>
               </div>
             </div>
           </div>

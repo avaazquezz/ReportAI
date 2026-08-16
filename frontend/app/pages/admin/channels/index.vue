@@ -3,6 +3,7 @@ import type { ChannelConnection, ChannelType } from '~/types'
 
 definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
 
+const { t } = useI18n()
 const { items, total, loading, error, fetchList, create, update } = useChannelConnections()
 const { show } = useSnackbar()
 const authStore = useAuthStore()
@@ -14,13 +15,13 @@ const CHANNEL_TYPES: { value: ChannelType; title: string }[] = [
   { value: 'email', title: 'Email' }
 ]
 
-const headers = [
-  { title: 'Nombre', key: 'display_name' },
-  { title: 'Canal', key: 'channel_type' },
-  { title: 'Remitentes permitidos', key: 'allowed_senders' },
-  { title: 'Estado', key: 'is_active' },
+const headers = computed(() => [
+  { title: t('admin.common.nameLabel'), key: 'display_name' },
+  { title: t('admin.channels.headers.channelType'), key: 'channel_type' },
+  { title: t('admin.channels.headers.allowedSenders'), key: 'allowed_senders' },
+  { title: t('admin.common.statusLabel'), key: 'is_active' },
   { title: '', key: 'actions', sortable: false, width: '1%' }
-]
+])
 
 const dialog = ref(false)
 const editingId = ref<string | null>(null)
@@ -97,10 +98,10 @@ async function onSave() {
       })
     }
     dialog.value = false
-    show('Canal guardado.', 'success')
+    show(t('admin.channels.toast.saved'), 'success')
     await fetchList({ page: 1, itemsPerPage: 10 })
   } catch {
-    saveError.value = 'No se pudo guardar. Revisa las credenciales requeridas para este canal.'
+    saveError.value = t('admin.channels.errors.save')
   } finally {
     saving.value = false
   }
@@ -121,7 +122,7 @@ async function confirmToggle() {
     allowed_senders: pendingConnection.value.allowed_senders,
     is_active: !pendingConnection.value.is_active
   })
-  show('Estado actualizado.', 'success')
+  show(t('admin.common.toastStatusUpdated'), 'success')
   await fetchList({ page: 1, itemsPerPage: 10 })
 }
 </script>
@@ -129,8 +130,8 @@ async function confirmToggle() {
 <template>
   <div>
     <div class="mb-6 flex items-center justify-between">
-      <h1 class="font-display text-2xl font-bold text-ink-900">Canales</h1>
-      <v-btn v-if="!isDemo" color="primary" @click="openCreate">Nuevo canal</v-btn>
+      <h1 class="font-display text-2xl font-bold text-ink-900">{{ t('admin.layout.nav.channels') }}</h1>
+      <v-btn v-if="!isDemo" color="primary" @click="openCreate">{{ t('admin.channels.new') }}</v-btn>
     </div>
 
     <AdminResourceTable
@@ -145,19 +146,19 @@ async function confirmToggle() {
         {{ CHANNEL_TYPES.find((c) => c.value === item.channel_type)?.title ?? item.channel_type }}
       </template>
       <template #item.allowed_senders="{ item }">
-        <span v-if="!item.allowed_senders.length" class="text-ink-900/60">Todos</span>
+        <span v-if="!item.allowed_senders.length" class="text-ink-900/60">{{ t('admin.channels.allSenders') }}</span>
         <span v-else>{{ item.allowed_senders.length }}</span>
       </template>
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'approved' : 'failed'" size="small" variant="tonal">
-          {{ item.is_active ? 'Activo' : 'Inactivo' }}
+          {{ item.is_active ? t('admin.common.status.active') : t('admin.common.status.inactive') }}
         </v-chip>
       </template>
       <template #item.actions="{ item }">
         <template v-if="!isDemo">
-          <v-btn size="small" variant="text" @click="openEdit(item)">Editar</v-btn>
+          <v-btn size="small" variant="text" @click="openEdit(item)">{{ t('admin.common.edit') }}</v-btn>
           <v-btn size="small" variant="text" @click="askToggle(item)">
-            {{ item.is_active ? 'Desactivar' : 'Reactivar' }}
+            {{ item.is_active ? t('admin.common.deactivate') : t('admin.common.reactivate') }}
           </v-btn>
         </template>
       </template>
@@ -165,7 +166,7 @@ async function confirmToggle() {
 
     <v-dialog v-model="dialog" max-width="520">
       <v-card>
-        <v-card-title>{{ editingId ? 'Editar canal' : 'Nuevo canal' }}</v-card-title>
+        <v-card-title>{{ editingId ? t('admin.channels.dialog.editTitle') : t('admin.channels.new') }}</v-card-title>
         <v-card-text>
           <v-form @submit.prevent="onSave">
             <v-select
@@ -173,69 +174,73 @@ async function confirmToggle() {
               :items="CHANNEL_TYPES"
               item-title="title"
               item-value="value"
-              label="Tipo de canal"
+              :label="t('admin.channels.dialog.channelTypeLabel')"
               :disabled="!!editingId"
               class="mb-2"
             />
-            <v-text-field v-model="displayName" label="Nombre" required class="mb-2" />
+            <v-text-field v-model="displayName" :label="t('admin.common.nameLabel')" required class="mb-2" />
 
             <template v-if="channelType === 'telegram'">
               <v-text-field
                 v-model="botToken"
-                label="Bot token"
-                :placeholder="editingId ? 'Dejar en blanco para no cambiar' : ''"
+                :label="t('admin.channels.dialog.botTokenLabel')"
+                :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
                 class="mb-2"
               />
             </template>
             <template v-else-if="channelType === 'whatsapp'">
               <v-text-field
                 v-model="phoneNumberId"
-                label="Phone number ID"
-                :placeholder="editingId ? 'Dejar en blanco para no cambiar' : ''"
+                :label="t('admin.channels.dialog.phoneNumberIdLabel')"
+                :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
                 class="mb-2"
               />
               <v-text-field
                 v-model="accessToken"
-                label="Access token"
-                :placeholder="editingId ? 'Dejar en blanco para no cambiar' : ''"
+                :label="t('admin.channels.dialog.accessTokenLabel')"
+                :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
                 class="mb-2"
               />
             </template>
             <template v-else>
               <v-text-field
                 v-model="inboundSlug"
-                label="Inbound slug"
-                :placeholder="editingId ? 'Dejar en blanco para no cambiar' : ''"
+                :label="t('admin.channels.dialog.inboundSlugLabel')"
+                :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
                 class="mb-2"
               />
             </template>
 
             <v-combobox
               v-model="allowedSenders"
-              label="Remitentes permitidos"
+              :label="t('admin.channels.headers.allowedSenders')"
               multiple
               chips
               closable-chips
-              hint="Vacío = permitir a cualquier remitente"
+              :hint="t('admin.channels.dialog.allowedSendersHint')"
               persistent-hint
               class="mb-2"
             />
-            <v-switch v-if="editingId" v-model="isActive" label="Activo" color="primary" />
+            <v-switch v-if="editingId" v-model="isActive" :label="t('admin.common.status.active')" color="primary" />
             <v-alert v-if="saveError" type="error" variant="tonal" class="mt-2">{{ saveError }}</v-alert>
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn variant="text" @click="dialog = false">Cancelar</v-btn>
-          <v-btn color="primary" :loading="saving" @click="onSave">Guardar</v-btn>
+          <v-btn variant="text" @click="dialog = false">{{ t('admin.common.cancel') }}</v-btn>
+          <v-btn color="primary" :loading="saving" @click="onSave">{{ t('admin.common.save') }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <AdminConfirmDialog
       v-model="confirmDialog"
-      title="Cambiar estado"
-      :message="`¿${pendingConnection?.is_active ? 'Desactivar' : 'Reactivar'} ${pendingConnection?.display_name}?`"
+      :title="t('admin.common.changeStatus')"
+      :message="
+        pendingConnection?.is_active
+          ? t('admin.common.confirmToggle.deactivate', { name: pendingConnection?.display_name })
+          : t('admin.common.confirmToggle.reactivate', { name: pendingConnection?.display_name })
+      "
       confirm-color="primary"
       @confirm="confirmToggle"
     />

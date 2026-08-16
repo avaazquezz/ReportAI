@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n()
+
 defineProps<{
   modelValue: boolean
   title: string
@@ -33,9 +35,9 @@ function confirm() {
       <v-card-text>{{ message }}</v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn variant="text" @click="close">Cancelar</v-btn>
+        <v-btn variant="text" @click="close">{{ t('admin.common.cancel') }}</v-btn>
         <v-btn :color="confirmColor ?? 'error'" variant="flat" @click="confirm">
-          {{ confirmText ?? 'Confirmar' }}
+          {{ confirmText ?? t('admin.common.confirm') }}
         </v-btn>
       </v-card-actions>
     </v-card>

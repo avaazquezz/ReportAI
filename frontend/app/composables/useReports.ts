@@ -1,6 +1,7 @@
 import type { PaginatedResponse, Report } from '~/types'
 
 export function useReports() {
+  const { t } = useI18n()
   const items = ref<Report[]>([])
   const total = ref(0)
   const loading = ref(false)
@@ -18,7 +19,7 @@ export function useReports() {
       items.value = response.items
       total.value = response.total
     } catch {
-      error.value = 'No se pudieron cargar los informes.'
+      error.value = t('admin.reports.errors.list')
     } finally {
       loading.value = false
     }

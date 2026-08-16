@@ -6,6 +6,7 @@ import type {
 } from '~/types'
 
 export function useChannelConnections() {
+  const { t } = useI18n()
   const items = ref<ChannelConnection[]>([])
   const total = ref(0)
   const loading = ref(false)
@@ -23,7 +24,7 @@ export function useChannelConnections() {
       items.value = response.items
       total.value = response.total
     } catch {
-      error.value = 'No se pudieron cargar los canales.'
+      error.value = t('admin.channels.errors.list')
     } finally {
       loading.value = false
     }
