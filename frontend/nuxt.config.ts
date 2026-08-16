@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   // Vuetify first so its base stylesheet loads before Tailwind's utilities —
   // Tailwind preflight is disabled (see tailwind.config.ts), so load order is
   // what keeps Vuetify's own component styles from being overridden.
-  modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxt/eslint'],
+  modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxt/eslint', '@nuxtjs/i18n'],
   css: ['@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
   runtimeConfig: {
     // Server-side base for SSR fetches: inside Docker the public domain isn't
@@ -16,8 +16,28 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
     }
   },
+  i18n: {
+    locales: [
+      // vuetify.json feeds vuetify-nuxt-module's auto-detected i18n adapter (it
+      // reads Vuetify's own UI strings — pagination, "no data available", etc. —
+      // from this same vue-i18n message tree under the `$vuetify` key).
+      { code: 'es', language: 'es-ES', name: 'Español', files: ['es/vuetify.json', 'es/common.json', 'es/landing.json', 'es/auth.json', 'es/admin.json'] },
+      { code: 'en', language: 'en-US', name: 'English', files: ['en/vuetify.json', 'en/common.json', 'en/landing.json', 'en/auth.json', 'en/admin.json'] }
+    ],
+    defaultLocale: 'en',
+    // No /en/ /es/ URL prefixes — the landing nav's anchor links (e.g. #ejemplo-real)
+    // must stay stable regardless of language.
+    strategy: 'no_prefix',
+    experimental: {
+      // Runs server-side during SSR so the first HTML response is already in the
+      // right language — see i18n/localeDetector.ts for the actual detection rule.
+      localeDetector: 'localeDetector.ts'
+    }
+  },
   vuetify: {
     vuetifyOptions: {
+      // vuetify-nuxt-module auto-detects @nuxtjs/i18n and replaces `locale` with
+      // its own reactive vue-i18n adapter at runtime — nothing to configure here.
       icons: { defaultSet: 'mdi' },
       theme: {
         defaultTheme: 'reportai',
