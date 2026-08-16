@@ -5,13 +5,13 @@ const { state: snackbar } = useSnackbar()
 
 const navItems = computed(() => {
   if (authStore.user?.role === 'super_admin') {
-    return [{ title: 'Empresas', to: '/admin/tenants', icon: 'mdi-domain' }]
+    return [{ title: t('admin.layout.nav.tenants'), to: '/admin/tenants', icon: 'mdi-domain' }]
   }
   return [
-    { title: 'Tipos de documento', to: '/admin/document-types', icon: 'mdi-file-document-outline' },
-    { title: 'Canales', to: '/admin/channels', icon: 'mdi-message-processing-outline' },
-    { title: 'Informes', to: '/admin/reports', icon: 'mdi-file-chart-outline' },
-    { title: 'Uso y coste', to: '/admin/usage', icon: 'mdi-chart-line' }
+    { title: t('admin.layout.nav.documentTypes'), to: '/admin/document-types', icon: 'mdi-file-document-outline' },
+    { title: t('admin.layout.nav.channels'), to: '/admin/channels', icon: 'mdi-message-processing-outline' },
+    { title: t('admin.layout.nav.reports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' },
+    { title: t('admin.layout.nav.usage'), to: '/admin/usage', icon: 'mdi-chart-line' }
   ]
 })
 
@@ -54,8 +54,7 @@ const drawer = ref(true)
           density="compact"
           class="mb-6"
         >
-          Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe
-          aparecer aquí.
+          {{ t('admin.layout.demoBanner') }}
         </v-alert>
         <slot />
       </v-container>

@@ -1,1 +1,192 @@
-{}
+{
+  "admin": {
+    "layout": {
+      "logout": "Log out",
+      "nav": {
+        "tenants": "Companies",
+        "documentTypes": "Document types",
+        "channels": "Channels",
+        "reports": "Reports",
+        "usage": "Usage & cost"
+      },
+      "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here."
+    },
+    "common": {
+      "nameLabel": "Name",
+      "descriptionLabel": "Description",
+      "statusLabel": "Status",
+      "createdLabel": "Created",
+      "edit": "Edit",
+      "view": "View",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "close": "Close",
+      "confirm": "Confirm",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "changeStatus": "Change status",
+      "toastStatusUpdated": "Status updated.",
+      "noResults": "No results yet.",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "confirmToggle": {
+        "deactivate": "Deactivate {name}?",
+        "reactivate": "Reactivate {name}?"
+      }
+    },
+    "dashboard": {
+      "greeting": "Hi, {name}",
+      "hint": "Use the menu on the left to manage your account."
+    },
+    "channels": {
+      "new": "New channel",
+      "headers": {
+        "channelType": "Channel",
+        "allowedSenders": "Allowed senders"
+      },
+      "allSenders": "All",
+      "dialog": {
+        "editTitle": "Edit channel",
+        "channelTypeLabel": "Channel type",
+        "botTokenLabel": "Bot token",
+        "phoneNumberIdLabel": "Phone number ID",
+        "accessTokenLabel": "Access token",
+        "inboundSlugLabel": "Inbound slug",
+        "leaveBlank": "Leave blank to keep unchanged",
+        "allowedSendersHint": "Empty = allow any sender"
+      },
+      "errors": {
+        "list": "Couldn't load channels.",
+        "save": "Couldn't save. Check the credentials required for this channel."
+      },
+      "toast": {
+        "saved": "Channel saved."
+      }
+    },
+    "documentTypes": {
+      "new": "New type",
+      "dialog": {
+        "newTitle": "New document type"
+      },
+      "basicInfo": {
+        "title": "Basic information",
+        "promptInstructionsLabel": "Extraction instructions",
+        "notificationEmailsLabel": "Notification recipients",
+        "notificationEmailsHint": "Emails that receive every report generated with this type"
+      },
+      "fields": {
+        "title": "Fields to extract",
+        "add": "+ Add field",
+        "empty": "No fields yet. Add at least one to generate reports.",
+        "nameLabel": "Field name",
+        "typeLabel": "Type",
+        "requiredLabel": "Required"
+      },
+      "saveChanges": "Save changes",
+      "templates": {
+        "title": "Templates",
+        "uploadLabel": "Upload new template (.docx)",
+        "uploadButton": "Upload"
+      },
+      "templateHeaders": {
+        "file": "File",
+        "version": "Version",
+        "uploaded": "Uploaded"
+      },
+      "templateStatus": {
+        "active": "Active",
+        "previous": "Previous"
+      },
+      "errors": {
+        "list": "Couldn't load document types.",
+        "create": "Couldn't create it. Check that the name isn't already in use.",
+        "load": "Couldn't load the document type.",
+        "saveForm": "Couldn't save. Check the form data.",
+        "uploadTemplate": "Couldn't upload the template."
+      },
+      "toast": {
+        "created": "Document type created.",
+        "saved": "Changes saved.",
+        "templateUploaded": "Template uploaded."
+      }
+    },
+    "tenants": {
+      "new": "New company",
+      "headers": {
+        "slug": "Slug"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "dialog": {
+        "slugHint": "lowercase letters, numbers and hyphens",
+        "adminNameLabel": "Admin name",
+        "adminEmailLabel": "Admin email"
+      },
+      "detail": {
+        "slug": "Slug: {slug}",
+        "created": "Created: {date}",
+        "resendInvite": "Resend invitation"
+      },
+      "errors": {
+        "list": "Couldn't load companies.",
+        "create": "Couldn't create the company. Check that the slug isn't already in use.",
+        "load": "Couldn't load the company.",
+        "resendInvite": "Couldn't resend the invitation."
+      },
+      "toast": {
+        "created": "Company created. Invitation sent.",
+        "createdInviteFailed": "Company created, but sending the invitation failed — you can resend it from its page."
+      }
+    },
+    "reports": {
+      "status": {
+        "all": "All",
+        "pending": "Pending",
+        "awaitingApproval": "Awaiting approval",
+        "awaitingDoctypeSelection": "Awaiting selection",
+        "delivered": "Delivered",
+        "failed": "Failed"
+      },
+      "headers": {
+        "documentType": "Document type"
+      },
+      "dialog": {
+        "title": "Report",
+        "type": "Type: {type}",
+        "channel": "Channel: {channel} ({identifier})"
+      },
+      "actions": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "downloadPdf": "Download PDF"
+      },
+      "errors": {
+        "list": "Couldn't load reports.",
+        "download": "Couldn't download the report.",
+        "approve": "Couldn't approve the report.",
+        "reject": "Couldn't reject the report."
+      },
+      "toast": {
+        "approved": "Report approved — generating the document.",
+        "rejected": "Report rejected."
+      }
+    },
+    "usageSummary": {
+      "costLabel": "Cost (30 days)",
+      "reportsGeneratedLabel": "Reports generated",
+      "avgLatencyLabel": "Average latency",
+      "dailyCostTitle": "Daily cost",
+      "noActivity": "No activity in this period.",
+      "byStatusTitle": "Reports by status",
+      "noReports": "No reports in this period.",
+      "errors": {
+        "load": "Couldn't load the usage summary."
+      }
+    }
+  }
+}

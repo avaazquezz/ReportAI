@@ -1,13 +1,14 @@
 <script setup lang="ts">
+const { t } = useI18n()
 const props = withDefaults(defineProps<{ tenantId?: string }>(), { tenantId: undefined })
 
 const { summary, loading, error, fetchSummary } = useUsageSummary(props.tenantId)
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Pendiente',
-  delivered: 'Entregado',
-  failed: 'Fallido'
-}
+const STATUS_LABEL = computed<Record<string, string>>(() => ({
+  pending: t('admin.reports.status.pending'),
+  delivered: t('admin.reports.status.delivered'),
+  failed: t('admin.reports.status.failed')
+}))
 
 const STATUS_COLOR: Record<string, string> = {
   pending: 'pending',
@@ -32,7 +33,7 @@ onMounted(() => fetchSummary(30))
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <v-card>
           <v-card-text>
-            <p class="font-body text-sm text-ink-900/60">Coste (30 días)</p>
+            <p class="font-body text-sm text-ink-900/60">{{ t('admin.usageSummary.costLabel') }}</p>
             <p class="font-display text-2xl font-bold text-ink-900">
               ${{ summary.total_cost_usd.toFixed(2) }}
             </p>
@@ -40,13 +41,13 @@ onMounted(() => fetchSummary(30))
         </v-card>
         <v-card>
           <v-card-text>
-            <p class="font-body text-sm text-ink-900/60">Informes generados</p>
+            <p class="font-body text-sm text-ink-900/60">{{ t('admin.usageSummary.reportsGeneratedLabel') }}</p>
             <p class="font-display text-2xl font-bold text-ink-900">{{ summary.total_reports }}</p>
           </v-card-text>
         </v-card>
         <v-card>
           <v-card-text>
-            <p class="font-body text-sm text-ink-900/60">Latencia media</p>
+            <p class="font-body text-sm text-ink-900/60">{{ t('admin.usageSummary.avgLatencyLabel') }}</p>
             <p class="font-display text-2xl font-bold text-ink-900">
               {{ summary.avg_latency_ms ? Math.round(summary.avg_latency_ms) + ' ms' : '—' }}
             </p>
@@ -55,7 +56,7 @@ onMounted(() => fetchSummary(30))
       </div>
 
       <v-card class="mt-4">
-        <v-card-title>Coste diario</v-card-title>
+        <v-card-title>{{ t('admin.usageSummary.dailyCostTitle') }}</v-card-title>
         <v-card-text>
           <v-sparkline
             v-if="sparklineValues.length"
@@ -66,12 +67,12 @@ onMounted(() => fetchSummary(30))
             padding="8"
             smooth
           />
-          <p v-else class="py-6 text-center text-sm text-ink-900/60">Sin actividad en este periodo.</p>
+          <p v-else class="py-6 text-center text-sm text-ink-900/60">{{ t('admin.usageSummary.noActivity') }}</p>
         </v-card-text>
       </v-card>
 
       <v-card class="mt-4">
-        <v-card-title>Informes por estado</v-card-title>
+        <v-card-title>{{ t('admin.usageSummary.byStatusTitle') }}</v-card-title>
         <v-card-text class="flex flex-wrap gap-2">
           <template v-if="Object.keys(summary.reports_by_status).length">
             <v-chip
@@ -83,7 +84,7 @@ onMounted(() => fetchSummary(30))
               {{ STATUS_LABEL[status] ?? status }}: {{ count }}
             </v-chip>
           </template>
-          <p v-else class="text-sm text-ink-900/60">Sin informes en este periodo.</p>
+          <p v-else class="text-sm text-ink-900/60">{{ t('admin.usageSummary.noReports') }}</p>
         </v-card-text>
       </v-card>
     </template>

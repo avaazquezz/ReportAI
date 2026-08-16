@@ -1,6 +1,7 @@
 import type { PaginatedResponse, Tenant, TenantCreateRequest, TenantCreateResponse } from '~/types'
 
 export function useTenants() {
+  const { t } = useI18n()
   const items = ref<Tenant[]>([])
   const total = ref(0)
   const loading = ref(false)
@@ -18,7 +19,7 @@ export function useTenants() {
       items.value = response.items
       total.value = response.total
     } catch {
-      error.value = 'No se pudieron cargar las empresas.'
+      error.value = t('admin.tenants.errors.list')
     } finally {
       loading.value = false
     }
