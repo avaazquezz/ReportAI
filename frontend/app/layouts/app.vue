@@ -1,4 +1,5 @@
 <script setup lang="ts">
+const { t } = useI18n()
 const authStore = useAuthStore()
 const { state: snackbar } = useSnackbar()
 
@@ -40,7 +41,8 @@ const drawer = ref(true)
       <v-app-bar-title>{{ authStore.user?.full_name }}</v-app-bar-title>
       <v-spacer />
       <v-chip class="mr-4" size="small" variant="tonal">{{ authStore.user?.role }}</v-chip>
-      <v-btn variant="text" @click="authStore.logout()">Salir</v-btn>
+      <LanguageSwitcher class="mr-4" />
+      <v-btn variant="text" @click="authStore.logout()">{{ t('admin.layout.logout') }}</v-btn>
     </v-app-bar>
 
     <v-main>
