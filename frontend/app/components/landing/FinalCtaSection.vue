@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const placeholderTag = '{{ tu_proximo_informe }}'
+const { t } = useI18n()
 
 const card = ref<HTMLElement | null>(null)
 const headlinePlaceholder = ref<HTMLElement | null>(null)
@@ -47,21 +47,21 @@ watch(inView, (visible) => {
           class="absolute inset-0 flex items-center justify-center font-mono text-lg text-white/30 md:text-xl"
           aria-hidden="true"
         >
-          {{ placeholderTag }}
+          {{ t('landing.finalCta.placeholderTag') }}
         </p>
         <h2 ref="headline" class="font-display text-4xl font-bold opacity-0 md:text-6xl">
-          Manda una nota de voz. Recibe el acta.
+          {{ t('landing.finalCta.headline') }}
         </h2>
       </div>
       <p ref="sub" class="mx-auto mt-6 max-w-xl font-body text-lg text-white/70 opacity-0">
-        Ya has visto un ejemplo real más arriba. El siguiente puede salir de tu plantilla.
+        {{ t('landing.finalCta.sub') }}
       </p>
       <div ref="actions" class="mt-8 flex justify-center opacity-0">
         <a
           href="mailto:adrian@vazquezdev.pro"
           class="rounded-md bg-capture-600 px-8 py-4 font-body text-lg font-semibold text-white transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-capture-600 focus-visible:ring-offset-2"
         >
-          Quiero ser cliente
+          {{ t('landing.cta.becomeClient') }}
         </a>
       </div>
     </div>

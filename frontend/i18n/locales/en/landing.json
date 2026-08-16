@@ -1,1 +1,117 @@
-{}
+{
+  "landing": {
+    "seo": {
+      "title": "ReportAI — From audio to report, without touching a template"
+    },
+    "header": {
+      "nav": {
+        "realExample": "Real example",
+        "howItWorks": "How it works",
+        "difference": "The difference"
+      }
+    },
+    "cta": {
+      "becomeClient": "I want to become a client"
+    },
+    "hero": {
+      "placeholderTag": "{{ your_report }}",
+      "headlineLine1": "Send a voice note.",
+      "headlineLine2": "Get the minutes back in your own template.",
+      "subheadline": "ReportAI transcribes the meeting, fills in the exact document your company already uses, and sends it to the right person — over Telegram, the default channel, or whichever one you already use. No joining video calls, no generic templates, no installs.",
+      "demoLink": "See a real example ↓"
+    },
+    "demo": {
+      "approvedSent": "Approved · Sent",
+      "fields": {
+        "meetingDate": "meeting_date",
+        "attendees": "attendees",
+        "summary": "summary",
+        "summaryValue": "Quarterly order review and delivery terms."
+      }
+    },
+    "howItWorks": {
+      "eyebrowTag": "{{ how_it_works }}",
+      "heading": "From voice note to delivered minutes.",
+      "steps": {
+        "record": {
+          "artifact": "voice_note.ogg",
+          "title": "Record a voice note",
+          "body": "In the car, in the hallway, right after hanging up. Over Telegram, the default channel, or whichever one you already use."
+        },
+        "transcribe": {
+          "artifact": "transcript.txt",
+          "title": "It gets transcribed",
+          "body": "The AI converts the audio into text in seconds."
+        },
+        "extract": {
+          "artifact": "fields.json",
+          "title": "The data gets extracted",
+          "body": "It identifies date, attendees, summary, and agreements based on your document's exact fields."
+        },
+        "approve": {
+          "artifact": "approved ✓",
+          "title": "You approve it",
+          "body": "You review the draft and confirm, or request a quick correction."
+        },
+        "deliver": {
+          "artifact": "meeting_minutes.docx",
+          "title": "It gets delivered",
+          "body": "The document is filled into your .docx template and reaches the right person."
+        }
+      }
+    },
+    "approval": {
+      "eyebrowTag": "{{ your_approval }}",
+      "heading": "Nothing goes out without your approval.",
+      "paragraph1": "Every report goes through mandatory human review before it's delivered. If something's off, you correct it with a simple reply and ReportAI tries again.",
+      "paragraph2": "By default, everything goes through Telegram. If your team uses another channel, we adapt it with you during onboarding — every setup is custom-built.",
+      "defaultChannelBadge": "Telegram · default channel",
+      "otherChannelNote": "+ whichever channel you already use, if you prefer",
+      "mockup": {
+        "draftReady": "Draft minutes ready:",
+        "approve": "✓ Approve",
+        "correct": "Correct",
+        "filename": "meeting_minutes.pdf",
+        "sentTo": "Sent to Marta Delgado ✓"
+      }
+    },
+    "differentiator": {
+      "eyebrowTag": "{{ the_difference }}",
+      "heading": "It's not a bot that sneaks into your video call.",
+      "paragraph": "Otter, Fireflies, or Fathom need a scheduled video call with a link. Most of your sales visits and calls don't have one. ReportAI works from a voice note recorded afterward — in the car, in the hallway, right after hanging up — and turns it into the document with the exact format your company already uses.",
+      "notNeeded": {
+        "calendarLink": "{{ calendar_link }}",
+        "videoCallBot": "{{ video_call_bot }}",
+        "newApp": "{{ new_app }}"
+      },
+      "kicker": "None of this is needed. Just a voice note."
+    },
+    "templateFidelity": {
+      "eyebrowTag": "{{ your_template }}",
+      "heading": "Your template, not ours.",
+      "paragraph": "You upload the .docx your company already uses. ReportAI fills in those same fields, in that same format — no generic PDF with your logo pasted on top.",
+      "filename": "meeting_minutes.docx",
+      "labels": {
+        "date": "Date:",
+        "attendees": "Attendees:",
+        "summary": "Summary"
+      }
+    },
+    "realDemo": {
+      "heading": "This isn't a mockup.",
+      "paragraph": "It's the system's real output: an actual voice note, transcribed, extracted, and filled into your template by the AI — unedited afterward. Hit play.",
+      "transcriptLabel": "Automatic transcription",
+      "playPlaceholder": "Hit play to see the real transcript appear here.",
+      "documentLabel": "Generated document",
+      "downloadPdf": "Download PDF",
+      "iframeTitle": "Generated report",
+      "pause": "Pause",
+      "play": "Play"
+    },
+    "finalCta": {
+      "placeholderTag": "{{ your_next_report }}",
+      "headline": "Send a voice note. Get the minutes.",
+      "sub": "You've already seen a real example above. The next one could come from your template."
+    }
+  }
+}

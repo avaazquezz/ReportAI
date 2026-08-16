@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const eyebrowTag = '{{ la_diferencia }}'
+const { t } = useI18n()
 
 // Template tags that will never be filled — the inversion of the page's
 // resolve-the-tag motif: what meeting bots require and ReportAI doesn't.
-const NOT_NEEDED = [
-  '{{ enlace_de_calendario }}',
-  '{{ bot_en_la_videollamada }}',
-  '{{ aplicacion_nueva }}'
-]
+const NOT_NEEDED = computed(() => [
+  t('landing.differentiator.notNeeded.calendarLink'),
+  t('landing.differentiator.notNeeded.videoCallBot'),
+  t('landing.differentiator.notNeeded.newApp')
+])
 
 const root = ref<HTMLElement | null>(null)
 const head = ref<HTMLElement | null>(null)
@@ -57,21 +57,18 @@ watch(inView, (visible) => {
   <section id="diferencia" ref="root" class="bg-ink-900 py-16 text-white md:py-24">
     <div class="mx-auto max-w-[1200px] px-6">
       <div ref="head" class="opacity-0">
-        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-500">{{ eyebrowTag }}</p>
+        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-500">{{ t('landing.differentiator.eyebrowTag') }}</p>
         <h2 class="max-w-4xl font-display text-4xl font-bold md:text-5xl lg:text-6xl">
-          No es un bot que se cuela en tu videollamada.
+          {{ t('landing.differentiator.heading') }}
         </h2>
         <p class="mt-6 max-w-2xl font-body text-lg text-white/80">
-          Otter, Fireflies o Fathom necesitan una videollamada programada con un enlace. La mayoría de
-          tus visitas comerciales y llamadas no lo tienen. ReportAI funciona con una nota de voz
-          grabada después — en el coche, en el pasillo, nada más colgar — y la convierte en el
-          documento con el formato exacto que tu empresa ya usa.
+          {{ t('landing.differentiator.paragraph') }}
         </p>
       </div>
       <div class="mt-10 flex flex-wrap gap-x-10 gap-y-4">
         <span
           v-for="(tag, i) in NOT_NEEDED"
-          :key="tag"
+          :key="i"
           :ref="(el) => setTagRef(el, i)"
           class="relative font-mono text-sm text-white/60 opacity-0"
         >
@@ -84,7 +81,7 @@ watch(inView, (visible) => {
         </span>
       </div>
       <p ref="kicker" class="mt-6 font-body text-base text-white/60 opacity-0">
-        Nada de esto hace falta. Solo una nota de voz.
+        {{ t('landing.differentiator.kicker') }}
       </p>
     </div>
   </section>
