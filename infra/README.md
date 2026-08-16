@@ -8,18 +8,20 @@
 Prerequisites on the server: Docker + Compose, the shared Traefik already running
 on the external `web` network with a certificate resolver named `le`.
 
-### 1. Domain — `reportai.vazquezdev.pro`
+### 1. Domain — `reportai.vazquezlabs.com`
 
 `reportai.is-a.dev` was the original plan (see the 2026-08-13 decisions-log
 entry) but is-a.dev's Terms of Service rule it out on multiple counts:
 commercial/for-profit use is explicitly prohibited (§4.8), AI-agent products
 are called out by name as disallowed (§4.15), and PRs authored by an AI
 coding tool are explicitly rejected on sight (§5) — see the 2026-08-16
-decisions-log entry. Using a subdomain of `vazquezdev.pro` (already owned,
-already pointed at this server for the portfolio site) avoids all three: add
-an `A` record for `reportai` → the server's IP through whatever DNS host
-manages `vazquezdev.pro` (nameservers `ns1/ns2.dns-parking.com` at the time
-of writing). No external review, no separate registration step.
+decisions-log entry. `vazquezlabs.com` is an owned, currently-unused domain
+earmarked as the umbrella brand for presenting all of this developer's
+projects — a subdomain per project (`reportai.vazquezlabs.com` here) reads
+as a more deliberate portfolio structure than piggybacking on the personal
+consulting domain, and it sidesteps every is-a.dev restriction with no
+external review. Add an `A` record for `reportai` → the server's IP through
+whatever DNS host manages `vazquezlabs.com`.
 
 ### 2. Server checkout + environment
 
@@ -57,7 +59,7 @@ restart, then run both scripts above.
 
 ### 4. Smoke test (the real thing, not curl)
 
-`curl https://reportai.vazquezdev.pro/api/health` returns 200, and the
+`curl https://reportai.vazquezlabs.com/api/health` returns 200, and the
 landing page loads with its static demo audio/PDF playing and the language
 auto-detecting/toggling correctly. No Telegram round-trip test — the bot
 stays off (see above).
@@ -76,4 +78,4 @@ tenant to reset while the public demo stays dormant.
 ### 6. Monitoring (minimal, deliberate)
 
 - Container health: every service defines a Docker healthcheck — `docker compose ps` shows it.
-- External uptime: a free UptimeRobot monitor on `https://reportai.vazquezdev.pro/api/health`.
+- External uptime: a free UptimeRobot monitor on `https://reportai.vazquezlabs.com/api/health`.
