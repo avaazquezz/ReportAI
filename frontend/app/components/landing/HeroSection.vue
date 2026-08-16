@@ -2,6 +2,10 @@
 import gsap from 'gsap'
 
 const { t } = useI18n()
+// Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
+// expression as an unterminated nested interpolation — building the string in
+// script and interpolating the result avoids that.
+const placeholderTag = computed(() => `{{ ${t('landing.hero.placeholderTag')} }}`)
 
 const headlinePlaceholder = ref<HTMLElement | null>(null)
 const headline = ref<HTMLElement | null>(null)
@@ -46,7 +50,7 @@ onMounted(() => {
           class="absolute inset-0 font-mono text-2xl text-ink-900/30 md:text-3xl"
           aria-hidden="true"
         >
-          {{ t('landing.hero.placeholderTag') }}
+          {{ placeholderTag }}
         </p>
         <h1
           ref="headline"

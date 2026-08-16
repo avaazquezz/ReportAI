@@ -14,7 +14,7 @@
       "becomeClient": "Quiero ser cliente"
     },
     "hero": {
-      "placeholderTag": "{{ tu_informe }}",
+      "placeholderTag": "tu_informe",
       "headlineLine1": "Manda una nota de voz.",
       "headlineLine2": "Recibe el acta en tu propia plantilla.",
       "subheadline": "ReportAI transcribe la reunión, rellena el documento exacto que ya usas en tu empresa y lo envía a quien corresponde — por Telegram, el canal por defecto, o el que ya uses. Sin unirse a videollamadas, sin plantillas genéricas, sin instalar nada.",
@@ -30,7 +30,7 @@
       }
     },
     "howItWorks": {
-      "eyebrowTag": "{{ como_funciona }}",
+      "eyebrowTag": "como_funciona",
       "heading": "De la nota de voz al acta entregada.",
       "steps": {
         "record": {
@@ -61,7 +61,7 @@
       }
     },
     "approval": {
-      "eyebrowTag": "{{ tu_aprobacion }}",
+      "eyebrowTag": "tu_aprobacion",
       "heading": "Nada sale sin que lo apruebes.",
       "paragraph1": "Cada informe pasa por una revisión humana obligatoria antes de entregarse. Si algo no cuadra, corriges con una simple respuesta y ReportAI vuelve a intentarlo.",
       "paragraph2": "Por defecto, todo pasa por Telegram. Si tu equipo usa otro canal, lo adaptamos contigo al darte de alta — cada implementación es a medida.",
@@ -76,18 +76,18 @@
       }
     },
     "differentiator": {
-      "eyebrowTag": "{{ la_diferencia }}",
+      "eyebrowTag": "la_diferencia",
       "heading": "No es un bot que se cuela en tu videollamada.",
       "paragraph": "Otter, Fireflies o Fathom necesitan una videollamada programada con un enlace. La mayoría de tus visitas comerciales y llamadas no lo tienen. ReportAI funciona con una nota de voz grabada después — en el coche, en el pasillo, nada más colgar — y la convierte en el documento con el formato exacto que tu empresa ya usa.",
       "notNeeded": {
-        "calendarLink": "{{ enlace_de_calendario }}",
-        "videoCallBot": "{{ bot_en_la_videollamada }}",
-        "newApp": "{{ aplicacion_nueva }}"
+        "calendarLink": "enlace_de_calendario",
+        "videoCallBot": "bot_en_la_videollamada",
+        "newApp": "aplicacion_nueva"
       },
       "kicker": "Nada de esto hace falta. Solo una nota de voz."
     },
     "templateFidelity": {
-      "eyebrowTag": "{{ tu_plantilla }}",
+      "eyebrowTag": "tu_plantilla",
       "heading": "Tu plantilla, no la nuestra.",
       "paragraph": "Subes el .docx que ya usáis en la empresa. ReportAI rellena esos mismos campos, con ese mismo formato — nada de un PDF genérico con vuestro logo pegado encima.",
       "filename": "acta_reunion.docx",
@@ -109,7 +109,7 @@
       "play": "Reproducir"
     },
     "finalCta": {
-      "placeholderTag": "{{ tu_proximo_informe }}",
+      "placeholderTag": "tu_proximo_informe",
       "headline": "Manda una nota de voz. Recibe el acta.",
       "sub": "Ya has visto un ejemplo real más arriba. El siguiente puede salir de tu plantilla."
     }

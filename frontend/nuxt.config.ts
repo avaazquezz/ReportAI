@@ -28,11 +28,11 @@ export default defineNuxtConfig({
     // No /en/ /es/ URL prefixes — the landing nav's anchor links (e.g. #ejemplo-real)
     // must stay stable regardless of language.
     strategy: 'no_prefix',
-    experimental: {
-      // Runs server-side during SSR so the first HTML response is already in the
-      // right language — see i18n/localeDetector.ts for the actual detection rule.
-      localeDetector: 'localeDetector.ts'
-    }
+    // The built-in detector only matches Accept-Language against the two codes above —
+    // it has no notion of "Spain's co-official regional languages also mean Spanish".
+    // app/plugins/locale-detect.server.ts does that bucketing itself on every SSR
+    // request, so the built-in one is disabled rather than left running redundantly.
+    detectBrowserLanguage: false
   },
   vuetify: {
     vuetifyOptions: {

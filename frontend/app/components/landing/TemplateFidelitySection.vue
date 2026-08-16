@@ -2,6 +2,10 @@
 import gsap from 'gsap'
 
 const { t } = useI18n()
+// Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
+// expression as an unterminated nested interpolation — building the string in
+// script and interpolating the result avoids that.
+const eyebrowTag = computed(() => `{{ ${t('landing.templateFidelity.eyebrowTag')} }}`)
 
 // Filled values reuse the RealDemoSection story (same fictional client across
 // the whole page), so the panel shows the template resolving into that acta.
@@ -96,7 +100,7 @@ watch(inView, (visible) => {
         </div>
       </div>
       <div ref="textCol" class="opacity-0 md:order-2">
-        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">{{ t('landing.templateFidelity.eyebrowTag') }}</p>
+        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">{{ eyebrowTag }}</p>
         <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">{{ t('landing.templateFidelity.heading') }}</h2>
         <p class="mt-6 font-body text-lg text-ink-900/80">
           {{ t('landing.templateFidelity.paragraph') }}
