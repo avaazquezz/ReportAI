@@ -2,13 +2,17 @@
 import gsap from 'gsap'
 
 const { t } = useI18n()
+// Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
+// expression as an unterminated nested interpolation — building the string in
+// script and interpolating the result avoids that.
+const eyebrowTag = computed(() => `{{ ${t('landing.differentiator.eyebrowTag')} }}`)
 
 // Template tags that will never be filled — the inversion of the page's
 // resolve-the-tag motif: what meeting bots require and ReportAI doesn't.
 const NOT_NEEDED = computed(() => [
-  t('landing.differentiator.notNeeded.calendarLink'),
-  t('landing.differentiator.notNeeded.videoCallBot'),
-  t('landing.differentiator.notNeeded.newApp')
+  `{{ ${t('landing.differentiator.notNeeded.calendarLink')} }}`,
+  `{{ ${t('landing.differentiator.notNeeded.videoCallBot')} }}`,
+  `{{ ${t('landing.differentiator.notNeeded.newApp')} }}`
 ])
 
 const root = ref<HTMLElement | null>(null)
@@ -57,7 +61,7 @@ watch(inView, (visible) => {
   <section id="diferencia" ref="root" class="bg-ink-900 py-16 text-white md:py-24">
     <div class="mx-auto max-w-[1200px] px-6">
       <div ref="head" class="opacity-0">
-        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-500">{{ t('landing.differentiator.eyebrowTag') }}</p>
+        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-500">{{ eyebrowTag }}</p>
         <h2 class="max-w-4xl font-display text-4xl font-bold md:text-5xl lg:text-6xl">
           {{ t('landing.differentiator.heading') }}
         </h2>
