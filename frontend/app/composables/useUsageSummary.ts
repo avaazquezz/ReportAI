@@ -1,6 +1,7 @@
 import type { UsageSummary } from '~/types'
 
 export function useUsageSummary(tenantId?: string) {
+  const { t } = useI18n()
   const summary = ref<UsageSummary | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -13,7 +14,7 @@ export function useUsageSummary(tenantId?: string) {
       const path = tenantId ? `/admin/tenants/${tenantId}/usage/summary` : '/usage/summary'
       summary.value = await api<UsageSummary>(path, { query: { days } })
     } catch {
-      error.value = 'No se pudo cargar el resumen de uso.'
+      error.value = t('admin.usageSummary.errors.load')
     } finally {
       loading.value = false
     }
