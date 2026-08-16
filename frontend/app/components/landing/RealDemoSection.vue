@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
+const { t } = useI18n()
+
 // Real pipeline output, generated once via backend/scripts/generate_landing_demo_audio.py
 // (real OpenAI TTS) + generate_landing_demo_asset.py (real Groq Whisper transcription,
 // real Claude extraction, real docxtpl+Gotenberg render). Not a live call — see
@@ -147,10 +149,9 @@ function onLoadedMetadata() {
         <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">
           {{ eyebrowTag }}
         </p>
-        <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">Esto no es una maqueta.</h2>
+        <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">{{ t('landing.realDemo.heading') }}</h2>
         <p class="mx-auto mt-3 max-w-xl font-body text-base text-ink-900/70">
-          Es la salida real del sistema: una nota de voz de verdad, transcrita, extraída y rellenada
-          en tu plantilla por la IA — sin editar nada después. Dale a play.
+          {{ t('landing.realDemo.paragraph') }}
         </p>
       </div>
 
@@ -175,7 +176,7 @@ function onLoadedMetadata() {
             <button
               type="button"
               class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-capture-600 text-white transition-transform hover:scale-105"
-              :aria-label="playing ? 'Pausar' : 'Reproducir'"
+              :aria-label="playing ? t('landing.realDemo.pause') : t('landing.realDemo.play')"
               @click="togglePlay"
             >
               <svg v-if="!playing" viewBox="0 0 20 20" fill="currentColor" class="ml-0.5 h-5 w-5">
@@ -204,10 +205,10 @@ function onLoadedMetadata() {
 
           <div class="mt-6 min-h-[7rem] border-t border-slate-300 pt-4">
             <p class="mb-2 font-mono text-xs uppercase tracking-wide text-ink-900/40">
-              Transcripción automática
+              {{ t('landing.realDemo.transcriptLabel') }}
             </p>
             <p v-if="!played" class="font-body text-sm text-ink-900/40">
-              Dale a play para ver la transcripción real aparecer aquí.
+              {{ t('landing.realDemo.playPlaceholder') }}
             </p>
             <p v-else class="space-y-1 font-body text-sm leading-relaxed text-ink-900">
               <span
@@ -234,10 +235,10 @@ function onLoadedMetadata() {
         <!-- Right: real generated document -->
         <div ref="documentCard" class="flex flex-col opacity-0">
           <p class="mb-2 font-mono text-xs uppercase tracking-wide text-ink-900/40">
-            Documento generado
+            {{ t('landing.realDemo.documentLabel') }}
           </p>
           <div class="flex-1 overflow-hidden rounded-lg border border-slate-300">
-            <iframe src="/demo/informe.pdf" title="Informe generado" class="h-full min-h-[320px] w-full" />
+            <iframe src="/demo/informe.pdf" :title="t('landing.realDemo.iframeTitle')" class="h-full min-h-[320px] w-full" />
           </div>
           <div class="mt-4 flex items-center justify-end">
             <a
@@ -245,7 +246,7 @@ function onLoadedMetadata() {
               download
               class="rounded-md bg-ink-900 px-4 py-2 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.02]"
             >
-              Descargar PDF
+              {{ t('landing.realDemo.downloadPdf') }}
             </a>
           </div>
         </div>

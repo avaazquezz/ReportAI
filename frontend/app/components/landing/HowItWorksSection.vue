@@ -1,37 +1,37 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const eyebrowTag = '{{ como_funciona }}'
+const { t } = useI18n()
 
 // Each step's mono artifact is the output that feeds the next step, so the
 // pipeline reads as data flowing along the drawn line.
-const STEPS = [
+const STEPS = computed(() => [
   {
-    artifact: 'nota_de_voz.ogg',
-    title: 'Grabas una nota de voz',
-    body: 'En el coche, en el pasillo, nada más colgar. Por Telegram, el canal por defecto, o el que ya uses.'
+    artifact: t('landing.howItWorks.steps.record.artifact'),
+    title: t('landing.howItWorks.steps.record.title'),
+    body: t('landing.howItWorks.steps.record.body')
   },
   {
-    artifact: 'transcripcion.txt',
-    title: 'Se transcribe',
-    body: 'La IA convierte el audio en texto en segundos.'
+    artifact: t('landing.howItWorks.steps.transcribe.artifact'),
+    title: t('landing.howItWorks.steps.transcribe.title'),
+    body: t('landing.howItWorks.steps.transcribe.body')
   },
   {
-    artifact: 'campos.json',
-    title: 'Se extraen los datos',
-    body: 'Identifica fecha, asistentes, resumen y acuerdos según los campos exactos de tu documento.'
+    artifact: t('landing.howItWorks.steps.extract.artifact'),
+    title: t('landing.howItWorks.steps.extract.title'),
+    body: t('landing.howItWorks.steps.extract.body')
   },
   {
-    artifact: 'aprobado ✓',
-    title: 'Lo apruebas tú',
-    body: 'Revisas el borrador y confirmas, o pides una corrección puntual.'
+    artifact: t('landing.howItWorks.steps.approve.artifact'),
+    title: t('landing.howItWorks.steps.approve.title'),
+    body: t('landing.howItWorks.steps.approve.body')
   },
   {
-    artifact: 'acta_reunion.docx',
-    title: 'Se entrega',
-    body: 'El documento se rellena en tu plantilla .docx y llega a quien corresponde.'
+    artifact: t('landing.howItWorks.steps.deliver.artifact'),
+    title: t('landing.howItWorks.steps.deliver.title'),
+    body: t('landing.howItWorks.steps.deliver.body')
   }
-]
+])
 
 const CAPTURE_600 = '#C0432A'
 
@@ -92,9 +92,9 @@ watch(inView, (visible) => {
 <template>
   <section id="como-funciona" class="mx-auto max-w-[1200px] px-6 py-16 md:py-24">
     <div ref="head" class="opacity-0">
-      <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">{{ eyebrowTag }}</p>
+      <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">{{ t('landing.howItWorks.eyebrowTag') }}</p>
       <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">
-        De la nota de voz al acta entregada.
+        {{ t('landing.howItWorks.heading') }}
       </h2>
     </div>
 
@@ -104,7 +104,7 @@ watch(inView, (visible) => {
       </div>
       <li
         v-for="(step, i) in STEPS"
-        :key="step.title"
+        :key="i"
         :ref="(el) => setItemRef(el, i)"
         class="relative pl-12 opacity-0 lg:pl-0 lg:pr-8 lg:pt-12"
       >

@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
+const { t } = useI18n()
+
 const root = ref<HTMLElement | null>(null)
 const bars = ref<HTMLElement[]>([])
 const fieldLines = ref<HTMLElement[]>([])
 const approvedMark = ref<HTMLElement | null>(null)
 
-const FIELDS = [
-  { label: 'fecha_reunión', value: '11/08/2026' },
-  { label: 'asistentes', value: 'Javier Molina, Isabel Ortega' },
-  { label: 'resumen', value: 'Revisión de pedido trimestral y condiciones de entrega.' }
-]
+const FIELDS = computed(() => [
+  { label: t('landing.demo.fields.meetingDate'), value: '11/08/2026' },
+  { label: t('landing.demo.fields.attendees'), value: 'Javier Molina, Isabel Ortega' },
+  { label: t('landing.demo.fields.summary'), value: t('landing.demo.fields.summaryValue') }
+])
 
 function setBarRef(el: unknown, i: number) {
   if (el) bars.value[i] = el as HTMLElement
@@ -76,7 +78,7 @@ onMounted(() => {
     </div>
 
     <div class="space-y-2 border-t border-slate-300 pt-4 font-mono text-xs text-ink-900">
-      <p v-for="(field, i) in FIELDS" :key="field.label" :ref="(el) => setFieldRef(el, i)" class="opacity-0">
+      <p v-for="(field, i) in FIELDS" :key="i" :ref="(el) => setFieldRef(el, i)" class="opacity-0">
         <span class="text-ink-900/50">{{ field.label }}:</span> {{ field.value }}
       </p>
     </div>
@@ -85,7 +87,7 @@ onMounted(() => {
       <span class="flex h-6 w-6 items-center justify-center rounded-full bg-approved-600 text-white">
         <svg viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5"><path d="M16.7 5.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3-3a1 1 0 1 1 1.4-1.4l2.3 2.29 6.3-6.29a1 1 0 0 1 1.4 0Z" /></svg>
       </span>
-      <span class="font-body text-sm font-medium text-approved-600">Aprobado · Enviado</span>
+      <span class="font-body text-sm font-medium text-approved-600">{{ t('landing.demo.approvedSent') }}</span>
     </div>
   </div>
 </template>
