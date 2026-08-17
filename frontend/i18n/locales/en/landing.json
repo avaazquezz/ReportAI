@@ -72,7 +72,7 @@
         "approve": "✓ Approve",
         "correct": "Correct",
         "filename": "meeting_minutes.pdf",
-        "sentTo": "Sent to Marta Delgado ✓"
+        "sentTo": "Sent to Sarah Mitchell ✓"
       }
     },
     "differentiator": {
@@ -98,6 +98,7 @@
       }
     },
     "realDemo": {
+      "eyebrowTag": "real_example",
       "heading": "This isn't a mockup.",
       "paragraph": "It's the system's real output: an actual voice note, transcribed, extracted, and filled into your template by the AI — unedited afterward. Hit play.",
       "transcriptLabel": "Automatic transcription",

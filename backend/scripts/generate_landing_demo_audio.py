@@ -6,10 +6,10 @@ Reads OPENAI_API_KEY from the environment directly (not app.core.config.settings
 this key belongs to this content-generation tool, not the production pipeline).
 
 Usage (run inside the backend container, or anywhere with `openai` installed):
-    OPENAI_API_KEY=sk-... python scripts/generate_landing_demo_audio.py
+    OPENAI_API_KEY=sk-... python scripts/generate_landing_demo_audio.py [es|en]
 
-Writes backend/scripts/_landing_demo_input.mp3 — feed it to
-generate_landing_demo_asset.py next.
+Locale defaults to "es". Writes backend/scripts/_landing_demo_input.mp3 (es) or
+_landing_demo_input_en.mp3 (en) — feed it to generate_landing_demo_asset.py next.
 """
 
 import os
@@ -18,9 +18,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
-OUTPUT_PATH = Path(__file__).parent / "_landing_demo_input.mp3"
-
-SCRIPT_TEXT = (
+ES_SCRIPT_TEXT = (
     "Hola, buenas tardes, soy Javier Molina. Hoy dieciocho de agosto acabo de terminar "
     "la reunión con Construcciones Marítimas del Levante, en sus oficinas de Alicante. "
     "Han asistido Marta Delgado, la directora de compras, Óscar Ferreira, del "
@@ -37,14 +35,45 @@ SCRIPT_TEXT = (
     "septiembre para cerrar el tema del transporte. En general, muy buena reunión."
 )
 
-INSTRUCTIONS = (
+ES_INSTRUCTIONS = (
     "Warm, natural business voice, Spanish from Spain. Sounds like a real voice memo "
+    "dictated right after leaving a client meeting, not a script being read aloud — "
+    "conversational pace, slight informality, not overly polished."
+)
+
+EN_SCRIPT_TEXT = (
+    "Hi, good afternoon, this is James Whitfield. Today, August eighteenth, I just "
+    "wrapped up the meeting with Harbor Point Industrial Supply, at their offices in "
+    "Savannah, Georgia. In attendance were Sarah Mitchell, VP of Procurement, Marcus "
+    "Reed from the technical department, and Emily Chen, who handles logistics. We "
+    "went over three items: first, the quarterly order, which is going up fifteen "
+    "percent starting in October; second, extending the maintenance contract to two "
+    "years; and third, changing the freight carrier for deliveries to the southern "
+    "region. We agreed to accept the volume increase by cutting the delivery window "
+    "down to two weeks, and to renew the maintenance contract on the current terms. "
+    "As for next steps: I, James Whitfield, need to send the updated proposal to "
+    "Sarah by Friday, August twenty-first; Marcus will confirm warehouse availability "
+    "on Monday, August twenty-fourth; and Emily has to reach out to the new carrier "
+    "before the end of the month. We're set to meet again on September fifteenth to "
+    "close out the transport piece. Overall, a really good meeting."
+)
+
+EN_INSTRUCTIONS = (
+    "Warm, natural business voice, American English. Sounds like a real voice memo "
     "dictated right after leaving a client meeting, not a script being read aloud — "
     "conversational pace, slight informality, not overly polished."
 )
 
 
 def main() -> None:
+    locale = sys.argv[1] if len(sys.argv) > 1 else "es"
+    if locale not in ("es", "en"):
+        sys.exit(f"Unknown locale {locale!r}, expected 'es' or 'en'.")
+
+    script_text, instructions = (EN_SCRIPT_TEXT, EN_INSTRUCTIONS) if locale == "en" else (ES_SCRIPT_TEXT, ES_INSTRUCTIONS)
+    suffix = "_en" if locale == "en" else ""
+    output_path = Path(__file__).parent / f"_landing_demo_input{suffix}.mp3"
+
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         sys.exit("OPENAI_API_KEY is not set in the environment.")
@@ -53,13 +82,13 @@ def main() -> None:
     with client.audio.speech.with_streaming_response.create(
         model="gpt-4o-mini-tts",
         voice="alloy",
-        input=SCRIPT_TEXT,
-        instructions=INSTRUCTIONS,
+        input=script_text,
+        instructions=instructions,
         response_format="mp3",
     ) as response:
-        response.stream_to_file(OUTPUT_PATH)
+        response.stream_to_file(output_path)
 
-    print(f"Wrote {OUTPUT_PATH} ({OUTPUT_PATH.stat().st_size} bytes)")
+    print(f"Wrote {output_path} ({output_path.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 // Real pipeline output, generated once via backend/scripts/generate_landing_demo_audio.py
 // (real OpenAI TTS) + generate_landing_demo_asset.py (real Groq Whisper transcription,
 // real Claude extraction, real docxtpl+Gotenberg render). Not a live call — see
-// PROJECT_ROADMAP.md decisions log, 2026-08-15.
-const TRANSCRIPT =
+// PROJECT_ROADMAP.md decisions log, 2026-08-15. Two independent real runs (one per
+// locale), not a translation of one into the other.
+const TRANSCRIPT_ES =
   'Hola, buenas tardes. Soy Javier Molina. Hoy, 18 de agosto, acabo de terminar la ' +
   'reunión con Construcciones Marítimas del Levante, en sus oficinas de Alicante. Han ' +
   'asistido Marta Delgado, la directora de compras, Oscar Ferreira, del departamento ' +
@@ -22,7 +23,22 @@ const TRANSCRIPT =
   'transportista antes de fin de mes. Quedamos en vernos otra vez el 15 de septiembre ' +
   'para cerrar el tema del transporte. En general, muy buena reunión.'
 
-const FIELDS = [
+const TRANSCRIPT_EN =
+  'Hi, good afternoon. This is James Whitfield. Today, August 18th, I just wrapped up ' +
+  'the meeting with Harbor Point Industrial Supply at their offices in Savannah, ' +
+  'Georgia. In attendance were Sarah Mitchell, VP of Procurement, Marcus Reed from the ' +
+  'Technical Department, and Emily Chen, who handles logistics. We went over three ' +
+  'items. First, the quarterly order, which is going up 15% starting in October. ' +
+  'Second, extending the maintenance contract to two years. And third, changing the ' +
+  'freight carrier for deliveries to the southern region. We agreed to accept the ' +
+  'volume increase by cutting the delivery window down to two weeks and to renew the ' +
+  'maintenance contract on the current terms. As for next steps, I, James Whitfield, ' +
+  'need to send the updated proposal to Sarah by Friday, August 21. Marcus will ' +
+  'confirm warehouse availability on Monday, August 24, and Emily has to reach out to ' +
+  'the new carrier before the end of the month. We\'re set to meet again on ' +
+  'September 15th to close out the transport piece.'
+
+const FIELDS_ES = [
   { label: 'company_name', value: 'Construcciones Marítimas del Levante' },
   { label: 'meeting_date', value: '2025-08-18' },
   { label: 'attendees', value: 'Javier Molina, Marta Delgado, Óscar Ferreira, Laura Sanz' },
@@ -36,11 +52,31 @@ const FIELDS = [
   }
 ]
 
-const eyebrowTag = '{{ ejemplo_real }}'
+const FIELDS_EN = [
+  { label: 'company_name', value: 'Harbor Point Industrial Supply' },
+  { label: 'meeting_date', value: '2024-08-18' },
+  { label: 'attendees', value: 'James Whitfield, Sarah Mitchell, Marcus Reed, Emily Chen' },
+  {
+    label: 'decisions',
+    value: 'Accept the volume increase (15%), reducing the delivery window to two weeks'
+  },
+  {
+    label: 'action_items',
+    value: 'Send the updated proposal to Sarah — James Whitfield, 08/21'
+  }
+]
+
+const content = computed(() =>
+  locale.value === 'es'
+    ? { transcript: TRANSCRIPT_ES, fields: FIELDS_ES, audioSrc: '/demo/audio-es.mp3', pdfSrc: '/demo/informe-es.pdf' }
+    : { transcript: TRANSCRIPT_EN, fields: FIELDS_EN, audioSrc: '/demo/audio-en.mp3', pdfSrc: '/demo/informe-en.pdf' }
+)
+
+const eyebrowTag = computed(() => `{{ ${t('landing.realDemo.eyebrowTag')} }}`)
 
 // One reveal "line" per sentence — natural caption-style stagger, and a clean
 // 1:1 index into transcriptLines (no word-grouping math to get wrong).
-const TRANSCRIPT_SENTENCES = TRANSCRIPT.split(/(?<=[.])\s+/)
+const TRANSCRIPT_SENTENCES = computed(() => content.value.transcript.split(/(?<=[.])\s+/))
 
 const root = ref<HTMLElement | null>(null)
 const audioEl = ref<HTMLAudioElement | null>(null)
@@ -163,7 +199,7 @@ function onLoadedMetadata() {
         <div>
           <audio
             ref="audioEl"
-            src="/demo/audio.mp3"
+            :src="content.audioSrc"
             preload="metadata"
             class="hidden"
             @play="onPlay"
@@ -222,7 +258,7 @@ function onLoadedMetadata() {
 
           <div class="mt-6 space-y-2 border-t border-slate-300 pt-4 font-mono text-xs text-ink-900">
             <p
-              v-for="(field, i) in FIELDS"
+              v-for="(field, i) in content.fields"
               :key="field.label"
               :ref="(el) => setFieldRef(el, i)"
               class="opacity-0"
@@ -238,11 +274,11 @@ function onLoadedMetadata() {
             {{ t('landing.realDemo.documentLabel') }}
           </p>
           <div class="flex-1 overflow-hidden rounded-lg border border-slate-300">
-            <iframe src="/demo/informe.pdf" :title="t('landing.realDemo.iframeTitle')" class="h-full min-h-[320px] w-full" />
+            <iframe :src="content.pdfSrc" :title="t('landing.realDemo.iframeTitle')" class="h-full min-h-[320px] w-full" />
           </div>
           <div class="mt-4 flex items-center justify-end">
             <a
-              href="/demo/informe.pdf"
+              :href="content.pdfSrc"
               download
               class="rounded-md bg-ink-900 px-4 py-2 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.02]"
             >
