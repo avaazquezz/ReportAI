@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const root = ref<HTMLElement | null>(null)
 const bars = ref<HTMLElement[]>([])
@@ -9,8 +9,14 @@ const fieldLines = ref<HTMLElement[]>([])
 const approvedMark = ref<HTMLElement | null>(null)
 
 const FIELDS = computed(() => [
-  { label: t('landing.demo.fields.meetingDate'), value: '11/08/2026' },
-  { label: t('landing.demo.fields.attendees'), value: 'Javier Molina, Isabel Ortega' },
+  {
+    label: t('landing.demo.fields.meetingDate'),
+    value: locale.value === 'es' ? '11/08/2026' : '08/11/2026'
+  },
+  {
+    label: t('landing.demo.fields.attendees'),
+    value: locale.value === 'es' ? 'Javier Molina, Isabel Ortega' : 'James Whitfield, Sarah Mitchell'
+  },
   { label: t('landing.demo.fields.summary'), value: t('landing.demo.fields.summaryValue') }
 ])
 

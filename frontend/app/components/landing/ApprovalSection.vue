@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 // Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
 // expression as an unterminated nested interpolation — building the string in
 // script and interpolating the result avoids that.
 const eyebrowTag = computed(() => `{{ ${t('landing.approval.eyebrowTag')} }}`)
+
+// Reuses the RealDemoSection story (same fictional client across the whole page).
+const mockCompanyName = computed(() => (locale.value === 'es' ? 'Construcciones Marítimas' : 'Harbor Point Industrial'))
+const mockMeetingDate = computed(() => (locale.value === 'es' ? '18/08/2025' : '08/18/2025'))
 
 // Static waveform for the voice-note bubble — the motion here is the
 // conversation itself popping in, not the bars.
@@ -101,8 +105,8 @@ watch(inView, (visible) => {
           >
             <p class="font-body text-sm font-medium text-ink-900">{{ t('landing.approval.mockup.draftReady') }}</p>
             <div class="mt-2 space-y-1 font-mono text-xs text-ink-900">
-              <p><span class="text-ink-900/70">company_name:</span> Construcciones Marítimas</p>
-              <p><span class="text-ink-900/70">meeting_date:</span> 18/08/2025</p>
+              <p><span class="text-ink-900/70">company_name:</span> {{ mockCompanyName }}</p>
+              <p><span class="text-ink-900/70">meeting_date:</span> {{ mockMeetingDate }}</p>
               <p><span class="text-ink-900/70">decisions:</span> 3</p>
             </div>
             <div class="mt-3 flex gap-2">

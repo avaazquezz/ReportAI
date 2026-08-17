@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 // Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
 // expression as an unterminated nested interpolation — building the string in
 // script and interpolating the result avoids that.
@@ -13,10 +13,17 @@ const dateTag = ['{{', 'meeting_date', '}}'].join(' ')
 const attendeesTag = '{% for a in attendees %}{{ a }}{% endfor %}'
 const summaryTag = ['{{', 'summary', '}}'].join(' ')
 
-const dateValue = '18 de agosto de 2025'
-const attendeesValue = 'Javier Molina, Marta Delgado, Óscar Ferreira, Laura Sanz'
-const summaryValue =
-  'Pedido trimestral +15% con entrega en dos semanas y renovación del contrato de mantenimiento.'
+const dateValue = computed(() => (locale.value === 'es' ? '18 de agosto de 2025' : 'August 18, 2025'))
+const attendeesValue = computed(() =>
+  locale.value === 'es'
+    ? 'Javier Molina, Marta Delgado, Óscar Ferreira, Laura Sanz'
+    : 'James Whitfield, Sarah Mitchell, Marcus Reed, Emily Chen'
+)
+const summaryValue = computed(() =>
+  locale.value === 'es'
+    ? 'Pedido trimestral +15% con entrega en dos semanas y renovación del contrato de mantenimiento.'
+    : 'Quarterly order +15% with two-week delivery and renewal of the maintenance contract.'
+)
 
 const panel = ref<HTMLElement | null>(null)
 const textCol = ref<HTMLElement | null>(null)
