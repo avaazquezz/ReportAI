@@ -98,6 +98,7 @@
       }
     },
     "realDemo": {
+      "eyebrowTag": "ejemplo_real",
       "heading": "Esto no es una maqueta.",
       "paragraph": "Es la salida real del sistema: una nota de voz de verdad, transcrita, extraída y rellenada en tu plantilla por la IA — sin editar nada después. Dale a play.",
       "transcriptLabel": "Transcripción automática",
