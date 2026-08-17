@@ -16,7 +16,9 @@ dist/
 build/
 storage/
 backend/scripts/_landing_demo_input.mp3
+backend/scripts/_landing_demo_input_en.mp3
 backend/scripts/_landing_demo_output/
+backend/scripts/_landing_demo_output_en/
 
 # ── Node / Nuxt (Phase 2) ─────────────────────────────────────────────────
 node_modules/
