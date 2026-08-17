@@ -35,10 +35,10 @@ from app.services.agent.state import AgentState
 from app.services.rendering.docx_render import fill_template
 from app.services.rendering.gotenberg_client import convert_docx_to_pdf
 from scripts.seed_demo_tenant import (
-    FIELD_SCHEMA,
-    PROMPT_INSTRUCTIONS,
     _GRAY,
     _NAVY,
+    FIELD_SCHEMA,
+    PROMPT_INSTRUCTIONS,
     _generate_template,
     _heading,
     _set_cell_shading,
