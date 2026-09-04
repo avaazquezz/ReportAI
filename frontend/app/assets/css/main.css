@@ -3,6 +3,38 @@ html {
   /* Sticky header is ~68px tall — without this, anchor nav (#como-funciona,
      #diferencia, #ejemplo-real) lands section content underneath it. */
   scroll-padding-top: 88px;
+  scroll-behavior: smooth;
+}
+
+/* Vuetify's reset only reaches inside <v-app>; the landing and auth layouts have none,
+   so anchors otherwise fall back to the UA's blue underline. Mirrors Vuetify's own rule. */
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+::selection {
+  background: #ff6a45;
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid #c0432a;
+  outline-offset: 3px;
+}
+
+/* Initial state for elements a section timeline reveals (see useSectionMotion).
+   app.vue restores them under <noscript>. */
+.m-hide {
+  opacity: 0;
+}
+
+/* Native <details> in the FAQ: hide the UA marker, we draw our own. */
+summary::-webkit-details-marker {
+  display: none;
+}
+summary {
+  list-style: none;
 }
 
 /* Non-negotiable regardless of how "spectacular" the landing's motion is meant to be. */
