@@ -1,72 +1,59 @@
 <script setup lang="ts">
-import gsap from 'gsap'
-
 const { t } = useI18n()
+const contactHref = useContactHref()
+
 // Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
 // expression as an unterminated nested interpolation — building the string in
 // script and interpolating the result avoids that.
 const placeholderTag = computed(() => `{{ ${t('landing.finalCta.placeholderTag')} }}`)
 
-const card = ref<HTMLElement | null>(null)
-const headlinePlaceholder = ref<HTMLElement | null>(null)
-const headline = ref<HTMLElement | null>(null)
-const sub = ref<HTMLElement | null>(null)
-const actions = ref<HTMLElement | null>(null)
-// Observe the card (always rendered), never a ref inside a v-if — an unmounted
-// target would silently never trigger the reveal.
-const inView = useInView(card, 0.4)
-
-watch(inView, (visible) => {
-  if (!visible) return
-
-  if (usePrefersReducedMotion()) {
-    gsap.set(headlinePlaceholder.value, { opacity: 0 })
-    gsap.set([headline.value, sub.value, actions.value], { opacity: 1, y: 0 })
-    return
-  }
-
-  gsap.set(headline.value, { y: 8 })
-  gsap
-    .timeline()
-    .to(headlinePlaceholder.value, { opacity: 0, y: -6, duration: 0.35, ease: 'power2.out' }, '+=0.35')
-    .to(headline.value, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' }, '<')
-    .fromTo(
-      [sub.value, actions.value],
-      { opacity: 0, y: 12 },
-      { opacity: 1, y: 0, duration: 0.5, stagger: 0.12, ease: 'power2.out' }
-    )
-})
+// Closes the loop opened by the hero: the same placeholder-resolving signature,
+// used exactly twice on the page.
+const root = ref<HTMLElement | null>(null)
+useSectionMotion(
+  root,
+  (tl) => {
+    tl.to('.tag', { opacity: 0, y: -6, duration: 0.35 }, 0.4)
+      .fromTo('.headline', { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4 }, '<')
+      .fromTo(['.sub', '.actions'], { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.12 })
+  },
+  { start: 'top 65%' }
+)
 </script>
 
 <template>
-  <section class="mx-auto max-w-[1200px] px-6 py-16 md:py-24">
+  <section class="bg-paper-50 px-6 pb-24 pt-8 md:pb-32">
     <div
-      ref="card"
-      class="relative overflow-hidden rounded-2xl bg-ink-900 px-6 py-16 text-center text-white md:px-8 md:py-20"
-      style="background-image: radial-gradient(circle at 50% 0%, rgba(255, 106, 69, 0.15), transparent 60%)"
+      ref="root"
+      class="relative mx-auto max-w-[1152px] overflow-hidden rounded-3xl bg-ink-900 px-6 py-20 text-center text-white md:px-8 md:py-28"
     >
-      <div class="relative mx-auto flex max-w-2xl items-center justify-center">
-        <p
-          ref="headlinePlaceholder"
-          class="absolute inset-0 flex items-center justify-center font-mono text-lg text-white/30 md:text-xl"
-          aria-hidden="true"
-        >
+      <div
+        class="pointer-events-none absolute inset-0"
+        style="background: radial-gradient(60% 70% at 50% 100%, rgba(255, 106, 69, 0.22), transparent 70%)"
+        aria-hidden="true"
+      />
+      <div class="relative mx-auto flex max-w-3xl items-center justify-center">
+        <p class="tag absolute inset-0 flex items-center justify-center font-mono text-lg text-white/30 md:text-xl" aria-hidden="true">
           {{ placeholderTag }}
         </p>
-        <h2 ref="headline" class="font-display text-4xl font-bold opacity-0 md:text-6xl">
+        <h2 class="headline m-hide font-display text-[clamp(2.2rem,5vw,4.2rem)] font-bold leading-[1.02] tracking-[-0.03em] [text-wrap:balance]">
           {{ t('landing.finalCta.headline') }}
         </h2>
       </div>
-      <p ref="sub" class="mx-auto mt-6 max-w-xl font-body text-lg text-white/70 opacity-0">
+      <p class="sub m-hide relative mx-auto mt-6 max-w-xl font-body text-lg text-white/70">
         {{ t('landing.finalCta.sub') }}
       </p>
-      <div ref="actions" class="mt-8 flex justify-center opacity-0">
+      <div class="actions m-hide relative mt-9 flex flex-col items-center gap-4">
         <a
-          href="mailto:adrian@vazquezdev.pro"
-          class="rounded-md bg-capture-600 px-8 py-4 font-body text-lg font-semibold text-white transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-capture-600 focus-visible:ring-offset-2"
+          :href="contactHref"
+          class="rounded-md bg-capture-600 px-8 py-4 font-body text-lg font-semibold text-white transition-[transform,background-color] hover:-translate-y-0.5 hover:bg-[#A93A24]"
         >
           {{ t('landing.cta.becomeClient') }}
         </a>
+        <p class="font-body text-sm text-white/55">
+          {{ t('landing.finalCta.or') }}
+          <a :href="`mailto:${CONTACT_EMAIL}`" class="text-white/85 underline decoration-white/30 underline-offset-4 hover:text-capture-500">{{ CONTACT_EMAIL }}</a>
+        </p>
       </div>
     </div>
   </section>

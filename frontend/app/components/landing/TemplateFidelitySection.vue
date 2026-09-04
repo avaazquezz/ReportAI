@@ -1,116 +1,80 @@
 <script setup lang="ts">
-import gsap from 'gsap'
+const { t } = useI18n()
 
-const { t, locale } = useI18n()
-// Vue's own template tokenizer treats literal "{{"/"}}" inside a mustache
-// expression as an unterminated nested interpolation — building the string in
-// script and interpolating the result avoids that.
-const eyebrowTag = computed(() => `{{ ${t('landing.templateFidelity.eyebrowTag')} }}`)
-
-// Filled values reuse the RealDemoSection story (same fictional client across
-// the whole page), so the panel shows the template resolving into that acta.
-const dateTag = ['{{', 'meeting_date', '}}'].join(' ')
-const attendeesTag = '{% for a in attendees %}{{ a }}{% endfor %}'
-const summaryTag = ['{{', 'summary', '}}'].join(' ')
-
-const dateValue = computed(() => (locale.value === 'es' ? '18 de agosto de 2025' : 'August 18, 2025'))
-const attendeesValue = computed(() =>
-  locale.value === 'es'
-    ? 'Javier Molina, Marta Delgado, Óscar Ferreira, Laura Sanz'
-    : 'James Whitfield, Sarah Mitchell, Marcus Reed, Emily Chen'
-)
-const summaryValue = computed(() =>
-  locale.value === 'es'
-    ? 'Pedido trimestral +15% con entrega en dos semanas y renovación del contrato de mantenimiento.'
-    : 'Quarterly order +15% with two-week delivery and renewal of the maintenance contract.'
-)
-
-const panel = ref<HTMLElement | null>(null)
-const textCol = ref<HTMLElement | null>(null)
-const lines = ref<HTMLElement[]>([])
-const tagSpans = ref<HTMLElement[]>([])
-const valueSpans = ref<HTMLElement[]>([])
-const inView = useInView(panel, 0.3)
-
-function setLineRef(el: unknown, i: number) {
-  if (el) lines.value[i] = el as HTMLElement
-}
-function setTagSpanRef(el: unknown, i: number) {
-  if (el) tagSpans.value[i] = el as HTMLElement
-}
-function setValueSpanRef(el: unknown, i: number) {
-  if (el) valueSpans.value[i] = el as HTMLElement
+// Real docxtpl syntax: the panel shows the client's .docx as the engine sees it,
+// then does what the product does — each tag resolves into its value.
+const TAGS = {
+  date: ['{{', 'meeting_date', '}}'].join(' '),
+  place: ['{{', 'location', '}}'].join(' '),
+  attendees: '{% for a in attendees %}{{ a }}{% endfor %}',
+  summary: ['{{', 'summary', '}}'].join(' ')
 }
 
-watch(inView, (visible) => {
-  if (!visible) return
-
-  if (usePrefersReducedMotion()) {
-    gsap.set(textCol.value, { opacity: 1, y: 0 })
-    gsap.set(lines.value, { clipPath: 'inset(0 0% 0 0)' })
-    gsap.set(tagSpans.value, { opacity: 0 })
-    gsap.set(valueSpans.value, { opacity: 1 })
-    return
-  }
-
-  gsap
-    .timeline()
-    .fromTo(textCol.value, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' })
-    .fromTo(
-      lines.value,
-      { clipPath: 'inset(0 100% 0 0)' },
-      { clipPath: 'inset(0 0% 0 0)', duration: 0.5, stagger: 0.15, ease: 'power1.inOut' },
-      '-=0.2'
-    )
-    // The panel does what the product does: after a beat, each tag resolves
-    // into its real value.
-    .to(tagSpans.value, { opacity: 0, duration: 0.3, stagger: 0.2 }, '+=0.8')
-    .to(valueSpans.value, { opacity: 1, duration: 0.3, stagger: 0.2 }, '<')
+const root = ref<HTMLElement | null>(null)
+useSectionMotion(root, (tl) => {
+  tl.fromTo('.text', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 })
+    .fromTo('.paper', { opacity: 0, y: 24, rotate: -1.5 }, { opacity: 1, y: 0, rotate: 0, duration: 0.6 }, '-=0.3')
+    .fromTo('.line', { opacity: 0, x: -6 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.12 }, '-=0.2')
+    .to('.tag', { opacity: 0, duration: 0.3, stagger: 0.22 }, '+=0.7')
+    .to('.val', { opacity: 1, duration: 0.3, stagger: 0.22 }, '<')
+    .fromTo('.check', { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4 }, '-=0.2')
 })
 </script>
 
 <template>
-  <section class="mx-auto max-w-[1200px] px-6 py-16 md:py-24">
-    <div class="grid items-center gap-12 md:grid-cols-2">
-      <div ref="panel" class="overflow-hidden rounded-2xl bg-ink-900 md:order-1">
-        <div class="hidden items-center gap-1.5 border-b border-white/10 px-4 py-3 sm:flex">
-          <span class="h-2.5 w-2.5 rounded-full bg-slate-300/30" />
-          <span class="h-2.5 w-2.5 rounded-full bg-slate-300/30" />
-          <span class="h-2.5 w-2.5 rounded-full bg-slate-300/30" />
-          <span class="ml-3 font-mono text-xs text-white/50">{{ t('landing.templateFidelity.filename') }}</span>
+  <section id="plantilla" ref="root" class="bg-surface-0 py-20 md:py-28">
+    <div class="mx-auto grid max-w-[1200px] items-center gap-12 px-6 md:grid-cols-2 lg:gap-16">
+      <div class="paper m-hide relative md:order-1">
+        <div class="absolute -top-3 left-6 rounded-md bg-ink-900 px-2.5 py-1 font-mono text-[11px] text-white shadow-sm">
+          {{ t('landing.templateFidelity.filename') }}
         </div>
-        <div class="space-y-3 p-6 font-mono text-sm">
-          <!-- Static initial clip (not just the GSAP "from" state) avoids a flash of
-               fully-revealed text before the reveal timeline runs. Tag and value are
-               stacked in the same inline-grid cell so the swap never shifts layout. -->
-          <p :ref="(el) => setLineRef(el, 0)" class="[clip-path:inset(0_100%_0_0)]">
-            <span class="text-white/70">{{ t('landing.templateFidelity.labels.date') }} </span>
-            <span class="inline-grid align-top">
-              <span :ref="(el) => setTagSpanRef(el, 0)" class="col-start-1 row-start-1 text-capture-500">{{ dateTag }}</span>
-              <span :ref="(el) => setValueSpanRef(el, 0)" class="col-start-1 row-start-1 text-white/90 opacity-0">{{ dateValue }}</span>
+        <div class="rounded-[3px] bg-surface-0 px-7 pb-10 pt-9 shadow-page ring-1 ring-ink-900/5 sm:px-9">
+          <p class="font-body text-xl font-bold leading-none tracking-tight text-doc-700">{{ t('landing.templateFidelity.docTitle') }}</p>
+          <div class="mt-3 h-px w-full bg-doc-700/15" />
+
+          <p class="line m-hide mt-5 font-body text-[13px] leading-6 text-ink-900">
+            <b class="font-semibold">{{ t('landing.templateFidelity.labels.date') }}</b>
+            <span class="ml-1 inline-grid align-top">
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.date }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.date') }}</span>
             </span>
           </p>
-          <p :ref="(el) => setLineRef(el, 1)" class="[clip-path:inset(0_100%_0_0)]">
-            <span class="text-white/70">{{ t('landing.templateFidelity.labels.attendees') }} </span>
-            <span class="inline-grid align-top">
-              <span :ref="(el) => setTagSpanRef(el, 1)" class="col-start-1 row-start-1 text-capture-500">{{ attendeesTag }}</span>
-              <span :ref="(el) => setValueSpanRef(el, 1)" class="col-start-1 row-start-1 text-white/90 opacity-0">{{ attendeesValue }}</span>
+          <p class="line m-hide mt-1 font-body text-[13px] leading-6 text-ink-900">
+            <b class="font-semibold">{{ t('landing.templateFidelity.labels.place') }}</b>
+            <span class="ml-1 inline-grid align-top">
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.place }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.place') }}</span>
             </span>
           </p>
-          <p :ref="(el) => setLineRef(el, 2)" class="pt-2 text-slate-300 [clip-path:inset(0_100%_0_0)]">{{ t('landing.templateFidelity.labels.summary') }}</p>
-          <p :ref="(el) => setLineRef(el, 3)" class="[clip-path:inset(0_100%_0_0)]">
+          <p class="line m-hide mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.attendees') }}</p>
+          <p class="line m-hide mt-1 font-body text-[13px] leading-6 text-ink-900">
             <span class="inline-grid align-top">
-              <span :ref="(el) => setTagSpanRef(el, 2)" class="col-start-1 row-start-1 text-capture-500">{{ summaryTag }}</span>
-              <span :ref="(el) => setValueSpanRef(el, 2)" class="col-start-1 row-start-1 text-white/90 opacity-0">{{ summaryValue }}</span>
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.attendees }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.attendees') }}</span>
+            </span>
+          </p>
+          <p class="line m-hide mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.summary') }}</p>
+          <p class="line m-hide mt-1 font-body text-[13px] leading-6 text-ink-900">
+            <span class="inline-grid align-top">
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.summary }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.summary') }}</span>
             </span>
           </p>
         </div>
       </div>
-      <div ref="textCol" class="opacity-0 md:order-2">
-        <p class="mb-2 font-mono text-xs uppercase tracking-wide text-capture-600">{{ eyebrowTag }}</p>
-        <h2 class="font-display text-3xl font-bold text-ink-900 md:text-4xl">{{ t('landing.templateFidelity.heading') }}</h2>
-        <p class="mt-6 font-body text-lg text-ink-900/80">
-          {{ t('landing.templateFidelity.paragraph') }}
+
+      <div class="md:order-2">
+        <div class="text m-hide">
+          <h2 class="font-display text-[clamp(1.9rem,3.4vw,2.9rem)] font-bold leading-[1.05] tracking-[-0.02em] text-ink-900">
+            {{ t('landing.templateFidelity.heading') }}
+          </h2>
+          <p class="mt-5 font-body text-lg leading-relaxed text-ink-900/75">{{ t('landing.templateFidelity.paragraph') }}</p>
+        </div>
+        <p class="check m-hide mt-6 flex gap-3 rounded-lg border border-approved-600/30 bg-approved-100/60 px-4 py-3 font-body text-sm leading-relaxed text-ink-900/80">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-approved-600" aria-hidden="true">
+            <path d="M4 10.5l4 4 8-9" />
+          </svg>
+          <span>{{ t('landing.templateFidelity.check') }}</span>
         </p>
       </div>
     </div>
