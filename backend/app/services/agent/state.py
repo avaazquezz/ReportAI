@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -32,6 +33,18 @@ class AgentState(BaseModel):
     is_voice: bool = False
     media_local_path: str | None = None
     transcript: str | None = None
+
+    # Who is talking and when: the language to answer in and the clock "tomorrow" resolves
+    # against (a message's own timestamp when the channel has one).
+    language: str = "es"
+    timezone: str = "Europe/Madrid"
+    received_at: datetime | None = None
+    sender_label: str | None = None
+    # The original text plus everything the person added later; the evidence quotes the
+    # extraction returns are checked against this.
+    source_text: str | None = None
+    corrections: list[str] = []
+    evidence: dict[str, Any] = {}
 
     document_type_id: uuid.UUID | None = None
     document_type_name: str | None = None

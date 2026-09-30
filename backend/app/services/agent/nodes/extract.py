@@ -1,123 +1,67 @@
-import json
-from functools import cache
-from typing import Any, NamedTuple, cast
+from datetime import UTC, datetime
+from typing import Any
+from zoneinfo import ZoneInfo
 
-from anthropic import AsyncAnthropic, transform_schema
-from anthropic.types import OutputConfigParam
-from openai import AsyncOpenAI
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from app.core.config import settings
 from app.services.agent.state import AgentState, ToolUsage
-from app.services.agent.tools.extraction_schema import build_extraction_model
+from app.services.agent.tools.extraction_schema import (
+    build_extraction_model,
+    build_result_model,
+    unverified_evidence_keys,
+)
 from app.services.agent.tools.pricing import estimate_cost_usd
+from app.services.i18n import LANGUAGE_NAMES, normalize_language
+from app.services.llm import structured_completion
 from app.services.observability.execution_log import observed_node
 
 TOOL_NAME = "extract_report_fields"
-_MAX_TOKENS = 4096
 
 
-class _Extraction(NamedTuple):
-    fields: dict[str, Any]
-    input_tokens: int
-    output_tokens: int
+def _local_moment(state: AgentState) -> datetime:
+    moment = state.received_at or datetime.now(UTC)
+    try:
+        return moment.astimezone(ZoneInfo(state.timezone))
+    except Exception:  # noqa: BLE001 — an unknown tz name in a tenant setting must not stop a report
+        return moment.astimezone(UTC)
 
 
-# Clients are built on first use, not at import: which provider is configured (and which
-# keys exist) depends on the installation.
-@cache
-def _anthropic_client() -> AsyncAnthropic:
-    return AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY, max_retries=3)
-
-
-@cache
-def _openai_client() -> AsyncOpenAI:
-    return AsyncOpenAI(
-        api_key=settings.EXTRACTION_API_KEY, base_url=settings.EXTRACTION_BASE_URL, max_retries=3
-    )
-
-
-def _build_system_prompt(document_type_name: str, prompt_instructions: str | None) -> str:
+def _build_system_prompt(state: AgentState) -> str:
+    assert state.document_type_name is not None
+    local = _local_moment(state)
+    language = LANGUAGE_NAMES[normalize_language(state.language)]
+    sender = f" ('{state.sender_label}')" if state.sender_label else ""
     base = (
-        f"You extract structured data for a '{document_type_name}' corporate report from a "
-        "transcript or message. Give your best-effort extraction of the requested fields. "
-        "Never invent facts not present in the source text — leave optional "
-        "fields empty rather than guessing."
+        f"You extract structured data for a '{state.document_type_name}' corporate report from a "
+        f"message sent by a person{sender}. The message was sent on {local:%A %Y-%m-%d} at "
+        f"{local:%H:%M} ({local.tzname()}): resolve relative dates and times ('tomorrow', "
+        "'next Thursday', 'el jueves') from that moment and always output absolute dates. "
+        "Fill a field only with what the message states. If it does not say, return null for "
+        "that field: never guess and never invent — a missing value will be asked of the "
+        "person. In 'evidence', for every field you filled, copy the shortest exact quote from "
+        "the message that supports it (verbatim, in the message's own language), or null. "
+        f"Write free-text values in {language}."
     )
-    if prompt_instructions:
-        return f"{base}\n\n{prompt_instructions}"
+    if state.prompt_instructions:
+        return f"{base}\n\n{state.prompt_instructions}"
     return base
 
 
-def _build_user_message(
-    incoming_text: str | None, last_validation_error: str | None, correction_text: str | None
-) -> str:
-    parts = [f"Source text:\n{incoming_text or ''}"]
-    if last_validation_error:
+def _build_user_message(state: AgentState) -> str:
+    parts = [f"Message:\n{state.source_text or ''}"]
+    corrections = [*state.corrections, *([state.correction_text] if state.correction_text else [])]
+    if corrections:
+        listed = "\n".join(f"- {text}" for text in corrections)
         parts.append(
-            f"Your previous extraction failed validation with this error — fix it:\n{last_validation_error}"
+            "The person added or corrected the following, in order (apply all of it; a later "
+            f"statement wins over an earlier one):\n{listed}"
         )
-    if correction_text:
-        parts.append(f"The requester sent this correction — apply it:\n{correction_text}")
+    if state.last_validation_error:
+        parts.append(
+            f"Your previous extraction failed validation with this error — fix it:\n{state.last_validation_error}"
+        )
     return "\n\n".join(parts)
-
-
-async def _extract_with_anthropic(system: str, user: str, model_cls: type[BaseModel]) -> _Extraction:
-    # Structured outputs, not a forced tool_choice: forced tool use returns a 400 on
-    # Claude Sonnet 5.5, Opus 5.5 and Fable 5.1, which is where model updates lead.
-    output_config: dict[str, Any] = {
-        "format": {"type": "json_schema", "schema": transform_schema(model_cls)}
-    }
-    if settings.EXTRACTION_EFFORT:
-        output_config["effort"] = settings.EXTRACTION_EFFORT
-    response = await _anthropic_client().messages.create(
-        model=settings.EXTRACTION_MODEL,
-        max_tokens=_MAX_TOKENS,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-        output_config=cast(OutputConfigParam, output_config),
-    )
-    if response.stop_reason in ("refusal", "max_tokens"):
-        raise ValueError(f"Extraction did not complete: stop_reason={response.stop_reason}")
-    text = next(block.text for block in response.content if block.type == "text")
-    return _Extraction(
-        json.loads(text), response.usage.input_tokens, response.usage.output_tokens
-    )
-
-
-async def _extract_with_openai_compatible(
-    system: str, user: str, model_cls: type[BaseModel]
-) -> _Extraction:
-    response = await _openai_client().chat.completions.create(
-        model=settings.EXTRACTION_MODEL,
-        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-        tools=[
-            {
-                "type": "function",
-                "function": {
-                    "name": TOOL_NAME,
-                    "description": "Extract structured report fields from the source text.",
-                    "parameters": model_cls.model_json_schema(),
-                },
-            }
-        ],
-        tool_choice={"type": "function", "function": {"name": TOOL_NAME}},
-    )
-    tool_calls = response.choices[0].message.tool_calls
-    if not tool_calls:
-        raise ValueError(
-            f"Model {settings.EXTRACTION_MODEL!r} did not call the extraction function — it may "
-            "not support forced function calling (reasoning/thinking variants often don't)"
-        )
-    call = tool_calls[0]
-    if call.type != "function":
-        raise ValueError(f"Unexpected tool call type {call.type!r} from the extraction model")
-    usage = response.usage
-    return _Extraction(
-        json.loads(call.function.arguments),
-        usage.prompt_tokens if usage else 0,
-        usage.completion_tokens if usage else 0,
-    )
 
 
 @observed_node("extract")
@@ -125,27 +69,38 @@ async def extract_node(state: AgentState) -> AgentState:
     assert state.document_type_name is not None
     assert state.field_schema is not None
 
-    model_cls = build_extraction_model(state.document_type_name, state.field_schema)
-    system = _build_system_prompt(state.document_type_name, state.prompt_instructions)
-    user = _build_user_message(
-        state.incoming_text, state.last_validation_error, state.correction_text
+    result_cls = build_result_model(state.document_type_name, state.field_schema)
+    source_text = state.source_text or state.incoming_text or ""
+    state = state.model_copy(update={"source_text": source_text})
+    completion = await structured_completion(
+        system=_build_system_prompt(state),
+        user=_build_user_message(state),
+        model_cls=result_cls,
+        tool_name=TOOL_NAME,
     )
-    extract = (
-        _extract_with_anthropic
-        if settings.EXTRACTION_PROVIDER == "anthropic"
-        else _extract_with_openai_compatible
-    )
-    extraction = await extract(system, user, model_cls)
+
+    fields: dict[str, Any] = completion.data.get("fields") or {}
+    quotes: dict[str, Any] = completion.data.get("evidence") or {}
+    corrections = [*state.corrections, *([state.correction_text] if state.correction_text else [])]
+    haystack = "\n".join([source_text, *corrections])
+    unverified = unverified_evidence_keys(quotes, haystack)
+    evidence = {
+        name: {"quote": quote, "verified": name not in unverified}
+        for name, quote in quotes.items()
+        if quote and fields.get(name) is not None
+    }
 
     return state.model_copy(
         update={
-            "extracted_fields": extraction.fields,
+            "extracted_fields": fields,
+            "evidence": evidence,
+            "corrections": corrections,
             "extraction_attempts": state.extraction_attempts + 1,
             "correction_text": None,
             "last_tool_usage": ToolUsage(
                 model_used=settings.EXTRACTION_MODEL,
                 cost_usd=estimate_cost_usd(
-                    settings.EXTRACTION_MODEL, extraction.input_tokens, extraction.output_tokens
+                    settings.EXTRACTION_MODEL, completion.input_tokens, completion.output_tokens
                 ),
             ),
         }
@@ -159,7 +114,14 @@ async def validate_node(state: AgentState) -> AgentState:
 
     model_cls = build_extraction_model(state.document_type_name, state.field_schema)
     try:
-        model_cls.model_validate(state.extracted_fields)
-        return state.model_copy(update={"last_validation_error": None})
+        validated = model_cls.model_validate(state.extracted_fields)
     except ValidationError as exc:
         return state.model_copy(update={"last_validation_error": str(exc)})
+    # Normalised (dates as ISO strings, tables as plain dicts) so what is stored and shown is
+    # exactly what the template will receive.
+    return state.model_copy(
+        update={
+            "extracted_fields": validated.model_dump(mode="json"),
+            "last_validation_error": None,
+        }
+    )
