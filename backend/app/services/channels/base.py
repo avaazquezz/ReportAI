@@ -30,12 +30,24 @@ class IncomingMessage(BaseModel):
     meta: dict[str, Any] = {}  # channel reply context, e.g. the email thread ids
 
 
+class Button(BaseModel):
+    """A choice offered as a tappable button where the channel supports it (Telegram); on the
+    others the message text itself says how to reply."""
+
+    label: str
+    action: str  # confirm | correct | cancel | doctype
+    arg: str | None = None
+
+
 class OutgoingMessage(BaseModel):
     """A message to send back on the channel a request came in on."""
 
     recipient_id: str
     text: str
     attachments: list[str] | None = None
+    attachment_name: str | None = None  # what the person sees the file called
+    buttons: list[Button] | None = None
+    meta: dict[str, Any] = {}  # channel reply context, e.g. the email thread to answer in
 
 
 class ChannelAdapterError(Exception):
@@ -67,3 +79,6 @@ class ChannelAdapter(ABC):
     @abstractmethod
     async def download_media(self, media_reference: str) -> bytes:
         """Resolve an IncomingMessage.media_reference into raw bytes (e.g. a voice note)."""
+
+    async def acknowledge(self, callback_id: str) -> None:
+        """Tell the channel a button press was received (stops Telegram's loading spinner)."""

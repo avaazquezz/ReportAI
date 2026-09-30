@@ -28,7 +28,7 @@ async def register_telegram_webhook(connection_id: uuid.UUID, credentials: dict[
     body = {
         "url": telegram_webhook_url(connection_id),
         "secret_token": credentials["secret_token"],
-        "allowed_updates": ["message"],
+        "allowed_updates": ["message", "callback_query"],
     }
     try:
         async with httpx.AsyncClient(timeout=15) as client:

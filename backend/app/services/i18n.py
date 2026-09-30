@@ -24,6 +24,7 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         # photos
         "photo_attached": "📎 Foto añadida al informe.",
         "photo_without_report": "He guardado la foto. Envíame la nota de voz o el texto del informe y la adjunto.",
+        "photo_failed": "No he podido descargar la foto. Envíala de nuevo, por favor.",
         # document type
         "doctype_prompt": "¿Qué tipo de documento quieres generar?",
         "doctype_unclear": "No he reconocido ese tipo. Elige uno de la lista.",
@@ -60,6 +61,7 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "unsupported_message": "I can't use that kind of message yet. Send a voice note, a text or a photo.",
         "photo_attached": "📎 Photo added to the report.",
         "photo_without_report": "I saved the photo. Send the voice note or text for the report and I'll attach it.",
+        "photo_failed": "I couldn't download the photo. Please send it again.",
         "doctype_prompt": "Which document type do you want to generate?",
         "doctype_unclear": "I didn't recognise that type. Pick one from the list.",
         "approval_header": "Here's what I extracted for your {doc_type}:",

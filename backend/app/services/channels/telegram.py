@@ -99,11 +99,23 @@ class TelegramAdapter(ChannelAdapter):
 
         await retry_async(_call)
 
+    @staticmethod
+    def _keyboard(message: OutgoingMessage) -> dict[str, Any] | None:
+        if not message.buttons:
+            return None
+        row = [
+            {"text": b.label, "callback_data": f"{b.action}:{b.arg}" if b.arg else b.action}
+            for b in message.buttons
+        ]
+        # A row per button when they are long (document type names), one row when they are short.
+        rows = [[b] for b in row] if any(len(b["text"]) > 18 for b in row) else [row]
+        return {"inline_keyboard": rows}
+
     async def _post_text(self, client: httpx.AsyncClient, message: OutgoingMessage) -> httpx.Response:
-        response = await client.post(
-            f"{self._api_base}/sendMessage",
-            json={"chat_id": message.recipient_id, "text": message.text},
-        )
+        payload: dict[str, Any] = {"chat_id": message.recipient_id, "text": message.text}
+        if keyboard := self._keyboard(message):
+            payload["reply_markup"] = keyboard
+        response = await client.post(f"{self._api_base}/sendMessage", json=payload)
         response.raise_for_status()
         return response
 
@@ -114,10 +126,14 @@ class TelegramAdapter(ChannelAdapter):
         response = await client.post(
             f"{self._api_base}/sendDocument",
             data={"chat_id": message.recipient_id, "caption": message.text},
-            files={"document": (Path(attachment_path).name, file_bytes)},
+            files={"document": (message.attachment_name or Path(attachment_path).name, file_bytes)},
         )
         response.raise_for_status()
         return response
+
+    async def acknowledge(self, callback_id: str) -> None:
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(f"{self._api_base}/answerCallbackQuery", json={"callback_query_id": callback_id})
 
     async def download_media(self, media_reference: str) -> bytes:
         async def _get_file_path() -> str:
