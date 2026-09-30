@@ -84,7 +84,7 @@ Run `make help` for the full list. The most-used ones:
 
 - `make logs` — tail logs from all services
 - `make test` — run the backend test suite (fast, free, excludes the golden-set eval)
-- `make eval` — run the golden-set extraction eval (costs real Anthropic/Groq API calls)
+- `make eval` — run the golden-set extraction eval (costs real AI provider API calls)
 - `make lint` — run ruff + mypy
 - `make seed-demo` — seed a demo tenant with a self-generated document template
 - `make migrate-create MSG="add reports table"` — generate a new Alembic revision (review the diff manually before applying — never blind-autogenerate-and-apply)

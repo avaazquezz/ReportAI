@@ -33,17 +33,39 @@ cp .env.example .env   # then fill EVERY value with real production secrets
 
 Production-specific values (see the commented blocks at the bottom of
 `.env.example`): `APP_DOMAIN`, `API_ROOT_PATH=/api`, `FRONTEND_ORIGIN`,
-`PUBLIC_BASE_URL`, `ENVIRONMENT=production`, the `DEMO_*` trio, and the guards
-(`SENDER_RATE_LIMIT_PER_HOUR`, `DAILY_SPEND_CAP_USD`). Generate `SECRET_KEY`
-and `DEMO_USER_PASSWORD` fresh — never reuse dev values. `.env` lives only on
-the server; it is never committed.
+`PUBLIC_BASE_URL`, `ENVIRONMENT=production` (this is also what closes `/docs` and
+`/openapi.json`), `LEGAL_NAME` / `LEGAL_ID` / `LEGAL_ADDRESS` (published on
+`/aviso-legal`), the `DEMO_*` trio, and the guards (`SENDER_RATE_LIMIT_PER_HOUR`,
+`DAILY_SPEND_CAP_USD`). Generate `SECRET_KEY` and `DEMO_USER_PASSWORD` fresh — never
+reuse dev values. `.env` lives only on the server; it is never committed.
+
+The AI provider is chosen here, per installation: `EXTRACTION_PROVIDER` (`anthropic` or
+`openai_compatible` + `EXTRACTION_BASE_URL` / `EXTRACTION_API_KEY`), `EXTRACTION_MODEL`, and
+the independent `TRANSCRIPTION_*` settings — with the client's own keys. SMTP, WhatsApp and
+Mailgun are optional: leave them unset to disable those features.
+
+A channel with an empty `allowed_senders` list rejects every message (unless
+`ALLOW_ANY_SENDER=true`), so after connecting a Telegram bot, add the administrator's
+Telegram id to it in the panel. The rejected id is written to the backend log, so it can be
+copied from there (`docker logs reportai_backend | grep "Rejected message"`).
 
 ### 3. Bring the stack up
 
+CI publishes the backend and frontend images to GHCR on every push to `main`
+(`.github/workflows/publish.yml`), tagged with the commit SHA and `latest`. The server pulls
+them instead of building; pin a release with `REPORTAI_TAG=<sha or v-tag>` in `.env`.
+
 ```bash
-docker compose --project-directory . -f infra/docker-compose.prod.yml up -d --build
-docker compose --project-directory . -f infra/docker-compose.prod.yml exec backend alembic upgrade head
+make deploy    # pull images → run the one-shot `migrate` job → restart
 ```
+
+`migrate` applies the Alembic migrations **and** LangGraph's checkpoint tables
+(`scripts/setup_checkpointer.py`), and the API only starts after it completes
+successfully. The API refuses to start if the checkpoint tables are missing, so a forgotten
+migration shows up as a clear error instead of failing the first report.
+
+If the GHCR packages are private, `docker login ghcr.io` first; to build on the server
+instead, use `docker compose --project-directory . -f infra/docker-compose.prod.yml up -d --build`.
 
 Deliberately **not** run here: `scripts/seed_demo_tenant.py` and
 `scripts/set_telegram_webhook.py`. The public interactive demo (Telegram bot
@@ -64,18 +86,40 @@ landing page loads with its static demo audio/PDF playing and the language
 auto-detecting/toggling correctly. No Telegram round-trip test — the bot
 stays off (see above).
 
-### 5. Cron jobs (host crontab)
+### 5. Backups (host crontab)
 
 ```cron
-# Nightly Postgres backup, 7-day rotation ($POSTGRES_* resolve inside the container)
-30 4 * * * docker exec reportai_postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' | gzip > /var/backups/reportai/reportai-$(date +\%u).sql.gz
+30 4 * * * BACKUP_SYNC_CMD='rclone sync /var/backups/reportai remote:reportai-backups' BACKUP_PING_URL='https://hc-ping.com/<uuid>' /path/to/ReportAI/infra/backup.sh >> /var/log/reportai-backup.log 2>&1
 ```
 
-(`%u` = day of week 1–7, so the rotation overwrites itself weekly. Create
-`/var/backups/reportai` first.) No demo-reset cron line — there is no demo
-tenant to reset while the public demo stays dormant.
+`infra/backup.sh` dumps the database and archives the storage volume (customers' `.docx`
+templates and PDFs live there, and nothing else can regenerate them). It verifies both
+files before keeping them, exits non-zero on any failure (so cron/monitoring see it), and
+prunes local copies older than `KEEP_DAYS` (14).
+
+Two things make it a real backup rather than a copy on the same disk:
+
+- `BACKUP_SYNC_CMD` runs after a successful backup — use it to push `BACKUP_DIR` off the
+  server, encrypted (e.g. `rclone` with a `crypt` remote, or `restic`). The dumps contain
+  client data.
+- `BACKUP_PING_URL` is pinged on success; a dead-man's-switch monitor (e.g. Healthchecks.io)
+  alerts you when a night *doesn't* report in, which a failing script alone can't tell you.
+
+**Rehearse the restore** before you need it, on a scratch server: stop the API, run
+`infra/restore.sh --yes <db-backup> [<storage-backup>]`, start the API, and check that a
+report downloads. The script drops and recreates the database.
+
+No demo-reset cron line — there is no demo tenant to reset while the public demo stays dormant.
 
 ### 6. Monitoring (minimal, deliberate)
 
 - Container health: every service defines a Docker healthcheck — `docker compose ps` shows it.
 - External uptime: a free UptimeRobot monitor on `https://reportai.vazquezlabs.com/api/health`.
+  It returns **503** when the database is unreachable, so any monitor that only looks at the
+  status code catches it.
+- Logs are one JSON object per line. Follow one report across its steps with
+  `docker logs reportai_backend | grep '"report_id": "<uuid>"'` (every line inside a pipeline
+  run carries `report_id` and `tenant_id`; failures include the traceback).
+- Reports whose pipeline dies with the process (a deploy, a crash) are marked `failed`, and their
+  sender is told, once they show no progress for `STUCK_REPORT_MINUTES` (15). A stop-gap until
+  reports run on a durable queue.
