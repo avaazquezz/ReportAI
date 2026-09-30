@@ -2,14 +2,15 @@ import hmac
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.exceptions import AuthenticationException, ResourceNotFoundException
 from app.models.channel_connection import ChannelConnection
 from app.repositories.base import BaseRepository
-from app.services.agent.invoke import start_or_resume_pipeline
+from app.services.agent.ingestion import ingest_message
+from app.services.channels.base import ChannelAdapterError
 from app.services.channels.telegram import TelegramAdapter
 
 router = APIRouter(tags=["webhooks"])
@@ -19,7 +20,6 @@ router = APIRouter(tags=["webhooks"])
 async def telegram_webhook(
     connection_id: uuid.UUID,
     request: Request,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
     repo = BaseRepository(ChannelConnection, db)
@@ -40,8 +40,9 @@ async def telegram_webhook(
     adapter = TelegramAdapter(
         bot_token=connection.credentials["bot_token"], channel_connection_id=connection.id
     )
-    incoming = await adapter.receive_message(payload)
-    await start_or_resume_pipeline(
-        db=db, connection=connection, incoming=incoming, background_tasks=background_tasks
-    )
+    try:
+        incoming = await adapter.receive_message(payload)
+    except ChannelAdapterError:
+        return {"status": "ignored"}  # an update type we don't read; a 5xx would make Telegram retry it
+    await ingest_message(db=db, connection=connection, incoming=incoming)
     return {"status": "ok"}
