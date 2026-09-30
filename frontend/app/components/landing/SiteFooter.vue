@@ -60,7 +60,10 @@ const NAV = [
       </div>
 
       <div class="mt-10 flex flex-col gap-2 border-t border-ink-900/10 pt-6 font-body text-xs text-ink-900/60 sm:flex-row sm:justify-between">
-        <span>© {{ new Date().getFullYear() }} ReportAI</span>
+        <span>
+          © {{ new Date().getFullYear() }} ReportAI ·
+          <NuxtLink to="/aviso-legal" class="text-ink-900/80 hover:text-capture-600">{{ t('landing.footer.legal') }}</NuxtLink>
+        </span>
         <span>
           {{ t('landing.footer.madeBy') }}
           <a href="https://www.vazquezdev.pro" target="_blank" rel="noopener noreferrer" class="text-ink-900/80 hover:text-capture-600">vazquezdev.pro</a>
