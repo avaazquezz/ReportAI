@@ -70,6 +70,9 @@ class Settings(BaseSettings):
     EXTRACTION_EFFORT: str = ""
     EXTRACTION_BASE_URL: str = ""
     EXTRACTION_API_KEY: str = ""
+    # Per attempt, and across the attempts of one call: a stalled provider must not hold a job.
+    LLM_TIMEOUT_SECONDS: int = 60
+    LLM_TOTAL_TIMEOUT_SECONDS: int = 150
 
     # ── Transcription: any OpenAI-compatible /audio/transcriptions endpoint
     #    (Groq by default; OpenAI or a local Whisper server work too). GROQ_API_KEY is the
