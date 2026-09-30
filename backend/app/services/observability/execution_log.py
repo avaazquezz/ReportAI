@@ -6,6 +6,7 @@ from collections.abc import Awaitable, Callable
 from langgraph.errors import GraphInterrupt
 
 from app.core.database import AsyncSessionLocal
+from app.core.logging import describe_exception
 from app.models.execution_log import ExecutionLog
 from app.services.agent.state import AgentState
 
@@ -85,7 +86,7 @@ def observed_node(step: str) -> Callable[[NodeFn], Callable[[AgentState], Awaita
                     step=step,
                     status="error",
                     latency_ms=int((time.monotonic() - start) * 1000),
-                    error_detail=str(exc)[:2000],
+                    error_detail=describe_exception(exc)[:2000],
                 )
                 raise
 
