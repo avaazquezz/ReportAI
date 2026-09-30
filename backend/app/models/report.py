@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,7 +11,20 @@ from app.core.database import Base
 
 class Report(Base):
     __tablename__ = "reports"
-    __table_args__ = (Index("ix_reports_tenant_id", "tenant_id"),)
+    __table_args__ = (
+        Index("ix_reports_tenant_id", "tenant_id"),
+        # A sender has at most one report in flight or waiting on them.
+        Index(
+            "uq_reports_one_active_per_sender",
+            "tenant_id",
+            "requester_channel",
+            "requester_identifier",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('pending', 'awaiting_doctype_selection', 'awaiting_details', 'awaiting_approval')"
+            ),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
