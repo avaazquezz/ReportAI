@@ -1,5 +1,10 @@
 <script setup lang="ts">
 const { t } = useI18n()
+const { public: config } = useRuntimeConfig()
+
+// Don't link a legal notice that would publish blanks: it appears once the deployment has
+// configured the owner's identity (NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS).
+const showLegalLink = computed(() => Boolean(config.legalName && config.legalId && config.legalAddress))
 
 const NAV = [
   { hash: '#ejemplo-real', key: 'realExample' },
@@ -61,8 +66,11 @@ const NAV = [
 
       <div class="mt-10 flex flex-col gap-2 border-t border-ink-900/10 pt-6 font-body text-xs text-ink-900/60 sm:flex-row sm:justify-between">
         <span>
-          © {{ new Date().getFullYear() }} ReportAI ·
-          <NuxtLink to="/aviso-legal" class="text-ink-900/80 hover:text-capture-600">{{ t('landing.footer.legal') }}</NuxtLink>
+          © {{ new Date().getFullYear() }} ReportAI
+          <template v-if="showLegalLink">
+            ·
+            <NuxtLink to="/aviso-legal" class="text-ink-900/80 hover:text-capture-600">{{ t('landing.footer.legal') }}</NuxtLink>
+          </template>
         </span>
         <span>
           {{ t('landing.footer.madeBy') }}
