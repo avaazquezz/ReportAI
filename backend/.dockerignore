@@ -7,3 +7,5 @@ __pycache__/
 .ruff_cache/
 tests/
 .env
+storage/
+scripts/_landing_demo_*
