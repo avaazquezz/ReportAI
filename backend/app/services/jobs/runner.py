@@ -114,6 +114,7 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
             timezone=tenant.timezone,
             received_at=report.received_at,
             sender_label=job.payload.get("sender_label"),
+            channel_meta=report.channel_meta or {},
         )
         result = await graph.ainvoke(state, config)
     await _mark_paused_if_interrupted(result, report.id)

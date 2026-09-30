@@ -79,6 +79,7 @@ async def test_approval_prompt_send_failure_does_not_raise(
         report_id=report.id,
         raw_payload={},
         document_type_name="Meeting Minutes",
+        field_schema={"summary": {"type": "str"}},
         extracted_fields={"summary": "Discussed Q3 budget"},
     )
 

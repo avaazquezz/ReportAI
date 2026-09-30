@@ -57,9 +57,17 @@ class AgentState(BaseModel):
     extracted_fields: dict[str, Any] | None = None
     extraction_attempts: int = 0
     last_validation_error: str | None = None
+    validation_retries: int = 0  # consecutive failed validations, reset by a valid extraction
     correction_text: str | None = None
     correction_attempts: int = 0
-    pending_user_reply: str | None = None
+    # A reply is free text, or a dict when it came from a button or the panel
+    # ({"action": "confirm" | "cancel" | "doctype", "arg": ..., "fields": {...}}).
+    pending_user_reply: str | dict[str, Any] | None = None
+    intent: str | None = None  # what the last reply meant: confirm | correct | cancel | new_report | ask
+    missing_fields: list[str] = []
+    missing_attempts: int = 0
+    # Where to answer: the email thread a reply should stay in.
+    channel_meta: dict[str, Any] = {}
 
     rendered_docx_path: str | None = None
     rendered_pdf_path: str | None = None
