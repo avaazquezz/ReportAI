@@ -11,10 +11,19 @@ from typing import Any
 
 import pytest
 
+from app.services.agent.nodes import extract
 from app.services.agent.nodes.extract import extract_node
 from app.services.agent.state import AgentState
 
 pytestmark = pytest.mark.eval
+
+
+@pytest.fixture(autouse=True)
+def _fresh_provider_clients() -> None:
+    # pytest-asyncio gives every test its own event loop; a provider client cached by an
+    # earlier test would reuse HTTP connections bound to a loop that is already closed.
+    extract._anthropic_client.cache_clear()
+    extract._openai_client.cache_clear()
 
 _GOLDEN_SET_DIR = Path(__file__).parent / "golden_set"
 _FUZZY_MATCH_THRESHOLD = 0.85
