@@ -7,14 +7,18 @@ from app.services.agent.tools.retry import retry_async
 from app.services.delivery.email import RETRYABLE_SMTP_ERRORS, require_smtp_configured
 
 
-async def send_plain_email(*, to: list[str], subject: str, body: str) -> None:
-    """Plain-text transactional email (password reset, tenant invite) — unlike
+async def send_plain_email(
+    *, to: list[str], subject: str, body: str, headers: dict[str, str] | None = None
+) -> None:
+    """Plain-text email (password reset, tenant invite, a reply in a report's thread) — unlike
     send_report_email, no PDF attachment is required."""
     require_smtp_configured()
     message = EmailMessage()
     message["From"] = settings.SMTP_FROM_ADDRESS
     message["To"] = ", ".join(to)
     message["Subject"] = subject
+    for name, value in (headers or {}).items():
+        message[name] = value
     message.set_content(body)
 
     async def _send() -> None:

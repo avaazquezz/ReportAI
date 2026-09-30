@@ -10,6 +10,7 @@ from app.services.channels.base import (
     OutgoingMessage,
 )
 from app.services.delivery.email import send_report_email
+from app.services.notifications.email import send_plain_email
 
 
 class EmailInboundAdapter(ChannelAdapter):
@@ -42,17 +43,24 @@ class EmailInboundAdapter(ChannelAdapter):
         )
 
     async def send_message(self, message: OutgoingMessage) -> None:
-        if not message.attachments:
-            # Plain-text-only reply: reuse the SMTP relay with no attachment by sending an
-            # empty placeholder file would be wrong — this channel is confirmation-by-reply
-            # only meaningfully once there's a PDF, which always comes with attachments=[...].
-            return
-        await send_report_email(
-            to=[message.recipient_id],
-            subject="ReportAI",
-            body=message.text,
-            attachment_path=message.attachments[0],
-        )
+        """Answers in the person's own thread, so the recap, the question and the PDF all stay
+        under the email they sent — a reply to any of them reaches the same report."""
+        original_id = message.meta.get("message_id")
+        subject = message.meta.get("subject") or "ReportAI"
+        if not subject.lower().startswith("re:"):
+            subject = f"Re: {subject}"
+        headers = {"In-Reply-To": original_id, "References": original_id} if original_id else {}
+        if message.attachments:
+            await send_report_email(
+                to=[message.recipient_id],
+                subject=subject,
+                body=message.text,
+                attachment_path=message.attachments[0],
+                attachment_name=message.attachment_name,
+                headers=headers,
+            )
+        else:
+            await send_plain_email(to=[message.recipient_id], subject=subject, body=message.text, headers=headers)
 
     async def download_media(self, media_reference: str) -> bytes:
         return Path(media_reference).read_bytes()

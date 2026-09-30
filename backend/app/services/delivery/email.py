@@ -15,12 +15,22 @@ def require_smtp_configured() -> None:
         raise RuntimeError("Email isn't configured: set SMTP_HOST and SMTP_FROM_ADDRESS")
 
 
-async def send_report_email(*, to: list[str], subject: str, body: str, attachment_path: str) -> None:
+async def send_report_email(
+    *,
+    to: list[str],
+    subject: str,
+    body: str,
+    attachment_path: str,
+    attachment_name: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> None:
     require_smtp_configured()
     message = EmailMessage()
     message["From"] = settings.SMTP_FROM_ADDRESS
     message["To"] = ", ".join(to)
     message["Subject"] = subject
+    for name, value in (headers or {}).items():
+        message[name] = value
     message.set_content(body)
 
     attachment_bytes = Path(attachment_path).read_bytes()
@@ -28,7 +38,7 @@ async def send_report_email(*, to: list[str], subject: str, body: str, attachmen
         attachment_bytes,
         maintype="application",
         subtype="pdf",
-        filename=Path(attachment_path).name,
+        filename=attachment_name or Path(attachment_path).name,
     )
 
     async def _send() -> None:
