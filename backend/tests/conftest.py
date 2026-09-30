@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -54,3 +55,12 @@ async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _channel_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These are optional in production (empty disables the channel); the webhook tests need
+    them set, whatever the environment they run in."""
+    monkeypatch.setattr(settings, "WHATSAPP_APP_SECRET", "test-whatsapp-app-secret")
+    monkeypatch.setattr(settings, "WHATSAPP_VERIFY_TOKEN", "test-whatsapp-verify-token")
+    monkeypatch.setattr(settings, "MAILGUN_SIGNING_KEY", "test-mailgun-signing-key")

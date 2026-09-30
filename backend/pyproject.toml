@@ -19,7 +19,7 @@ dependencies = [
     "langgraph-checkpoint-postgres>=2.0",
     "psycopg[binary,pool]>=3.2",
     "anthropic>=0.40",
-    "groq>=0.11",
+    "openai>=1.50",
     "docxtpl>=0.18",
     "aiosmtplib>=3.0",
     "python-multipart>=0.0.9",
@@ -33,9 +33,6 @@ dev = [
     "ruff>=0.6.9",
     "mypy>=1.11.2",
     "types-python-jose>=3.3",
-    # Only used by the one-off backend/scripts/generate_landing_demo_audio.py —
-    # not part of the production pipeline, so it stays out of `dependencies`.
-    "openai>=1.50",
 ]
 
 [build-system]

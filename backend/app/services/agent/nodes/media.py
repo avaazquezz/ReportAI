@@ -1,7 +1,8 @@
 import asyncio
+from functools import cache
 from pathlib import Path
 
-from groq import AsyncGroq
+from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -11,7 +12,16 @@ from app.services.agent.state import AgentState, ToolUsage
 from app.services.channels.factory import get_channel_adapter
 from app.services.observability.execution_log import observed_node
 
-_groq_client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+
+@cache
+def _transcription_client() -> AsyncOpenAI:
+    api_key = settings.TRANSCRIPTION_API_KEY or settings.GROQ_API_KEY
+    if not api_key:
+        raise RuntimeError(
+            "Voice notes need a transcription provider: set TRANSCRIPTION_API_KEY "
+            "(and TRANSCRIPTION_BASE_URL / TRANSCRIPTION_MODEL if not using Groq)"
+        )
+    return AsyncOpenAI(api_key=api_key, base_url=settings.TRANSCRIPTION_BASE_URL)
 
 
 async def _load_connection(connection_id: object) -> ChannelConnection:
@@ -31,7 +41,7 @@ async def download_media_node(state: AgentState) -> AgentState:
     adapter = get_channel_adapter(connection)
     media_bytes = await adapter.download_media(state.media_reference)
 
-    # Single choke point for all three channels — caps what reaches Groq.
+    # Single choke point for all three channels — caps what reaches the transcription provider.
     if len(media_bytes) > settings.MAX_AUDIO_BYTES:
         raise ValueError(
             f"Audio too large: {len(media_bytes)} bytes (limit {settings.MAX_AUDIO_BYTES})"
@@ -50,7 +60,7 @@ async def transcribe_node(state: AgentState) -> AgentState:
     assert state.media_local_path is not None
 
     audio_bytes = await asyncio.to_thread(Path(state.media_local_path).read_bytes)
-    transcription = await _groq_client.audio.transcriptions.create(
+    transcription = await _transcription_client().audio.transcriptions.create(
         file=(Path(state.media_local_path).name, audio_bytes),
         model=settings.TRANSCRIPTION_MODEL,
         language=settings.TRANSCRIPTION_LANGUAGE,
