@@ -1,6 +1,7 @@
 COMPOSE = docker compose --project-directory . -f infra/docker-compose.yml
+PROD = docker compose --project-directory . -f infra/docker-compose.prod.yml
 
-.PHONY: help up down logs ps shell-db migrate migrate-down migrate-create test lint
+.PHONY: help up down logs ps shell-db migrate migrate-down migrate-create test lint deploy
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -20,8 +21,8 @@ ps: ## Show running services
 shell-db: ## Open a psql shell against the dev database
 	$(COMPOSE) exec postgres psql -U $${POSTGRES_USER:-reportai} -d $${POSTGRES_DB:-reportai}
 
-migrate: ## Apply all pending Alembic migrations
-	$(COMPOSE) exec backend alembic upgrade head
+migrate: ## Apply all pending Alembic migrations and LangGraph's checkpoint tables
+	$(COMPOSE) exec backend sh -c "alembic upgrade head && python scripts/setup_checkpointer.py"
 
 migrate-down: ## Revert the last Alembic migration
 	$(COMPOSE) exec backend alembic downgrade -1
@@ -32,7 +33,7 @@ migrate-create: ## Create a new migration: make migrate-create MSG="add reports 
 test: ## Run the backend test suite (fast, free, deterministic)
 	$(COMPOSE) exec backend pytest -v -m "not eval"
 
-eval: ## Run the golden-set eval suite (costs real Anthropic/Groq API calls)
+eval: ## Run the golden-set eval suite (costs real AI provider API calls)
 	$(COMPOSE) exec backend pytest -v -m eval
 
 lint: ## Run ruff and mypy against the backend
@@ -46,3 +47,8 @@ reset-demo: ## Delete the demo tenant (cascades all its data) and re-seed clean
 
 set-webhook: ## Register the Telegram webhook with the Bot API (needs PUBLIC_BASE_URL)
 	$(COMPOSE) exec backend python scripts/set_telegram_webhook.py
+
+deploy: ## Production (run on the server): pull images, migrate, restart
+	$(PROD) pull
+	$(PROD) run --rm migrate
+	$(PROD) up -d
