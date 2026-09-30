@@ -1,3 +1,4 @@
+import asyncio
 import functools
 import time
 import uuid
@@ -5,6 +6,7 @@ from collections.abc import Awaitable, Callable
 
 from langgraph.errors import GraphInterrupt
 
+from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.logging import describe_exception
 from app.models.execution_log import ExecutionLog
@@ -54,7 +56,8 @@ def observed_node(step: str) -> Callable[[NodeFn], Callable[[AgentState], Awaita
         async def wrapper(state: AgentState) -> AgentState:
             start = time.monotonic()
             try:
-                new_state = await fn(state)
+                async with asyncio.timeout(settings.NODE_TIMEOUT_SECONDS):
+                    new_state = await fn(state)
 
                 usage = new_state.last_tool_usage
                 await write_execution_log(

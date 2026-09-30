@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from app.api.webhooks import email as email_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
 from app.core.config import Settings, settings
-from app.services import llm
+from app.services import llm, transcription
 from app.services.agent.nodes import extract, media
 from app.services.agent.state import AgentState
 from app.services.agent.tools.pricing import estimate_cost_usd, require_priced_model_for_spend_cap
@@ -158,13 +158,13 @@ def test_webhooks_reject_signatures_made_with_an_empty_secret(monkeypatch: pytes
 
 
 async def test_transcription_goes_through_the_configured_openai_compatible_client(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, own_sessions: None
 ) -> None:
     audio = tmp_path / "audio.ogg"
     audio.write_bytes(b"fake-audio")
     create = AsyncMock(return_value=SimpleNamespace(text="hola mundo"))
     client = SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create)))
-    monkeypatch.setattr(media, "_transcription_client", lambda: client)
+    monkeypatch.setattr(transcription, "_client", lambda: client)
 
     result = await media.transcribe_node.__wrapped__(_state(media_local_path=str(audio)))
 
@@ -175,9 +175,9 @@ async def test_transcription_goes_through_the_configured_openai_compatible_clien
 def test_transcription_without_a_key_explains_what_to_set(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "TRANSCRIPTION_API_KEY", "")
     monkeypatch.setattr(settings, "GROQ_API_KEY", "")
-    media._transcription_client.cache_clear()
+    transcription.clear_client_cache()
     with pytest.raises(RuntimeError, match="TRANSCRIPTION_API_KEY"):
-        media._transcription_client()
+        transcription._client()
 
 
 def test_prices_match_anthropics_list_and_unknown_models_are_unpriced() -> None:
