@@ -1,11 +1,14 @@
 """What happens to a message the moment it arrives: one transaction decides whether it is a
 repeat, a stranger, noise, a reply or a new report — and records a report and its job together."""
 
+import io
 import uuid
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +16,7 @@ from app.core.config import settings
 from app.models.channel_connection import ChannelConnection
 from app.models.job import Job
 from app.models.report import Report
+from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
 from app.services.agent import ingestion
 from app.services.agent.ingestion import ingest_message, request_resume
@@ -221,3 +225,121 @@ async def test_the_allow_list_also_guards_replies(db: AsyncSession, adapter: Asy
 
     assert result.outcome == "rejected"
     assert await _jobs(db) == []
+
+
+def _jpeg(size: tuple[int, int] = (3000, 2000)) -> bytes:
+    out = io.BytesIO()
+    Image.new("RGB", size, (200, 30, 30)).save(out, "JPEG")
+    return out.getvalue()
+
+
+async def _paused(db: AsyncSession, connection: ChannelConnection, status: str = "awaiting_approval") -> Report:
+    report = Report(
+        tenant_id=connection.tenant_id, status=status, requester_channel="telegram",
+        requester_identifier="42", channel_connection_id=connection.id,
+    )
+    db.add(report)
+    await db.commit()
+    return report
+
+
+async def test_a_pressed_confirm_button_resumes_the_report_with_a_structured_reply(
+    db: AsyncSession, adapter: AsyncMock
+) -> None:
+    connection = await _connection(db)
+    paused = await _paused(db, connection)
+
+    result = await ingest_message(
+        db=db, connection=connection, incoming=_incoming(connection, text=None, action="confirm", callback_id="cb-1")
+    )
+    await db.commit()
+
+    assert (result.outcome, result.report_id) == ("resumed", paused.id)
+    [job] = await _jobs(db)
+    assert job.payload == {"action": "confirm", "arg": None}
+    adapter.acknowledge.assert_awaited_once_with("cb-1")
+
+
+async def test_the_correct_button_asks_what_to_change_and_waits(db: AsyncSession, adapter: AsyncMock) -> None:
+    connection = await _connection(db)
+    paused = await _paused(db, connection)
+
+    result = await ingest_message(db=db, connection=connection, incoming=_incoming(connection, text=None, action="correct"))
+
+    assert (result.outcome, result.report_id) == ("replied", paused.id)
+    assert await _jobs(db) == []
+    assert "cambiar" in adapter.send_message.await_args.args[0].text
+    await db.refresh(paused)
+    assert paused.status == "awaiting_approval"  # still waiting for the correction itself
+
+
+async def test_a_button_on_an_old_message_changes_nothing(db: AsyncSession, adapter: AsyncMock) -> None:
+    connection = await _connection(db)
+
+    result = await ingest_message(db=db, connection=connection, incoming=_incoming(connection, text=None, action="confirm"))
+
+    assert result.outcome == "replied" and await _jobs(db) == [] and await _reports(db) == []
+    adapter.send_message.assert_not_awaited()
+
+
+async def test_a_photo_sent_first_waits_and_joins_the_report_that_follows(
+    db: AsyncSession, adapter: AsyncMock, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(settings, "DOCUMENT_STORAGE_PATH", str(tmp_path))
+    connection = await _connection(db)
+    adapter.download_media.return_value = _jpeg()
+
+    photo = await ingest_message(
+        db=db, connection=connection, incoming=_incoming(connection, text=None, photo_reference="p1")
+    )
+    await db.commit()
+    assert photo.outcome == "replied" and await _reports(db) == []
+    waiting = (await db.execute(select(ReportAttachment))).scalars().one()
+    assert waiting.report_id is None and "guardado la foto" in adapter.send_message.await_args.args[0].text
+
+    created = await ingest_message(db=db, connection=connection, incoming=_incoming(connection, text="Visité la obra"))
+    await db.commit()
+
+    await db.refresh(waiting)
+    assert created.outcome == "created" and waiting.report_id == created.report_id
+
+
+async def test_a_photo_during_a_report_is_attached_to_it(
+    db: AsyncSession, adapter: AsyncMock, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(settings, "DOCUMENT_STORAGE_PATH", str(tmp_path))
+    connection = await _connection(db)
+    paused = await _paused(db, connection)
+    adapter.download_media.return_value = _jpeg()
+
+    result = await ingest_message(db=db, connection=connection, incoming=_incoming(connection, text=None, photo_reference="p1"))
+    await db.commit()
+
+    attachment = (await db.execute(select(ReportAttachment))).scalars().one()
+    assert (result.outcome, attachment.report_id) == ("replied", paused.id)
+    assert "📎" in adapter.send_message.await_args.args[0].text and await _jobs(db) == []
+
+
+async def test_saved_photos_are_shrunk_upright_jpegs(
+    db: AsyncSession, adapter: AsyncMock, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(settings, "DOCUMENT_STORAGE_PATH", str(tmp_path))
+    connection = await _connection(db)
+    adapter.download_media.return_value = _jpeg((4000, 3000))
+
+    await ingest_message(db=db, connection=connection, incoming=_incoming(connection, text=None, photo_reference="p1"))
+
+    saved = (await db.execute(select(ReportAttachment))).scalars().one()
+    with Image.open(saved.path) as image:
+        assert image.format == "JPEG" and max(image.size) == 1600
+
+
+async def test_a_photo_that_cannot_be_downloaded_is_reported_not_lost_silently(
+    db: AsyncSession, adapter: AsyncMock
+) -> None:
+    connection = await _connection(db)
+    adapter.download_media.side_effect = RuntimeError("telegram is down")
+
+    result = await ingest_message(db=db, connection=connection, incoming=_incoming(connection, text=None, photo_reference="p1"))
+
+    assert result.outcome == "replied" and "descargar la foto" in adapter.send_message.await_args.args[0].text
