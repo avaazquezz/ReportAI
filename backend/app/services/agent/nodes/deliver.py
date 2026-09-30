@@ -55,7 +55,14 @@ async def finalize_report_node(state: AgentState) -> AgentState:
         repo = BaseRepository(Report, session)
         report = await repo.get_by_id(state.report_id)
         if report is not None:
-            await repo.update(report, status="delivered", completed_at=datetime.now(UTC))
+            await repo.update(
+                report,
+                status="delivered",
+                completed_at=datetime.now(UTC),
+                # Without these the panel can't offer the download or show/count the type.
+                file_path=state.rendered_pdf_path,
+                document_type_id=state.document_type_id,
+            )
             await session.commit()
     return state
 
