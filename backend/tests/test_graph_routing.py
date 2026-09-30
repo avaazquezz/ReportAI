@@ -4,6 +4,7 @@ import pytest
 
 from app.services.agent.graph import (
     _route_after_approval,
+    _route_after_completeness,
     _route_after_doctype_selection,
     _route_after_ingest,
     _route_after_resolve_doctype,
@@ -68,28 +69,53 @@ def test_route_after_doctype_selection_exhausted() -> None:
 
 
 def test_route_after_validate_success() -> None:
-    assert _route_after_validate(_base_state(last_validation_error=None)) == "human_approval_prompt"
+    assert _route_after_validate(_base_state(last_validation_error=None)) == "check_completeness"
 
 
 def test_route_after_validate_retries_within_bound() -> None:
-    state = _base_state(last_validation_error="bad", extraction_attempts=1)
+    state = _base_state(last_validation_error="bad", validation_retries=1)
     assert _route_after_validate(state) == "extract"
 
 
 def test_route_after_validate_exhausted() -> None:
-    state = _base_state(last_validation_error="bad", extraction_attempts=999)
+    state = _base_state(last_validation_error="bad", validation_retries=999)
     assert _route_after_validate(state) == "fail"
 
 
-def test_route_after_approval_confirmed() -> None:
-    assert _route_after_approval(_base_state(correction_text=None)) == "render"
+def test_a_complete_extraction_goes_to_approval() -> None:
+    assert _route_after_completeness(_base_state(missing_fields=[])) == "human_approval_prompt"
 
 
-def test_route_after_approval_correction_within_bound() -> None:
-    state = _base_state(correction_text="fix the date", correction_attempts=0)
+def test_missing_required_fields_are_asked_for_a_limited_number_of_times() -> None:
+    assert _route_after_completeness(_base_state(missing_fields=["date"], missing_attempts=0)) == "ask_missing_fields"
+    assert _route_after_completeness(_base_state(missing_fields=["date"], missing_attempts=1)) == "ask_missing_fields"
+    # after that the gap goes to the approver instead of nagging
+    assert _route_after_completeness(_base_state(missing_fields=["date"], missing_attempts=2)) == "notify_missing_fields_limit"
+
+
+@pytest.mark.parametrize(
+    ("intent", "expected"),
+    [
+        ("confirm", "render"),
+        ("cancel", "cancel_report"),
+        ("new_report", "supersede_report"),
+        ("ask", "ask_what_to_correct"),
+    ],
+)
+def test_route_after_approval_by_intent(intent: str, expected: str) -> None:
+    assert _route_after_approval(_base_state(intent=intent)) == expected
+
+
+def test_a_correction_extracts_again_within_the_limit() -> None:
+    state = _base_state(intent="correct", correction_text="fix the date", correction_attempts=1)
     assert _route_after_approval(state) == "extract"
 
 
-def test_route_after_approval_exhausted() -> None:
-    state = _base_state(correction_text="still wrong", correction_attempts=999)
-    assert _route_after_approval(state) == "fail"
+def test_both_allowed_corrections_are_honoured_then_the_limit_applies() -> None:
+    assert _route_after_approval(_base_state(intent="correct", correction_attempts=2)) == "extract"
+    assert _route_after_approval(_base_state(intent="correct", correction_attempts=3)) == "correction_limit"
+
+
+def test_panel_edits_that_do_not_fit_the_schema_go_back_to_the_person() -> None:
+    state = _base_state(intent="ask", last_validation_error="not a date")
+    assert _route_after_approval(state) == "ask_what_to_correct"

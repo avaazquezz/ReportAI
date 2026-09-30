@@ -116,12 +116,15 @@ async def validate_node(state: AgentState) -> AgentState:
     try:
         validated = model_cls.model_validate(state.extracted_fields)
     except ValidationError as exc:
-        return state.model_copy(update={"last_validation_error": str(exc)})
+        return state.model_copy(
+            update={"last_validation_error": str(exc), "validation_retries": state.validation_retries + 1}
+        )
     # Normalised (dates as ISO strings, tables as plain dicts) so what is stored and shown is
     # exactly what the template will receive.
     return state.model_copy(
         update={
             "extracted_fields": validated.model_dump(mode="json"),
             "last_validation_error": None,
+            "validation_retries": 0,
         }
     )
