@@ -1,20 +1,50 @@
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.validators import EmailField
 
-# Must match app.services.agent.tools.extraction_schema._TYPE_MAP exactly — an
-# unsupported type here would only fail later, at extraction time, on a real request.
-FieldType = Literal["str", "int", "float", "bool", "date", "list[str]", "list[int]"]
+# Must match app.services.agent.tools.extraction_schema.FIELD_TYPES exactly — an unsupported
+# type here would only fail later, at extraction time, on a real request.
+FieldType = Literal[
+    "str", "int", "float", "bool", "date", "time", "email", "phone",
+    "list[str]", "list[int]", "enum", "list[object]", "image",
+]
+ColumnType = Literal["str", "int", "float", "bool", "date", "time", "email", "phone"]
+
+
+class ColumnSpec(BaseModel):
+    type: ColumnType
+    description: str = ""
 
 
 class FieldSchemaEntry(BaseModel):
     type: FieldType
     description: str = ""
+    # "Required to send": the bot asks for it when the message doesn't contain it.
     required: bool = True
+    label: str | None = Field(default=None, max_length=120)
+    options: list[str] | None = None  # enum only
+    columns: dict[str, ColumnSpec] | None = None  # list[object] (a table) only
+    multiple: bool | None = None  # image only: one slot for several photos
+
+    @model_validator(mode="after")
+    def _check_type_specific_keys(self) -> Self:
+        if self.type == "enum":
+            if not self.options or len(set(self.options)) < 2:
+                raise ValueError("an enum field needs at least two different options")
+        elif self.options is not None:
+            raise ValueError("options only apply to enum fields")
+        if self.type == "list[object]":
+            if not self.columns:
+                raise ValueError("a table field needs at least one column")
+        elif self.columns is not None:
+            raise ValueError("columns only apply to list[object] fields")
+        if self.multiple is not None and self.type != "image":
+            raise ValueError("multiple only applies to image fields")
+        return self
 
 
 class DocumentTypeCreateRequest(BaseModel):

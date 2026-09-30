@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def _dump_field_schema(field_schema: dict[str, FieldSchemaEntry]) -> dict[str, object]:
-    return {name: entry.model_dump() for name, entry in field_schema.items()}
+    return {name: entry.model_dump(exclude_none=True) for name, entry in field_schema.items()}
 
 
 @router.post("", status_code=201)
