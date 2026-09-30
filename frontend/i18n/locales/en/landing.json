@@ -270,7 +270,38 @@
     },
     "footer": {
       "tagline": "From audio to report, without touching a template.",
-      "madeBy": "A product by"
+      "madeBy": "A product by",
+      "legal": "Legal notice"
+    },
+    "legal": {
+      "title": "Legal notice",
+      "seoDescription": "Identity of the owner of ReportAI and terms of use of this website.",
+      "pending": "[not configured yet]",
+      "owner": {
+        "heading": "Website owner",
+        "intro": "In compliance with article 10 of Spanish Law 34/2002 on Information Society Services and Electronic Commerce (LSSI-CE), the owner's details are:",
+        "name": "Owner",
+        "id": "Tax ID (NIF/CIF)",
+        "address": "Address",
+        "email": "Email"
+      },
+      "purpose": {
+        "heading": "Purpose and terms of use",
+        "body": "This website presents ReportAI and the related installation and maintenance services. Browsing it is free. Whoever uses it agrees to do so lawfully and not to harm the site or third parties."
+      },
+      "ip": {
+        "heading": "Intellectual property",
+        "body": "The texts, images and other content of this site belong to its owner and may not be reproduced without permission. ReportAI's source code is distributed under the Sustainable Use License 1.0; its full terms are in the LICENSE file of the repository.",
+        "licenseLink": "Read the license"
+      },
+      "liability": {
+        "heading": "Liability",
+        "body": "The owner does not guarantee that the site is error-free or uninterruptedly available, and is not liable for damages arising from its use except where the law requires it. Links to third-party sites are provided as information; the owner does not control their content."
+      },
+      "law": {
+        "heading": "Governing law",
+        "body": "This legal notice is governed by Spanish law. Disputes will be submitted to the courts that are competent under the applicable rules."
+      }
     }
   }
 }

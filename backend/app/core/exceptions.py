@@ -28,3 +28,12 @@ class ConflictException(ReportAIException):
 class ValidationException(ReportAIException):
     def __init__(self, detail: str = "Invalid request") -> None:
         super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+
+class RateLimitException(ReportAIException):
+    def __init__(self, retry_after_seconds: int, detail: str = "Too many attempts. Try again later.") -> None:
+        super().__init__(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=detail,
+            headers={"Retry-After": str(retry_after_seconds)},
+        )

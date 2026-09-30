@@ -1,4 +1,6 @@
-from pydantic import computed_field
+from typing import Literal
+
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -42,6 +44,14 @@ class Settings(BaseSettings):
     SENDER_RATE_LIMIT_PER_HOUR: int = 0
     DAILY_SPEND_CAP_USD: float = 0.0
     MAX_AUDIO_BYTES: int = 10 * 1024 * 1024
+    # A channel with an empty allowed_senders list rejects everyone. Anyone who finds a
+    # bot's username could otherwise spend the client's AI credit. Only the public demo,
+    # which is meant to be open, sets this to true.
+    ALLOW_ANY_SENDER: bool = False
+    # A report still 'pending' with no progress for this long is declared failed (its
+    # pipeline died with the process that was running it). Keep it above the slowest
+    # legitimate run: a model call can take minutes.
+    STUCK_REPORT_MINUTES: int = 15
 
     # ── Public demo. Setting DEMO_USER_EMAIL enables one-click demo login
     #    and makes that account read-only. The others feed the seed script. ─
@@ -50,35 +60,63 @@ class Settings(BaseSettings):
     DEMO_TELEGRAM_BOT_TOKEN: str = ""
     DEMO_NOTIFICATION_EMAIL: str = ""
 
-    # ── Anthropic (extraction — the only node that uses Claude) ─────────
-    ANTHROPIC_API_KEY: str
+    # ── AI provider for extraction — chosen per installation. "anthropic" uses the
+    #    Anthropic SDK; "openai_compatible" talks to any OpenAI-style chat endpoint
+    #    (OpenAI, DeepSeek, Kimi, Gemini, Groq, Mistral, Ollama...) via base URL + key. ──
+    EXTRACTION_PROVIDER: Literal["anthropic", "openai_compatible"] = "anthropic"
     EXTRACTION_MODEL: str = "claude-sonnet-5"
+    ANTHROPIC_API_KEY: str = ""
+    # Anthropic only: low | medium | high. Empty = the model's default. Haiku 4.5 rejects it.
+    EXTRACTION_EFFORT: str = ""
+    EXTRACTION_BASE_URL: str = ""
+    EXTRACTION_API_KEY: str = ""
 
-    # ── Groq (transcription only) ────────────────────────────────────────
-    GROQ_API_KEY: str
+    # ── Transcription: any OpenAI-compatible /audio/transcriptions endpoint
+    #    (Groq by default; OpenAI or a local Whisper server work too). GROQ_API_KEY is the
+    #    legacy name of TRANSCRIPTION_API_KEY. ──────────────────────────────────────────
+    TRANSCRIPTION_BASE_URL: str = "https://api.groq.com/openai/v1"
+    TRANSCRIPTION_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
     TRANSCRIPTION_MODEL: str = "whisper-large-v3-turbo"
     TRANSCRIPTION_LANGUAGE: str = "es"
 
     # ── Rendering ─────────────────────────────────────────────────────────
     GOTENBERG_URL: str = "http://gotenberg:3000"
 
-    # ── SMTP delivery ────────────────────────────────────────────────────
-    SMTP_HOST: str
+    # ── SMTP delivery (optional: without it, report emails and password resets fail
+    #    loudly; Telegram delivery doesn't need it) ─────────────────────────────────
+    SMTP_HOST: str = ""
     SMTP_PORT: int = 587
-    SMTP_USER: str
-    SMTP_PASSWORD: str
-    SMTP_FROM_ADDRESS: str
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_ADDRESS: str = ""
 
-    # ── WhatsApp Business Cloud API (platform-level; per-tenant piece
-    #    lives in channel_connections.credentials) ───────────────────────
-    WHATSAPP_APP_SECRET: str
-    WHATSAPP_VERIFY_TOKEN: str
+    # ── WhatsApp Business Cloud API (experimental; platform-level — the per-tenant
+    #    piece lives in channel_connections.credentials). Empty = webhook disabled. ──
+    WHATSAPP_APP_SECRET: str = ""
+    WHATSAPP_VERIFY_TOKEN: str = ""
 
     # ── Mailgun inbound email (platform-level; per-tenant piece lives in
-    #    channel_connections.credentials) ────────────────────────────────
-    MAILGUN_API_KEY: str
-    MAILGUN_SIGNING_KEY: str
-    MAILGUN_INBOUND_DOMAIN: str
+    #    channel_connections.credentials). Empty = webhook disabled. ───────────────
+    MAILGUN_API_KEY: str = ""
+    MAILGUN_SIGNING_KEY: str = ""
+    MAILGUN_INBOUND_DOMAIN: str = ""
+
+    @model_validator(mode="after")
+    def _require_credentials_for_chosen_provider(self) -> "Settings":
+        if self.EXTRACTION_PROVIDER == "anthropic":
+            missing = [] if self.ANTHROPIC_API_KEY else ["ANTHROPIC_API_KEY"]
+        else:
+            missing = [
+                name
+                for name in ("EXTRACTION_BASE_URL", "EXTRACTION_API_KEY")
+                if not getattr(self, name)
+            ]
+        if missing:
+            raise ValueError(
+                f"EXTRACTION_PROVIDER={self.EXTRACTION_PROVIDER!r} requires: {', '.join(missing)}"
+            )
+        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property

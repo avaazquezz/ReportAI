@@ -10,7 +10,13 @@ from app.services.agent.tools.retry import retry_async
 RETRYABLE_SMTP_ERRORS = (SMTPConnectError, SMTPServerDisconnected, SMTPTimeoutError)
 
 
+def require_smtp_configured() -> None:
+    if not settings.SMTP_HOST or not settings.SMTP_FROM_ADDRESS:
+        raise RuntimeError("Email isn't configured: set SMTP_HOST and SMTP_FROM_ADDRESS")
+
+
 async def send_report_email(*, to: list[str], subject: str, body: str, attachment_path: str) -> None:
+    require_smtp_configured()
     message = EmailMessage()
     message["From"] = settings.SMTP_FROM_ADDRESS
     message["To"] = ", ".join(to)
@@ -30,8 +36,8 @@ async def send_report_email(*, to: list[str], subject: str, body: str, attachmen
             message,
             hostname=settings.SMTP_HOST,
             port=settings.SMTP_PORT,
-            username=settings.SMTP_USER,
-            password=settings.SMTP_PASSWORD,
+            username=settings.SMTP_USER or None,
+            password=settings.SMTP_PASSWORD or None,
             start_tls=True,
         )
 

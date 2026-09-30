@@ -270,7 +270,38 @@
     },
     "footer": {
       "tagline": "Del audio al informe, sin tocar una plantilla.",
-      "madeBy": "Un producto de"
+      "madeBy": "Un producto de",
+      "legal": "Aviso legal"
+    },
+    "legal": {
+      "title": "Aviso legal",
+      "seoDescription": "Datos identificativos del titular de ReportAI y condiciones de uso del sitio web.",
+      "pending": "[pendiente de configurar]",
+      "owner": {
+        "heading": "Titular del sitio web",
+        "intro": "En cumplimiento del artículo 10 de la Ley 34/2002, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa de los datos del titular:",
+        "name": "Titular",
+        "id": "NIF/CIF",
+        "address": "Domicilio",
+        "email": "Correo electrónico"
+      },
+      "purpose": {
+        "heading": "Objeto y condiciones de uso",
+        "body": "Este sitio web presenta ReportAI y los servicios de instalación y mantenimiento asociados. Navegar por él es libre y gratuito. Quien lo utiliza se compromete a hacerlo conforme a la ley y a no dañar el sitio ni a terceros."
+      },
+      "ip": {
+        "heading": "Propiedad intelectual",
+        "body": "Los textos, imágenes y demás contenidos de este sitio pertenecen a su titular, y no pueden reproducirse sin su autorización. El código fuente de ReportAI se distribuye bajo la Sustainable Use License 1.0; sus términos completos están en el fichero LICENSE del repositorio.",
+        "licenseLink": "Ver la licencia"
+      },
+      "liability": {
+        "heading": "Responsabilidad",
+        "body": "El titular no garantiza que el sitio esté libre de errores ni disponible de forma ininterrumpida, y no responde de los daños derivados de su uso, salvo en los casos en que la ley lo exija. Los enlaces a sitios de terceros se ofrecen como información; el titular no controla su contenido."
+      },
+      "law": {
+        "heading": "Legislación aplicable",
+        "body": "Este aviso legal se rige por la legislación española. Las controversias se someterán a los juzgados y tribunales que resulten competentes conforme a la normativa aplicable."
+      }
     }
   }
 }

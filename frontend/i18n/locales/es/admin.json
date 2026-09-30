@@ -47,7 +47,7 @@
         "channelType": "Canal",
         "allowedSenders": "Remitentes permitidos"
       },
-      "allSenders": "Todos",
+      "allSenders": "Ninguno (bloqueado)",
       "dialog": {
         "editTitle": "Editar canal",
         "channelTypeLabel": "Tipo de canal",
@@ -56,7 +56,7 @@
         "accessTokenLabel": "Access token",
         "inboundSlugLabel": "Inbound slug",
         "leaveBlank": "Dejar en blanco para no cambiar",
-        "allowedSendersHint": "Vacío = permitir a cualquier remitente"
+        "allowedSendersHint": "Ids de los remitentes autorizados. Si queda vacío, el canal rechaza a todos"
       },
       "errors": {
         "list": "No se pudieron cargar los canales.",
