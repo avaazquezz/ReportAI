@@ -1,9 +1,10 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user, is_demo_user
@@ -36,13 +37,26 @@ logger = logging.getLogger(__name__)
 _FORGOT_PASSWORD_MESSAGE = "If that email exists, we've sent password reset instructions."
 
 
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/auth/login")
-async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def login(
+    payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
+    email_key, ip_key = payload.email.lower(), _client_ip(request)
+    rate_limit.login_by_email.check(email_key)
+    rate_limit.login_by_ip.check(ip_key)
+
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
 
     if user is None or not user.is_active or not verify_password(payload.password, user.hashed_password):
+        rate_limit.login_by_email.record(email_key)
+        rate_limit.login_by_ip.record(ip_key)
         raise AuthenticationException("Incorrect email or password")
+    rate_limit.login_by_email.reset(email_key)
 
     token_payload = {
         "sub": str(user.id),
@@ -88,11 +102,16 @@ async def me(current_user: TenantUser = Depends(get_current_user)) -> UserRespon
 
 @router.post("/auth/forgot-password")
 async def forgot_password(
-    payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+    payload: ForgotPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)
 ) -> MessageResponse:
     """Always returns the same message regardless of whether the email exists — the
     response, and any email-delivery failure, must never let a caller distinguish a
     known account from an unknown one."""
+    email_key, ip_key = payload.email.lower(), _client_ip(request)
+    rate_limit.forgot_by_email.check(email_key)
+    rate_limit.forgot_by_ip.check(ip_key)
+    rate_limit.forgot_by_email.record(email_key)
+    rate_limit.forgot_by_ip.record(ip_key)
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
     if user is not None and user.is_active:

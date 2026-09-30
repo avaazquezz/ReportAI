@@ -26,10 +26,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await close_checkpointer()
 
 
+# The interactive docs and the OpenAPI schema document every endpoint for whoever asks:
+# they're a development tool, not something a production instance should publish.
+_docs_enabled = settings.is_development
+
 app = FastAPI(
     title="ReportAI API",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
     # Behind Traefik's StripPrefix in prod — keeps /docs, openapi.json and
     # trailing-slash redirects generating /api-prefixed URLs.
     root_path=settings.API_ROOT_PATH,
@@ -54,4 +61,4 @@ app.include_router(email_webhook.router)
 
 @app.get("/")
 async def root() -> dict[str, str]:
-    return {"service": "reportai-api", "environment": settings.ENVIRONMENT}
+    return {"service": "reportai-api"}
