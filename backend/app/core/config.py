@@ -48,10 +48,11 @@ class Settings(BaseSettings):
     # bot's username could otherwise spend the client's AI credit. Only the public demo,
     # which is meant to be open, sets this to true.
     ALLOW_ANY_SENDER: bool = False
-    # A report still 'pending' with no progress for this long is declared failed (its
-    # pipeline died with the process that was running it). Keep it above the slowest
-    # legitimate run: a model call can take minutes.
-    STUCK_REPORT_MINUTES: int = 15
+    # Ceilings so one stuck call cannot hold the worker: per graph node, and per job.
+    NODE_TIMEOUT_SECONDS: int = 240
+    JOB_TIMEOUT_SECONDS: int = 600
+    # A report left waiting on a person this long is cancelled and its checkpoints dropped.
+    PAUSED_REPORT_TTL_DAYS: int = 14
 
     # ── Public demo. Setting DEMO_USER_EMAIL enables one-click demo login
     #    and makes that account read-only. The others feed the seed script. ─

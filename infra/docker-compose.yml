@@ -55,6 +55,29 @@ services:
     networks:
       - reportai_net
 
+  # Same image as the API; runs the reports. `make restart-worker` after changing backend code.
+  worker:
+    build:
+      context: backend
+      target: builder
+    container_name: reportai_worker
+    command: python -m app.worker
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+      - reportai_storage_data:/app/storage
+    depends_on:
+      backend:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - reportai_net
+
 networks:
   reportai_net:
     driver: bridge

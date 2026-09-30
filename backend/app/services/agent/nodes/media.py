@@ -1,27 +1,15 @@
 import asyncio
-from functools import cache
 from pathlib import Path
-
-from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.channel_connection import ChannelConnection
 from app.repositories.base import BaseRepository
+from app.services import transcription
+from app.services.agent.persistence import save_report
 from app.services.agent.state import AgentState, ToolUsage
 from app.services.channels.factory import get_channel_adapter
 from app.services.observability.execution_log import observed_node
-
-
-@cache
-def _transcription_client() -> AsyncOpenAI:
-    api_key = settings.TRANSCRIPTION_API_KEY or settings.GROQ_API_KEY
-    if not api_key:
-        raise RuntimeError(
-            "Voice notes need a transcription provider: set TRANSCRIPTION_API_KEY "
-            "(and TRANSCRIPTION_BASE_URL / TRANSCRIPTION_MODEL if not using Groq)"
-        )
-    return AsyncOpenAI(api_key=api_key, base_url=settings.TRANSCRIPTION_BASE_URL)
 
 
 async def _load_connection(connection_id: object) -> ChannelConnection:
@@ -51,6 +39,7 @@ async def download_media_node(state: AgentState) -> AgentState:
     storage_dir.mkdir(parents=True, exist_ok=True)
     audio_path = storage_dir / "audio.ogg"
     audio_path.write_bytes(media_bytes)
+    await save_report(state.report_id, audio_path=str(audio_path))
 
     return state.model_copy(update={"media_local_path": str(audio_path)})
 
@@ -60,18 +49,14 @@ async def transcribe_node(state: AgentState) -> AgentState:
     assert state.media_local_path is not None
 
     audio_bytes = await asyncio.to_thread(Path(state.media_local_path).read_bytes)
-    transcription = await _transcription_client().audio.transcriptions.create(
-        file=(Path(state.media_local_path).name, audio_bytes),
-        model=settings.TRANSCRIPTION_MODEL,
-        language=settings.TRANSCRIPTION_LANGUAGE,
-        response_format="json",
-        temperature=0,
-    )
+    text = await transcription.transcribe(audio_bytes, Path(state.media_local_path).name)
+    await save_report(state.report_id, source_text=text)
 
     return state.model_copy(
         update={
-            "transcript": transcription.text,
-            "incoming_text": transcription.text,
+            "transcript": text,
+            "incoming_text": text,
+            "source_text": text,
             "last_tool_usage": ToolUsage(model_used=settings.TRANSCRIPTION_MODEL),
         }
     )

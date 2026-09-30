@@ -100,6 +100,28 @@ services:
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
 
+  # Runs the reports: transcription, the model, rendering, delivery. A deploy stops it gracefully
+  # (it finishes the job in hand); whatever it cannot finish resumes on the next worker.
+  worker:
+    <<: *backend
+    container_name: reportai_worker
+    command: python -m app.worker
+    volumes:
+      - reportai_storage_data:/app/storage
+    restart: always
+    stop_grace_period: 5m
+    mem_limit: 1g
+    logging: *logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - internal
+
   frontend:
     image: ghcr.io/avaazquezz/reportai-frontend:${REPORTAI_TAG:-latest}
     build:
