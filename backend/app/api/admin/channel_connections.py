@@ -16,6 +16,7 @@ from app.schemas.channel_connection import (
     ChannelConnectionUpdateRequest,
 )
 from app.schemas.common import PaginatedResponse
+from app.services.channels.telegram_webhook import register_telegram_webhook
 
 router = APIRouter(prefix="/channels", tags=["admin:channels"])
 
@@ -29,10 +30,13 @@ async def create_channel_connection(
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(ChannelConnection, db)
     credentials = dict(payload.credentials)
+    connection_id = uuid.uuid4()
     if payload.channel_type == "telegram":
         # Echoed back by Telegram on every webhook update and verified there.
         credentials.setdefault("secret_token", secrets.token_urlsafe(32))
+        await register_telegram_webhook(connection_id, credentials)
     connection = await repo.create(
+        id=connection_id,
         tenant_id=tenant_id,
         channel_type=payload.channel_type,
         display_name=payload.display_name,
@@ -89,6 +93,14 @@ async def update_channel_connection(
     merged_credentials = dict(connection.credentials)
     if payload.credentials:
         merged_credentials.update(payload.credentials)
+
+    # Only when something Telegram cares about changed (a new token, or switching back on),
+    # so editing allowed senders doesn't depend on Telegram being reachable.
+    if connection.channel_type == "telegram" and (
+        payload.credentials or (payload.is_active and not connection.is_active)
+    ):
+        merged_credentials.setdefault("secret_token", secrets.token_urlsafe(32))
+        await register_telegram_webhook(connection.id, merged_credentials)
 
     connection = await repo.update(
         connection,
