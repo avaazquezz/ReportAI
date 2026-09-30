@@ -1,16 +1,16 @@
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
+from app.models.job import Job
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
-from app.services.agent import invoke
 
 
 async def _create_tenant_admin(db: AsyncSession, *, name: str = "Acme", slug: str = "acme") -> TenantUser:
@@ -108,16 +108,14 @@ async def test_approve_resumes_awaiting_report(
     await db.commit()
     await db.refresh(report)
 
-    resume_mock = AsyncMock()
-    monkeypatch.setattr(invoke, "_resume_graph", resume_mock)
-
     response = await client.post(
         f"/reports/{report.id}/approve", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 202
     assert response.json()["status"] == "pending"  # claimed for the in-flight resume
-    resume_mock.assert_awaited_once_with(str(report.id), "CONFIRM")
+    [job] = (await db.execute(select(Job))).scalars().all()
+    assert (job.report_id, job.kind, job.payload) == (report.id, "resume", {"text": "CONFIRM"})
 
 
 async def test_approve_conflict_when_not_awaiting(client: AsyncClient, db: AsyncSession) -> None:

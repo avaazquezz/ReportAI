@@ -8,25 +8,25 @@ from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.repositories.base import BaseRepository
 
-PENDING_STATUSES = ("awaiting_doctype_selection", "awaiting_approval")
+# Waiting on a person, not on the worker.
+PENDING_STATUSES = ("awaiting_doctype_selection", "awaiting_details", "awaiting_approval")
+# A sender has at most one of these (see uq_reports_one_active_per_sender).
+ACTIVE_STATUSES = ("pending", *PENDING_STATUSES)
+TERMINAL_STATUSES = ("delivered", "failed", "cancelled")
 
 
 class ReportRepository(BaseRepository[Report]):
     def __init__(self, db: AsyncSession) -> None:
         super().__init__(Report, db)
 
-    async def find_pending_for_sender(
-        self, *, tenant_id: uuid.UUID, requester_identifier: str
+    async def find_active_for_sender(
+        self, *, tenant_id: uuid.UUID, channel: str, identifier: str
     ) -> Report | None:
-        query = (
-            select(Report)
-            .where(
-                Report.tenant_id == tenant_id,
-                Report.requester_identifier == requester_identifier,
-                Report.status.in_(PENDING_STATUSES),
-            )
-            .order_by(Report.created_at.desc())
-            .limit(1)
+        query = select(Report).where(
+            Report.tenant_id == tenant_id,
+            Report.requester_channel == channel,
+            Report.requester_identifier == identifier,
+            Report.status.in_(ACTIVE_STATUSES),
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
@@ -47,18 +47,16 @@ class ReportRepository(BaseRepository[Report]):
         return int(result.scalar_one())
 
     async def claim_for_resume(self, report_id: uuid.UUID) -> bool:
-        """Atomically flip a paused report back to 'pending' (commits). Returns True if
-        this call won the claim — the loser of a concurrent duplicate reply must not
-        schedule a second resume of the same thread."""
+        """Atomically flip a paused report back to 'pending'. Returns True if this call won the
+        claim — the loser of a concurrent duplicate reply must not enqueue a second resume.
+        Does not commit: the caller commits it together with the resume job."""
         result = await self.db.execute(
             update(Report)
             .where(Report.id == report_id, Report.status.in_(PENDING_STATUSES))
             .values(status="pending")
             .returning(Report.id)
         )
-        claimed = result.scalar_one_or_none() is not None
-        await self.db.commit()
-        return claimed
+        return result.scalar_one_or_none() is not None
 
     async def get_with_document_type_name(
         self, report_id: uuid.UUID

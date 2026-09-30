@@ -1,5 +1,6 @@
 import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, ClassVar
 
 from pydantic import BaseModel
@@ -14,6 +15,19 @@ class IncomingMessage(BaseModel):
     text: str | None = None
     media_reference: str | None = None  # opaque id/URL, passed back into download_media
     raw_payload: dict[str, Any]  # original webhook payload, kept for debugging
+
+    # Webhooks are delivered at least once; this id (Telegram update_id, WhatsApp wamid, email
+    # Message-Id) is what lets a redelivery be recognised and ignored.
+    external_id: str | None = None
+    sent_at: datetime | None = None
+    sender_label: str | None = None  # a display name, for the model and for the panel
+    photo_reference: str | None = None  # a picture to attach to the report
+    unsupported: bool = False  # a sticker, a location... something the bot cannot use
+    # A button the person pressed instead of typing: confirm | correct | cancel | doctype.
+    action: str | None = None
+    action_arg: str | None = None
+    callback_id: str | None = None  # lets the channel acknowledge the press
+    meta: dict[str, Any] = {}  # channel reply context, e.g. the email thread ids
 
 
 class OutgoingMessage(BaseModel):

@@ -1,4 +1,5 @@
 import uuid
+from email.utils import parseaddr
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -33,6 +34,10 @@ class EmailInboundAdapter(ChannelAdapter):
             sender_id=sender,
             text=payload.get("stripped_text") or payload.get("body_plain"),
             media_reference=payload.get("saved_attachment_path"),
+            external_id=payload.get("message_id"),
+            sender_label=parseaddr(payload.get("from") or "")[0] or None,
+            # What a reply needs to stay in the same thread in the person's mail client.
+            meta={"message_id": payload.get("message_id"), "subject": payload.get("subject")},
             raw_payload=payload,
         )
 
