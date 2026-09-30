@@ -5,6 +5,7 @@ from fastapi import BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.channel_connection import ChannelConnection
 from app.models.report import Report
 from app.models.tenant import Tenant
@@ -64,7 +65,30 @@ async def test_unlisted_sender_rejected_no_report_created(
     assert len(reports) == 0
 
 
-async def test_empty_allow_list_allows_any_sender(db: AsyncSession) -> None:
+async def test_empty_allow_list_rejects_everyone_by_default(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SEC-5: an unconfigured channel used to accept anyone who found the bot."""
+    monkeypatch.setattr(settings, "ALLOW_ANY_SENDER", False)
+    connection = await _create_connection(db, allowed_senders=[])
+    mock_adapter = AsyncMock()
+    monkeypatch.setattr(
+        "app.services.agent.invoke.get_channel_adapter", lambda _connection: mock_adapter
+    )
+
+    result = await start_or_resume_pipeline(
+        db=db,
+        connection=connection,
+        incoming=_incoming(connection, "anyone"),
+        background_tasks=BackgroundTasks(),
+    )
+
+    assert result is None
+    mock_adapter.send_message.assert_awaited_once()
+    assert (await db.execute(select(Report))).scalars().all() == []
+
+
+async def test_empty_allow_list_allows_any_sender_when_explicitly_enabled(db: AsyncSession) -> None:
     connection = await _create_connection(db, allowed_senders=[])
 
     result = await start_or_resume_pipeline(

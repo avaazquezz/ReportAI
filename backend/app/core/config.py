@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     SENDER_RATE_LIMIT_PER_HOUR: int = 0
     DAILY_SPEND_CAP_USD: float = 0.0
     MAX_AUDIO_BYTES: int = 10 * 1024 * 1024
+    # A channel with an empty allowed_senders list rejects everyone. Anyone who finds a
+    # bot's username could otherwise spend the client's AI credit. Only the public demo,
+    # which is meant to be open, sets this to true.
+    ALLOW_ANY_SENDER: bool = False
 
     # ── Public demo. Setting DEMO_USER_EMAIL enables one-click demo login
     #    and makes that account read-only. The others feed the seed script. ─

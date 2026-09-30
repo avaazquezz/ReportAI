@@ -103,9 +103,17 @@ async def start_or_resume_pipeline(
     """Single entry point every webhook route calls. A new message from a sender with an
     already-paused report is treated as the reply to that pause; otherwise a new run starts.
     Returns None (no report created, no LLM invoked) if the sender isn't on this
-    connection's allow-list — checked here so both the new-report and resume paths are
-    covered by one guard, not one per webhook route."""
-    if connection.allowed_senders and incoming.sender_id not in connection.allowed_senders:
+    connection's allow-list (an empty list allows nobody unless ALLOW_ANY_SENDER is set) —
+    checked here so both the new-report and resume paths are covered by one guard, not one
+    per webhook route."""
+    allowed = connection.allowed_senders
+    if (allowed and incoming.sender_id not in allowed) or (not allowed and not settings.ALLOW_ANY_SENDER):
+        # The id is logged so an administrator can copy it into the allow-list.
+        logger.warning(
+            "Rejected message from sender %s on connection %s (not in allowed_senders)",
+            incoming.sender_id,
+            connection.id,
+        )
         await _reject_sender_best_effort(connection, incoming)
         return None
 
