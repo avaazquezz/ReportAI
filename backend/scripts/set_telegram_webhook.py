@@ -1,6 +1,9 @@
 """Registers a Telegram connection's webhook against the Bot API, with the
 connection's secret_token so the webhook route can verify incoming updates.
 
+The panel already does this whenever a Telegram connection is saved with a new token or
+switched back on. This script is for re-registering by hand, e.g. after the domain changed.
+
 Usage: make set-webhook                # first active telegram connection
        python scripts/set_telegram_webhook.py <connection_id>
 
@@ -13,12 +16,12 @@ import secrets
 import sys
 import uuid
 
-import httpx
-
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.exceptions import ValidationException
 from app.models.channel_connection import ChannelConnection
 from app.repositories.base import BaseRepository
+from app.services.channels.telegram_webhook import register_telegram_webhook, telegram_webhook_url
 
 
 async def set_telegram_webhook(connection_id: uuid.UUID | None) -> None:
@@ -44,23 +47,14 @@ async def set_telegram_webhook(connection_id: uuid.UUID | None) -> None:
             )
             await session.commit()
 
-        bot_token = connection.credentials["bot_token"]
-        webhook_url = (
-            f"{settings.PUBLIC_BASE_URL}{settings.API_ROOT_PATH}/webhooks/telegram/{connection.id}"
-        )
+        credentials = {**connection.credentials, "secret_token": secret_token}
+        connection_id = connection.id
 
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(
-            f"https://api.telegram.org/bot{bot_token}/setWebhook",
-            json={
-                "url": webhook_url,
-                "secret_token": secret_token,
-                "allowed_updates": ["message"],
-            },
-        )
-    response.raise_for_status()
-    print(f"setWebhook -> {webhook_url}")
-    print(response.json())
+    try:
+        await register_telegram_webhook(connection_id, credentials)
+    except ValidationException as exc:
+        sys.exit(str(exc.detail))
+    print(f"setWebhook -> {telegram_webhook_url(connection_id)}")
 
 
 if __name__ == "__main__":
