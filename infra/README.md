@@ -67,6 +67,22 @@ migration shows up as a clear error instead of failing the first report.
 If the GHCR packages are private, `docker login ghcr.io` first; to build on the server
 instead, use `docker compose --project-directory . -f infra/docker-compose.prod.yml up -d --build`.
 
+### Connecting a client's Telegram bot
+
+One bot per installation (per company); all of the client's technicians talk to the same bot.
+
+1. Create the bot in BotFather and copy its token.
+2. In the panel: Canales → new → Telegram, paste the token. **Saving registers the webhook with
+   Telegram automatically** (`PUBLIC_BASE_URL` must be set and be a public `https://` URL —
+   Telegram pushes messages there). If Telegram refuses the token, the panel shows why and
+   nothing is saved. Changing the token, or switching a connection back on, registers again.
+3. Add the technicians' Telegram ids as allowed senders — an empty list rejects everyone. A
+   technician can write to the bot first; the rejected id is in the backend log
+   (`docker logs reportai_backend | grep "Rejected message"`).
+4. Send a voice note.
+
+`scripts/set_telegram_webhook.py` (`make set-webhook`) re-registers by hand, e.g. after the domain changed.
+
 Deliberately **not** run here: `scripts/seed_demo_tenant.py` and
 `scripts/set_telegram_webhook.py`. The public interactive demo (Telegram bot
 + demo-login tenant) stays dormant until a real paying client needs it — see

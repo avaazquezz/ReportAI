@@ -100,8 +100,11 @@ async function onSave() {
     dialog.value = false
     show(t('admin.channels.toast.saved'), 'success')
     await fetchList({ page: 1, itemsPerPage: 10 })
-  } catch {
-    saveError.value = t('admin.channels.errors.save')
+  } catch (err) {
+    // Saving a Telegram bot registers its webhook, so the API can explain why Telegram said no
+    // (e.g. a wrong token); validation errors arrive as a list and keep the generic text.
+    const detail = (err as { data?: { detail?: unknown } })?.data?.detail
+    saveError.value = typeof detail === 'string' ? detail : t('admin.channels.errors.save')
   } finally {
     saving.value = false
   }
