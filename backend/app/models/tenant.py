@@ -17,6 +17,11 @@ class Tenant(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # What the bot speaks to this company's people, and the clock "tomorrow" is resolved against.
+    language: Mapped[str] = mapped_column(String(5), nullable=False, default="es", server_default="es")
+    timezone: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="Europe/Madrid", server_default="Europe/Madrid"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
