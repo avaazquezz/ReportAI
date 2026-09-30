@@ -33,7 +33,7 @@ jobs:
       SECRET_KEY: ci-only-dummy-secret-key-not-used-anywhere-real
       ENVIRONMENT: testing
       ANTHROPIC_API_KEY: ci-dummy
-      GROQ_API_KEY: ci-dummy
+      TRANSCRIPTION_API_KEY: ci-dummy
       SMTP_HOST: localhost
       SMTP_USER: ci
       SMTP_PASSWORD: ci
@@ -54,23 +54,44 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
-          cache-dependency-path: backend/pyproject.toml
 
+      # Exactly the versions in uv.lock — what the published image ships, not whatever
+      # the `>=` ranges in pyproject.toml resolve to today.
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          pip install uv==0.12.5
+          uv sync --frozen --extra dev
 
       - name: Lint (ruff)
-        run: ruff check .
+        run: uv run --frozen ruff check .
 
       - name: Type check (mypy)
-        run: mypy app
+        run: uv run --frozen mypy app
 
       - name: Apply migrations
-        run: alembic upgrade head
+        run: |
+          uv run --frozen alembic upgrade head
+          uv run --frozen python scripts/setup_checkpointer.py
+
+      - name: Migrations match the models
+        run: uv run --frozen alembic check
 
       - name: Run tests
-        run: pytest -v -m "not eval"
+        run: uv run --frozen pytest -v -m "not eval"
+
+  backend-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the production image
+        run: docker build --target runtime -t reportai-backend:ci backend
+
+      # The production container runs as a non-root user; a storage volume owned by root
+      # made every upload fail while dev (running as root) looked fine.
+      - name: The app user can write to a fresh storage volume
+        run: docker run --rm -v ci_storage:/app/storage reportai-backend:ci sh -c 'echo ok > /app/storage/probe'
 
   frontend:
     runs-on: ubuntu-latest

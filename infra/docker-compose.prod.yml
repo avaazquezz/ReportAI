@@ -2,6 +2,22 @@
 # with a certificate resolver named "le" already configured at the Traefik level.
 # Single-domain routing: ${APP_DOMAIN}/api/* → backend (prefix stripped, backend
 # runs with API_ROOT_PATH=/api), everything else → the Nuxt frontend.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# One image for the API and the one-shot migrate job. CI publishes it to GHCR tagged with the
+# commit SHA (and `latest` on main); `build:` stays so `up --build` still works from a checkout.
+x-backend: &backend
+  image: ghcr.io/avaazquezz/reportai-backend:${REPORTAI_TAG:-latest}
+  build:
+    context: backend
+    target: runtime
+  env_file:
+    - .env
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -18,6 +34,8 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    mem_limit: 1g
+    logging: *logging
     networks:
       - internal
 
@@ -30,24 +48,41 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    mem_limit: 2g
+    logging: *logging
+    networks:
+      - internal
+
+  # One-shot: applies Alembic migrations and LangGraph's checkpoint tables, then exits.
+  # The API only starts once it has completed successfully (and `make deploy` runs it first).
+  migrate:
+    <<: *backend
+    container_name: reportai_migrate
+    command: sh -c "alembic upgrade head && python scripts/setup_checkpointer.py"
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 512m
+    logging: *logging
     networks:
       - internal
 
   backend:
-    build:
-      context: backend
-      target: runtime
+    <<: *backend
     container_name: reportai_backend
-    env_file:
-      - .env
     volumes:
       - reportai_storage_data:/app/storage
     restart: always
+    mem_limit: 1g
+    logging: *logging
     depends_on:
       postgres:
         condition: service_healthy
       gotenberg:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - internal
       - web
@@ -66,13 +101,19 @@ services:
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
 
   frontend:
+    image: ghcr.io/avaazquezz/reportai-frontend:${REPORTAI_TAG:-latest}
     build:
       context: frontend
     container_name: reportai_frontend
     environment:
       NUXT_PUBLIC_API_BASE: /api
       NUXT_API_BASE_SERVER: http://backend:8000
+      NUXT_PUBLIC_LEGAL_NAME: ${LEGAL_NAME:-}
+      NUXT_PUBLIC_LEGAL_ID: ${LEGAL_ID:-}
+      NUXT_PUBLIC_LEGAL_ADDRESS: ${LEGAL_ADDRESS:-}
     restart: always
+    mem_limit: 512m
+    logging: *logging
     depends_on:
       - backend
     networks:

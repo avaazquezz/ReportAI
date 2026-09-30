@@ -20,6 +20,12 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def include_object(obj: object, name: str | None, type_: str, reflected: bool, compare_to: object) -> bool:
+    # LangGraph's checkpoint tables live in the same database but are managed by
+    # scripts/setup_checkpointer.py — without this, autogenerate proposes dropping them.
+    return not (type_ == "table" and name is not None and name.startswith("checkpoint"))
+
+
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
@@ -28,13 +34,19 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

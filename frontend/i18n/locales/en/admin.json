@@ -47,7 +47,7 @@
         "channelType": "Channel",
         "allowedSenders": "Allowed senders"
       },
-      "allSenders": "All",
+      "allSenders": "None (blocked)",
       "dialog": {
         "editTitle": "Edit channel",
         "channelTypeLabel": "Channel type",
@@ -56,7 +56,7 @@
         "accessTokenLabel": "Access token",
         "inboundSlugLabel": "Inbound slug",
         "leaveBlank": "Leave blank to keep unchanged",
-        "allowedSendersHint": "Empty = allow any sender"
+        "allowedSendersHint": "IDs of the senders allowed to use this channel. If left empty, the channel rejects everyone"
       },
       "errors": {
         "list": "Couldn't load channels.",

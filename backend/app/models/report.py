@@ -29,4 +29,9 @@ class Report(Base):
     file_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Bumped by every status change, including a paused report being claimed for resume —
+    # the stuck-report sweep measures inactivity from here.
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app import models  # noqa: F401  — registers all tables on Base.metadata
+from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import Base, get_db
 from app.main import app
@@ -54,3 +56,24 @@ async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _open_channels(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Production rejects everyone when a channel's allow-list is empty; the tests that
+    aren't about the allow-list use empty ones and expect messages through."""
+    monkeypatch.setattr(settings, "ALLOW_ANY_SENDER", True)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits() -> None:
+    rate_limit.clear_all()
+
+
+@pytest.fixture(autouse=True)
+def _channel_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These are optional in production (empty disables the channel); the webhook tests need
+    them set, whatever the environment they run in."""
+    monkeypatch.setattr(settings, "WHATSAPP_APP_SECRET", "test-whatsapp-app-secret")
+    monkeypatch.setattr(settings, "WHATSAPP_VERIFY_TOKEN", "test-whatsapp-verify-token")
+    monkeypatch.setattr(settings, "MAILGUN_SIGNING_KEY", "test-mailgun-signing-key")

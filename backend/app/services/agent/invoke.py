@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.logging import describe_exception, log_context
 from app.models.channel_connection import ChannelConnection
 from app.models.report import Report
 from app.repositories.execution_log_repository import ExecutionLogRepository
@@ -103,9 +104,17 @@ async def start_or_resume_pipeline(
     """Single entry point every webhook route calls. A new message from a sender with an
     already-paused report is treated as the reply to that pause; otherwise a new run starts.
     Returns None (no report created, no LLM invoked) if the sender isn't on this
-    connection's allow-list — checked here so both the new-report and resume paths are
-    covered by one guard, not one per webhook route."""
-    if connection.allowed_senders and incoming.sender_id not in connection.allowed_senders:
+    connection's allow-list (an empty list allows nobody unless ALLOW_ANY_SENDER is set) —
+    checked here so both the new-report and resume paths are covered by one guard, not one
+    per webhook route."""
+    allowed = connection.allowed_senders
+    if (allowed and incoming.sender_id not in allowed) or (not allowed and not settings.ALLOW_ANY_SENDER):
+        # The id is logged so an administrator can copy it into the allow-list.
+        logger.warning(
+            "Rejected message from sender %s on connection %s (not in allowed_senders)",
+            incoming.sender_id,
+            connection.id,
+        )
         await _reject_sender_best_effort(connection, incoming)
         return None
 
@@ -164,36 +173,42 @@ async def start_or_resume_pipeline(
 
 
 async def _run_graph(initial_state: AgentState) -> None:
-    try:
-        result = await get_compiled_graph().ainvoke(
-            initial_state,
-            config={"configurable": {"thread_id": initial_state.thread_id}},
-        )
-        await _mark_paused_if_interrupted(result, initial_state.report_id)
-    except Exception as exc:  # noqa: BLE001 — deliberate top-level catch: any unexpected
-        # node failure must mark the report failed, not crash the background task silently
-        await mark_report_failed(report_id=initial_state.report_id, error_detail=str(exc))
-        await _notify_failure_best_effort(initial_state)
+    with log_context(report_id=initial_state.report_id, tenant_id=initial_state.tenant_id):
+        try:
+            result = await get_compiled_graph().ainvoke(
+                initial_state,
+                config={"configurable": {"thread_id": initial_state.thread_id}},
+            )
+            await _mark_paused_if_interrupted(result, initial_state.report_id)
+        except Exception as exc:
+            # node failure must mark the report failed, not crash the background task silently
+            logger.exception("Report pipeline failed")
+            await mark_report_failed(
+                report_id=initial_state.report_id, error_detail=describe_exception(exc)
+            )
+            await _notify_failure_best_effort(initial_state)
 
 
 async def _resume_graph(thread_id: str, reply_text: str) -> None:
-    try:
-        result = await get_compiled_graph().ainvoke(
-            Command(resume=reply_text),
-            config={"configurable": {"thread_id": thread_id}},
-        )
-        # A correction reply re-extracts and pauses again — re-mark the pause status
-        # (the claim set it back to 'pending' while the resume was in flight).
-        await _mark_paused_if_interrupted(result, uuid.UUID(thread_id))
-    except Exception as exc:  # noqa: BLE001 — same deliberate top-level catch as _run_graph
-        async with AsyncSessionLocal() as session:
-            report_repo = ReportRepository(session)
-            report = await report_repo.get_by_id(uuid.UUID(thread_id))
-            if report is not None:
-                await mark_report_failed(report_id=report.id, error_detail=str(exc))
+    with log_context(report_id=thread_id):
+        try:
+            result = await get_compiled_graph().ainvoke(
+                Command(resume=reply_text),
+                config={"configurable": {"thread_id": thread_id}},
+            )
+            # A correction reply re-extracts and pauses again — re-mark the pause status
+            # (the claim set it back to 'pending' while the resume was in flight).
+            await _mark_paused_if_interrupted(result, uuid.UUID(thread_id))
+        except Exception as exc:
+            logger.exception("Report pipeline failed on resume")
+            async with AsyncSessionLocal() as session:
+                report_repo = ReportRepository(session)
+                report = await report_repo.get_by_id(uuid.UUID(thread_id))
+                if report is not None:
+                    await mark_report_failed(report_id=report.id, error_detail=describe_exception(exc))
 
-        # Reconstruct enough state from the last checkpoint to notify the requester —
-        # _resume_graph only receives thread_id + reply text, not the full AgentState.
-        snapshot = await get_compiled_graph().aget_state({"configurable": {"thread_id": thread_id}})
-        if snapshot.values:
-            await _notify_failure_best_effort(AgentState.model_validate(snapshot.values))
+            # Reconstruct enough state from the last checkpoint to notify the requester —
+            # _resume_graph only receives thread_id + reply text, not the full AgentState.
+            snapshot = await get_compiled_graph().aget_state({"configurable": {"thread_id": thread_id}})
+            if snapshot.values:
+                await _notify_failure_best_effort(AgentState.model_validate(snapshot.values))

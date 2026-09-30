@@ -13,7 +13,12 @@ export default defineNuxtConfig({
     // Empty means "use the public apiBase" (local dev).
     apiBaseServer: process.env.NUXT_API_BASE_SERVER || '',
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
+      // Identity published on /aviso-legal (LSSI art. 10). Set per deployment through
+      // NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS; the page flags whatever is missing.
+      legalName: '',
+      legalId: '',
+      legalAddress: ''
     }
   },
   i18n: {

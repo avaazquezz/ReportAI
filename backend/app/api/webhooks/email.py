@@ -21,6 +21,9 @@ _AUDIO_CONTENT_TYPES = {"audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "au
 
 
 def _verify_signature(timestamp: str, token: str, signature: str) -> bool:
+    # An unset key means inbound email is disabled; HMAC with an empty key is forgeable by anyone.
+    if not settings.MAILGUN_SIGNING_KEY:
+        return False
     expected = hmac.new(
         settings.MAILGUN_SIGNING_KEY.encode(), f"{timestamp}{token}".encode(), hashlib.sha256
     ).hexdigest()
