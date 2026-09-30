@@ -24,12 +24,19 @@ async def whatsapp_verify(
     hub_verify_token: str = Query(alias="hub.verify_token"),
     hub_challenge: str = Query(alias="hub.challenge"),
 ) -> int:
-    if hub_mode == "subscribe" and hub_verify_token == settings.WHATSAPP_VERIFY_TOKEN:
+    if (
+        settings.WHATSAPP_VERIFY_TOKEN
+        and hub_mode == "subscribe"
+        and hmac.compare_digest(hub_verify_token, settings.WHATSAPP_VERIFY_TOKEN)
+    ):
         return int(hub_challenge)
     raise AuthenticationException("WhatsApp webhook verification failed")
 
 
 def _verify_signature(raw_body: bytes, signature_header: str | None) -> bool:
+    # An unset secret means WhatsApp is disabled; HMAC with an empty key is forgeable by anyone.
+    if not settings.WHATSAPP_APP_SECRET:
+        return False
     if not signature_header or not signature_header.startswith("sha256="):
         return False
     expected = hmac.new(
