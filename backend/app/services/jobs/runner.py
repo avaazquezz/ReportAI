@@ -119,8 +119,11 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
     await _mark_paused_if_interrupted(result, report.id)
 
 
-async def _reply_text(job: ClaimedJob, connection: ChannelConnection, report: Report) -> str:
-    """A reply can be a voice note: turn it into text before the graph sees it."""
+async def _reply(job: ClaimedJob, connection: ChannelConnection) -> str | dict[str, Any]:
+    """A pressed button or the panel answers with a structured reply, handed on as it is. A typed
+    reply is text, and a voice note is turned into text before the graph sees it."""
+    if job.payload.get("action"):
+        return job.payload
     text = (job.payload.get("text") or "").strip()
     media_reference = job.payload.get("media_reference")
     if text or not media_reference:
@@ -137,7 +140,7 @@ async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection
     if not any(task.interrupts for task in snapshot.tasks):
         return  # an earlier attempt already delivered this answer
 
-    result = await graph.ainvoke(Command(resume=await _reply_text(job, connection, report)), config)
+    result = await graph.ainvoke(Command(resume=await _reply(job, connection)), config)
     await _mark_paused_if_interrupted(result, report.id)
 
 

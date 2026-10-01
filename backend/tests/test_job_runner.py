@@ -139,6 +139,17 @@ async def test_a_resume_hands_the_reply_to_the_paused_graph(
     assert graph.ainvoke.await_args.args[0] == Command(resume="la fecha era el martes")
 
 
+async def test_a_pressed_button_reaches_the_graph_as_a_structured_reply(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    graph = _use_graph(monkeypatch, FakeGraph(paused=True))
+
+    await execute(_job(report, RESUME, {"action": "doctype", "arg": "7f0c"}))
+
+    assert graph.ainvoke.await_args.args[0] == Command(resume={"action": "doctype", "arg": "7f0c"})
+
+
 async def test_a_voice_reply_is_transcribed_before_the_graph_sees_it(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
 ) -> None:
