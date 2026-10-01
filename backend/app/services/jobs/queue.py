@@ -24,7 +24,6 @@ _BACKOFF_SECONDS = (30, 120, 300)
 RUN = "run"
 RESUME = "resume"
 DELIVER = "deliver"
-RERENDER = "rerender"
 
 
 @dataclass(frozen=True)

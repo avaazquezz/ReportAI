@@ -169,6 +169,24 @@ def field_label(field_name: str, spec: dict[str, Any]) -> str:
     return str(spec.get("label") or humanize_key(field_name))
 
 
+def merge_edits(
+    document_type_name: str, field_schema: dict[str, Any], current: dict[str, Any], edits: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Fields a person corrected by hand, laid over the extracted ones and validated like any
+    extraction (raises pydantic's ValidationError). Returns the fields and what actually changed,
+    as {"field": {"from": old, "to": new}}."""
+    model = build_extraction_model(document_type_name, field_schema)
+    # A field the schema no longer has (it was edited since the extraction) is dropped, not rejected.
+    known = {name: value for name, value in current.items() if name in extractable_fields(field_schema)}
+    merged = model.model_validate({**known, **edits}).model_dump(mode="json")
+    changes = {
+        name: {"from": current.get(name), "to": merged[name]}
+        for name in edits
+        if name in merged and current.get(name) != merged[name]
+    }
+    return merged, changes
+
+
 def missing_required_fields(field_schema: dict[str, Any], values: dict[str, Any]) -> list[str]:
     """Required fields the extraction left empty. An empty list is an answer ("no action
     items"), so only null and blank text count as missing. Photo slots are not the model's."""

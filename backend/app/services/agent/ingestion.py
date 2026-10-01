@@ -44,11 +44,15 @@ class IngestResult:
     report_id: uuid.UUID | None = None
 
 
-async def say(connection: ChannelConnection, recipient: str, text: str) -> None:
+async def say(
+    connection: ChannelConnection, recipient: str, text: str, *, meta: dict[str, Any] | None = None
+) -> None:
     """Best-effort message back to a person. Failing to tell someone "I'm busy" must never
     lose the message they sent."""
     try:
-        await get_channel_adapter(connection).send_message(OutgoingMessage(recipient_id=recipient, text=text))
+        await get_channel_adapter(connection).send_message(
+            OutgoingMessage(recipient_id=recipient, text=text, meta=meta or {})
+        )
     except Exception:
         logger.warning("Failed to message %s on connection %s", recipient, connection.id, exc_info=True)
 

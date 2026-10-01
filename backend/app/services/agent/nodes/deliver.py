@@ -25,8 +25,14 @@ async def deliver_node(state: AgentState) -> AgentState:
         await session.execute(
             update(Report)
             .where(Report.id == state.report_id)
-            # Without these the panel can't offer the download or show/count the type.
-            .values(file_path=state.rendered_pdf_path, document_type_id=state.document_type_id)
+            # Without these the panel can't offer the download or show/count the type, and the
+            # fields must be the ones in the PDF (an approval from the panel may have edited them).
+            .values(
+                file_path=state.rendered_pdf_path,
+                document_type_id=state.document_type_id,
+                extracted_fields=state.extracted_fields,
+                evidence=state.evidence,
+            )
         )
         await plan_deliveries(
             session,

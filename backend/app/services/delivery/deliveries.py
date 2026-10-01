@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +26,7 @@ from app.services.channels.factory import get_channel_adapter
 from app.services.delivery.email import send_report_email
 from app.services.i18n import format_date, t
 from app.services.jobs.errors import PermanentJobError
+from app.services.jobs.queue import DELIVER, enqueue
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,11 @@ RETRY_DELAY_SECONDS = 60
 
 class DeliveryFailed(Exception):
     """Some copies did not arrive; the job is retried and sends only those."""
+
+
+def local_day(report: Report, timezone: str) -> date:
+    """The day the report is about, on the company's clock (23:30 UTC is tomorrow in Madrid)."""
+    return (report.received_at or report.created_at).astimezone(ZoneInfo(timezone)).date()
 
 
 def attachment_name(document_type_name: str, day: date) -> str:
@@ -60,6 +66,29 @@ async def plan_deliveries(
         .values([{"report_id": report_id, "kind": kind, "destination": to} for kind, to in copies])
         .on_conflict_do_nothing(constraint="uq_deliveries_report_kind_destination")
     )
+
+
+async def request_resend(
+    session: AsyncSession, report_id: uuid.UUID, *, delivery_id: uuid.UUID | None = None, email: str | None = None
+) -> list[str]:
+    """Puts copies back on the to-send list — one copy, a new address, or every copy that failed —
+    and queues the job that sends them, in the caller's transaction. Returns their destinations."""
+    query = update(Delivery).where(Delivery.report_id == report_id)
+    if email:
+        await session.execute(
+            pg_insert(Delivery)
+            .values(report_id=report_id, kind=EMAIL, destination=email)
+            .on_conflict_do_nothing(constraint="uq_deliveries_report_kind_destination")
+        )
+        query = query.where(Delivery.kind == EMAIL, Delivery.destination == email)
+    elif delivery_id:
+        query = query.where(Delivery.id == delivery_id)
+    else:
+        query = query.where(Delivery.status == "failed")
+    destinations = list((await session.scalars(query.values(status="pending").returning(Delivery.destination))).all())
+    if destinations:
+        await enqueue(session, report_id=report_id, kind=DELIVER)
+    return destinations
 
 
 async def send_pending(report_id: uuid.UUID) -> list[str]:
@@ -89,7 +118,7 @@ async def send_pending(report_id: uuid.UUID) -> list[str]:
 
         language = tenant.language
         name = document_type.name if document_type else t(language, "report")
-        day = (report.received_at or report.created_at).astimezone(ZoneInfo(tenant.timezone)).date()
+        day = local_day(report, tenant.timezone)
         filename = attachment_name(name, day)
 
         failures = []

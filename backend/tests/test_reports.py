@@ -115,7 +115,7 @@ async def test_approve_resumes_awaiting_report(
     assert response.status_code == 202
     assert response.json()["status"] == "pending"  # claimed for the in-flight resume
     [job] = (await db.execute(select(Job))).scalars().all()
-    assert (job.report_id, job.kind, job.payload) == (report.id, "resume", {"text": "CONFIRM"})
+    assert (job.report_id, job.kind, job.payload) == (report.id, "resume", {"action": "confirm"})
 
 
 async def test_approve_conflict_when_not_awaiting(client: AsyncClient, db: AsyncSession) -> None:

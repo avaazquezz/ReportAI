@@ -168,6 +168,7 @@ async def test_the_deliver_step_records_the_pdf_and_queues_a_retry_for_what_fail
         thread_id=str(report.id), tenant_id=report.tenant_id, channel_connection_id=report.channel_connection_id,
         channel_type="telegram", sender_id="42", report_id=report.id, raw_payload={},
         document_type_id=doc_type_id, rendered_pdf_path=pdf, notification_emails=["jefe@acme.test"],
+        extracted_fields={"client": "García Hnos."}, evidence={"visit_date": "ayer"},
     )
 
     await deliver_node(state)
@@ -175,6 +176,8 @@ async def test_the_deliver_step_records_the_pdf_and_queues_a_retry_for_what_fail
     await db.refresh(report)
     # IA-1: without these the panel can't offer the download or show/count the type.
     assert (report.file_path, report.document_type_id) == (pdf, doc_type_id)
+    # The fields in the PDF, including any correction made when approving from the panel.
+    assert (report.extracted_fields, report.evidence) == ({"client": "García Hnos."}, {"visit_date": "ayer"})
     stored = await _deliveries(db, report)
     assert (stored["42"].status, stored["jefe@acme.test"].status) == ("failed", "sent")
     job = (await db.scalars(select(Job).where(Job.report_id == report.id))).one()

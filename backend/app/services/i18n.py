@@ -40,6 +40,8 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "missing_fields_limit": "Siguen faltando datos obligatorios. Complétalos en el panel.",
         "cancelled": "Informe cancelado.",
         "superseded": "He cancelado el informe anterior y empiezo uno nuevo con tu mensaje.",
+        "rejected": "Tu informe ha sido rechazado en la revisión.",
+        "rejected_reason": "Tu informe ha sido rechazado en la revisión. Motivo: {reason}",
         # outcomes
         "delivered": "Tu {doc_type} está listo.",
         "failure": "Lo siento, no he podido generar tu informe. Inténtalo de nuevo o contacta con soporte.",
@@ -76,6 +78,8 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "missing_fields_limit": "Required details are still missing. Please complete them in the panel.",
         "cancelled": "Report cancelled.",
         "superseded": "I cancelled the previous report and I'm starting a new one with your message.",
+        "rejected": "Your report was rejected in review.",
+        "rejected_reason": "Your report was rejected in review. Reason: {reason}",
         "delivered": "Your {doc_type} is ready.",
         "failure": "Sorry, we couldn't generate your report. Please try again or contact support.",
         "interrupted": "Sorry, your report didn't finish (the service was interrupted). Please send it again.",
