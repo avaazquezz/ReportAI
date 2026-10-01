@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -24,8 +24,9 @@ class DocumentType(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Exact shape defined by Phase 1's extraction work — Phase 0 just owns the column.
-    field_schema: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # JSON, not JSONB: JSONB reorders keys (shortest first), and the order fields are defined in is
+    # the order the bot asks, summarises and fills photo slots in, and the panel shows them.
+    field_schema: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     prompt_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
     notification_emails: Mapped[list[str]] = mapped_column(
         ARRAY(String), nullable=False, default=list
