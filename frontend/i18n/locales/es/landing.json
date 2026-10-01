@@ -1,8 +1,8 @@
 {
   "landing": {
     "seo": {
-      "title": "ReportAI — El informe de visita de obra, dictado por voz",
-      "description": "Para coordinadores de seguridad y salud y técnicos de PRL: dicta la visita al salir de la obra por Telegram y recibe el informe en tu plantilla Word, con deficiencias, responsables y plazos. En tu propio servidor."
+      "title": "ReportAI — El informe de visita, dictado por voz",
+      "description": "Dicta la visita por Telegram al terminar y recibe el informe en tu plantilla Word, con las deficiencias, quién las corrige y en qué plazo. Para técnicos de prevención, inspección y mantenimiento. En tu propio servidor."
     },
     "header": {
       "nav": {
@@ -21,10 +21,10 @@
     },
     "hero": {
       "placeholderTag": "informe_de_visita",
-      "eyebrow": "Para coordinadores de seguridad y salud y técnicos de PRL",
-      "headlineLine1": "Dicta la visita de obra.",
+      "eyebrow": "Para técnicos de prevención, inspección y mantenimiento",
+      "headlineLine1": "Dicta la visita.",
       "headlineLine2": "Recibe el informe.",
-      "subheadline": "Al salir de la obra mandas un audio por Telegram. ReportAI rellena tu plantilla Word con las empresas presentes, las deficiencias, quién las corrige y en qué plazo, y la envía a la contrata y al promotor cuando la apruebas.",
+      "subheadline": "Al acabar la visita mandas un audio por Telegram. ReportAI rellena con él tu plantilla Word: lo que has visto, las deficiencias, quién las corrige y en qué plazo. Cuando lo apruebas, se envía a quien corresponda.",
       "note": "Se instala en tu servidor: los audios y los informes se quedan contigo.",
       "replay": "Ver otra vez",
       "stage": {
@@ -344,7 +344,7 @@
       "or": "o escribe a"
     },
     "footer": {
-      "tagline": "El informe de visita de obra, dictado por voz.",
+      "tagline": "El informe de visita, dictado por voz.",
       "madeBy": "Un producto de",
       "legal": "Aviso legal",
       "code": "Código fuente"
