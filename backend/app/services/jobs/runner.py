@@ -119,7 +119,7 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
     await _mark_paused_if_interrupted(result, report.id)
 
 
-async def _reply(job: ClaimedJob, connection: ChannelConnection) -> str | dict[str, Any]:
+async def _reply(job: ClaimedJob, connection: ChannelConnection, language: str) -> str | dict[str, Any]:
     """A pressed button or the panel answers with a structured reply, handed on as it is. A typed
     reply is text, and a voice note is turned into text before the graph sees it."""
     if job.payload.get("action"):
@@ -129,10 +129,10 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection) -> str | dict[s
     if text or not media_reference:
         return text
     audio = await get_channel_adapter(connection).download_media(media_reference)
-    return (await transcription.transcribe(audio, f"reply-{job.id}.ogg")).strip()
+    return (await transcription.transcribe(audio, f"reply-{job.id}.ogg", language)).text.strip()
 
 
-async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection) -> None:
+async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection, tenant: Tenant) -> None:
     graph = get_compiled_graph()
     config: RunnableConfig = {"configurable": {"thread_id": str(report.id)}}
 
@@ -140,7 +140,7 @@ async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection
     if not any(task.interrupts for task in snapshot.tasks):
         return  # an earlier attempt already delivered this answer
 
-    result = await graph.ainvoke(Command(resume=await _reply(job, connection)), config)
+    result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant.language)), config)
     await _mark_paused_if_interrupted(result, report.id)
 
 
@@ -150,7 +150,7 @@ async def execute(job: ClaimedJob) -> None:
         if job.kind == RUN:
             await _run(job, report, connection, tenant)
         elif job.kind == RESUME:
-            await _resume(job, report, connection)
+            await _resume(job, report, connection, tenant)
         elif job.kind == DELIVER:
             failures = await send_pending(report.id)
             if failures:

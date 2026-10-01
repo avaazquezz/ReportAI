@@ -355,3 +355,31 @@ async def test_a_sender_outside_the_allow_list_is_told_the_id_to_give_their_admi
     assert result.outcome == "rejected"
     assert "981234" in adapter.send_message.await_args.args[0].text
     assert await _reports(db) == []
+
+
+async def test_without_an_ai_model_the_sender_is_told_instead_of_getting_a_failed_report(
+    db: AsyncSession, adapter: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "ANTHROPIC_API_KEY", "")
+    monkeypatch.setattr(settings, "EXTRACTION_PROVIDER", "anthropic")
+    connection = await _connection(db)
+
+    result = await ingest_message(db=db, connection=connection, incoming=_incoming(connection))
+
+    assert result.outcome == "rejected" and await _reports(db) == []
+    assert "no está configurado" in adapter.send_message.await_args.args[0].text
+
+
+async def test_a_voice_note_without_transcription_asks_for_text(
+    db: AsyncSession, adapter: AsyncMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(settings, "TRANSCRIPTION_API_KEY", "")
+    monkeypatch.setattr(settings, "GROQ_API_KEY", "")
+    connection = await _connection(db)
+
+    result = await ingest_message(
+        db=db, connection=connection, incoming=_incoming(connection, text=None, media_reference="voice-1")
+    )
+
+    assert result.outcome == "rejected" and await _reports(db) == []
+    assert "por escrito" in adapter.send_message.await_args.args[0].text

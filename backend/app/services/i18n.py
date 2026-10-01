@@ -21,6 +21,8 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "busy": "Sigo procesando tu informe anterior. En cuanto termine te escribo.",
         "empty_message": "No he entendido ese mensaje. Envíame una nota de voz o un texto con los datos del informe.",
         "unsupported_message": "Ese tipo de mensaje no lo puedo usar todavía. Envíame una nota de voz, un texto o una foto.",
+        "not_configured": "Este servicio aún no está configurado. Avisa a tu administrador, por favor.",
+        "voice_not_configured": "Las notas de voz aún no están activadas. Envíame el informe por escrito, por favor.",
         # photos
         "photo_attached": "📎 Foto añadida al informe.",
         "photo_without_report": "He guardado la foto. Envíame la nota de voz o el texto del informe y la adjunto.",
@@ -62,6 +64,8 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "busy": "I'm still processing your previous report. I'll message you as soon as it's done.",
         "empty_message": "I couldn't understand that message. Send me a voice note or a text with the report details.",
         "unsupported_message": "I can't use that kind of message yet. Send a voice note, a text or a photo.",
+        "not_configured": "This service isn't set up yet. Please let your administrator know.",
+        "voice_not_configured": "Voice notes aren't enabled yet. Please send me the report as text.",
         "photo_attached": "📎 Photo added to the report.",
         "photo_without_report": "I saved the photo. Send the voice note or text for the report and I'll attach it.",
         "photo_failed": "I couldn't download the photo. Please send it again.",

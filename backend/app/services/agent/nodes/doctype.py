@@ -3,7 +3,6 @@ import logging
 from langgraph.types import interrupt
 from pydantic import BaseModel
 
-from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.document_type import DocumentType
 from app.repositories.base import BaseRepository
@@ -61,8 +60,8 @@ async def _classify_type(
         max_tokens=200,
     )
     usage = ToolUsage(
-        model_used=settings.EXTRACTION_MODEL,
-        cost_usd=estimate_cost_usd(settings.EXTRACTION_MODEL, result.input_tokens, result.output_tokens),
+        model_used=result.model,
+        cost_usd=estimate_cost_usd(result.model, result.input_tokens, result.output_tokens),
     )
     choice = _TypeChoice.model_validate(result.data)
     if choice.type_number and 1 <= choice.type_number <= len(types) and choice.confidence >= _CLASSIFY_MIN_CONFIDENCE:

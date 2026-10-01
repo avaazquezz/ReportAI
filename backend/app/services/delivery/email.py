@@ -4,21 +4,27 @@ from pathlib import Path
 import aiosmtplib
 from aiosmtplib.errors import SMTPConnectError, SMTPServerDisconnected, SMTPTimeoutError
 
-from app.core.config import settings
 from app.services.agent.tools.retry import retry_async
+from app.services.instance_settings import NotConfiguredError, SMTPConfig, smtp_config
 
 RETRYABLE_SMTP_ERRORS = (SMTPConnectError, SMTPServerDisconnected, SMTPTimeoutError)
 
 
-def require_smtp_configured() -> None:
-    if not settings.SMTP_HOST or not settings.SMTP_FROM_ADDRESS:
-        raise RuntimeError("Email isn't configured: set SMTP_HOST and SMTP_FROM_ADDRESS")
+async def configured_smtp(config: SMTPConfig | None = None) -> SMTPConfig:
+    config = config or await smtp_config()
+    if not config.configured:
+        raise NotConfiguredError(
+            "Email isn't configured: add the mail server in the panel (Settings → Email), "
+            "or set SMTP_HOST and SMTP_FROM_ADDRESS"
+        )
+    return config
 
 
-def new_message(*, to: list[str], subject: str, body: str, headers: dict[str, str] | None = None) -> EmailMessage:
-    require_smtp_configured()
+def new_message(
+    config: SMTPConfig, *, to: list[str], subject: str, body: str, headers: dict[str, str] | None = None
+) -> EmailMessage:
     message = EmailMessage()
-    message["From"] = settings.SMTP_FROM_ADDRESS
+    message["From"] = config.from_address
     message["To"] = ", ".join(to)
     message["Subject"] = subject
     for name, value in (headers or {}).items():
@@ -27,16 +33,16 @@ def new_message(*, to: list[str], subject: str, body: str, headers: dict[str, st
     return message
 
 
-async def send_message(message: EmailMessage) -> None:
+async def send_message(config: SMTPConfig, message: EmailMessage) -> None:
     async def _send() -> None:
         await aiosmtplib.send(
             message,
-            hostname=settings.SMTP_HOST,
-            port=settings.SMTP_PORT,
-            username=settings.SMTP_USER or None,
-            password=settings.SMTP_PASSWORD or None,
-            use_tls=settings.SMTP_SECURITY == "ssl",
-            start_tls=settings.SMTP_SECURITY == "starttls",
+            hostname=config.host,
+            port=config.port,
+            username=config.user or None,
+            password=config.password or None,
+            use_tls=config.security == "ssl",
+            start_tls=config.security == "starttls",
         )
 
     await retry_async(_send, retryable_exceptions=RETRYABLE_SMTP_ERRORS)
@@ -51,7 +57,8 @@ async def send_report_email(
     attachment_name: str | None = None,
     headers: dict[str, str] | None = None,
 ) -> None:
-    message = new_message(to=to, subject=subject, body=body, headers=headers)
+    config = await configured_smtp()
+    message = new_message(config, to=to, subject=subject, body=body, headers=headers)
     attachment_bytes = Path(attachment_path).read_bytes()
     message.add_attachment(
         attachment_bytes,
@@ -59,4 +66,4 @@ async def send_report_email(
         subtype="pdf",
         filename=attachment_name or Path(attachment_path).name,
     )
-    await send_message(message)
+    await send_message(config, message)

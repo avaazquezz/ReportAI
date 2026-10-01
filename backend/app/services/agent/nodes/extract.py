@@ -4,7 +4,6 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
-from app.core.config import settings
 from app.services.agent.state import AgentState, ToolUsage
 from app.services.agent.tools.extraction_schema import (
     build_extraction_model,
@@ -98,10 +97,8 @@ async def extract_node(state: AgentState) -> AgentState:
             "extraction_attempts": state.extraction_attempts + 1,
             "correction_text": None,
             "last_tool_usage": ToolUsage(
-                model_used=settings.EXTRACTION_MODEL,
-                cost_usd=estimate_cost_usd(
-                    settings.EXTRACTION_MODEL, completion.input_tokens, completion.output_tokens
-                ),
+                model_used=completion.model,
+                cost_usd=estimate_cost_usd(completion.model, completion.input_tokens, completion.output_tokens),
             ),
         }
     )

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import computed_field, model_validator
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,10 @@ class Settings(BaseSettings):
 
     # ── Application ──────────────────────────────────────────────────────
     ENVIRONMENT: str = "development"
+    # One company per installation (what the installer sets up): the setup wizard creates it, and
+    # its admin also runs the installation's settings. false = this server hosts several
+    # companies under a super admin (the public demo).
+    SINGLE_TENANT: bool = False
 
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
@@ -65,7 +69,8 @@ class Settings(BaseSettings):
     DEMO_TELEGRAM_BOT_TOKEN: str = ""
     DEMO_NOTIFICATION_EMAIL: str = ""
 
-    # ── AI provider for extraction — chosen per installation. "anthropic" uses the
+    # ── AI provider for extraction — chosen per installation, in the panel (Settings → AI) or
+    #    here; a value saved in the panel wins. "anthropic" uses the
     #    Anthropic SDK; "openai_compatible" talks to any OpenAI-style chat endpoint
     #    (OpenAI, DeepSeek, Kimi, Gemini, Groq, Mistral, Ollama...) via base URL + key. ──
     EXTRACTION_PROVIDER: Literal["anthropic", "openai_compatible"] = "anthropic"
@@ -112,22 +117,6 @@ class Settings(BaseSettings):
     MAILGUN_API_KEY: str = ""
     MAILGUN_SIGNING_KEY: str = ""
     MAILGUN_INBOUND_DOMAIN: str = ""
-
-    @model_validator(mode="after")
-    def _require_credentials_for_chosen_provider(self) -> "Settings":
-        if self.EXTRACTION_PROVIDER == "anthropic":
-            missing = [] if self.ANTHROPIC_API_KEY else ["ANTHROPIC_API_KEY"]
-        else:
-            missing = [
-                name
-                for name in ("EXTRACTION_BASE_URL", "EXTRACTION_API_KEY")
-                if not getattr(self, name)
-            ]
-        if missing:
-            raise ValueError(
-                f"EXTRACTION_PROVIDER={self.EXTRACTION_PROVIDER!r} requires: {', '.join(missing)}"
-            )
-        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property
