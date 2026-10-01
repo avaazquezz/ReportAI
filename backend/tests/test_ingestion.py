@@ -343,3 +343,15 @@ async def test_a_photo_that_cannot_be_downloaded_is_reported_not_lost_silently(
     result = await ingest_message(db=db, connection=connection, incoming=_incoming(connection, text=None, photo_reference="p1"))
 
     assert result.outcome == "replied" and "descargar la foto" in adapter.send_message.await_args.args[0].text
+
+
+async def test_a_sender_outside_the_allow_list_is_told_the_id_to_give_their_administrator(
+    db: AsyncSession, adapter: AsyncMock
+) -> None:
+    connection = await _connection(db, allowed=["7"])
+
+    result = await ingest_message(db=db, connection=connection, incoming=_incoming(connection, sender="981234"))
+
+    assert result.outcome == "rejected"
+    assert "981234" in adapter.send_message.await_args.args[0].text
+    assert await _reports(db) == []
