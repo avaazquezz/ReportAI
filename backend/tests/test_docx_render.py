@@ -53,7 +53,7 @@ def test_a_field_nobody_mentioned_prints_as_nothing(tmp_path: Path) -> None:
 
 def test_a_list_nobody_mentioned_does_not_break_the_template(tmp_path: Path) -> None:
     schema = {"items": {"type": "list[str]"}, "rows": {"type": "list[object]", "columns": {"a": {"type": "str"}}}}
-    values = template_values(schema, {"items": None, "rows": None})
+    values = template_values(schema, {"items": None, "rows": None}, "es")
     template = _template(tmp_path, "{% for i in items %}{{ i }}{% endfor %}{% for r in rows %}{{ r.a }}{% endfor %}end")
     assert _rendered_text(fill_template(template, values, str(tmp_path / "out.docx"))) == "end"
 
@@ -101,7 +101,7 @@ async def test_a_report_renders_with_its_photos_or_says_the_template_is_missing(
     await db.commit()
     render = {
         "report_id": report.id, "document_type_id": document_type.id, "field_schema": schema,
-        "fields": {"client": "García"}, "output_path": str(tmp_path / "out.docx"),
+        "fields": {"client": "García"}, "language": "es", "output_path": str(tmp_path / "out.docx"),
     }
 
     with pytest.raises(MissingTemplateError):
@@ -115,3 +115,19 @@ async def test_a_report_renders_with_its_photos_or_says_the_template_is_missing(
     out = await fill_report_docx(**render)
 
     assert _rendered_text(out) == "García" and len(Document(out).inline_shapes) == 1
+
+
+def test_dates_and_yes_no_read_as_a_person_writes_them() -> None:
+    schema = {
+        "day": {"type": "date"},
+        "urgent": {"type": "bool"},
+        "hours": {"type": "float"},
+        "works": {"type": "list[object]", "columns": {"done": {"type": "date"}, "task": {"type": "str"}}},
+    }
+    fields = {"day": "2026-09-30", "urgent": False, "hours": 1.5, "works": [{"done": "2026-09-29", "task": "Caldera"}]}
+
+    assert template_values(schema, fields, "es") == {
+        "day": "30/09/2026", "urgent": "No", "hours": 1.5, "works": [{"done": "29/09/2026", "task": "Caldera"}],
+    }
+    assert template_values(schema, fields, "en")["urgent"] == "No"
+    assert template_values(schema, fields, "en")["day"] == "2026-09-30"

@@ -13,6 +13,7 @@ async def render_node(state: AgentState) -> AgentState:
         document_type_id=state.document_type_id,
         field_schema=state.field_schema or {},
         fields=state.extracted_fields,
+        language=state.language,
         output_path=f"{settings.DOCUMENT_STORAGE_PATH}/{state.report_id}/rendered.docx",
     )
     return state.model_copy(update={"rendered_docx_path": docx_path})

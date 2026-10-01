@@ -9,7 +9,8 @@ from sqlalchemy import select
 from app.core.database import AsyncSessionLocal
 from app.models.document_template import DocumentTemplate
 from app.models.report_attachment import ReportAttachment
-from app.services.agent.tools.extraction_schema import extractable_fields, image_fields
+from app.services.agent.summary import format_value
+from app.services.agent.tools.extraction_schema import TABLE, extractable_fields, image_fields
 from app.services.jobs.errors import PermanentJobError
 from app.services.rendering.docx_render import fill_template
 from app.services.rendering.gotenberg_client import convert_docx_to_pdf
@@ -41,15 +42,32 @@ async def _photo_paths(report_id: object) -> list[str]:
         return list(rows)
 
 
-def template_values(field_schema: dict[str, Any], fields: dict[str, Any]) -> dict[str, Any]:
-    """A list or table nobody mentioned is null, and a template looping over it would crash:
-    give it an empty list instead."""
-    empty_lists: dict[str, list[Any]] = {
-        name: []
-        for name, spec in extractable_fields(field_schema).items()
-        if str(spec.get("type", "")).startswith("list[") and fields.get(name) is None
-    }
-    return {**fields, **empty_lists}
+def _readable(language: str, spec: dict[str, Any], value: Any) -> Any:
+    """A date or a yes/no as a person writes it in the document's language, not as JSON."""
+    if value is None:
+        return None
+    kind = spec.get("type")
+    if kind in ("date", "bool"):
+        return format_value(language, spec, value)
+    if kind == TABLE:
+        columns = spec.get("columns") or {}
+        return [
+            {**row, **{name: _readable(language, column, row.get(name)) for name, column in columns.items()}}
+            for row in value
+        ]
+    return value
+
+
+def template_values(field_schema: dict[str, Any], fields: dict[str, Any], language: str) -> dict[str, Any]:
+    """What the template sees. A list or table nobody mentioned is null, and a template looping
+    over it would crash: it gets an empty list instead."""
+    values = dict(fields)
+    for name, spec in extractable_fields(field_schema).items():
+        if str(spec.get("type", "")).startswith("list[") and fields.get(name) is None:
+            values[name] = []
+        elif name in fields:
+            values[name] = _readable(language, spec, fields[name])
+    return values
 
 
 def assign_photos(field_schema: dict[str, Any], photos: list[str]) -> dict[str, str | list[str] | None]:
@@ -66,17 +84,29 @@ def assign_photos(field_schema: dict[str, Any], photos: list[str]) -> dict[str, 
 
 
 async def fill_report_docx(
-    *, report_id: object, document_type_id: object, field_schema: dict[str, Any], fields: dict[str, Any], output_path: str
+    *,
+    report_id: object,
+    document_type_id: object,
+    field_schema: dict[str, Any],
+    fields: dict[str, Any],
+    language: str,
+    output_path: str,
 ) -> str:
     template_path = await _active_template_path(document_type_id)
     photos = assign_photos(field_schema, await _photo_paths(report_id)) if image_fields(field_schema) else {}
     return await asyncio.to_thread(
-        fill_template, template_path, template_values(field_schema, fields), output_path, photos
+        fill_template, template_path, template_values(field_schema, fields, language), output_path, photos
     )
 
 
 async def render_report_pdf(
-    *, report_id: object, document_type_id: object, field_schema: dict[str, Any], fields: dict[str, Any], folder: str
+    *,
+    report_id: object,
+    document_type_id: object,
+    field_schema: dict[str, Any],
+    fields: dict[str, Any],
+    language: str,
+    folder: str,
 ) -> str:
     """Writes rendered.docx and rendered.pdf into `folder` and returns the PDF's path."""
     docx_path = await fill_report_docx(
@@ -84,6 +114,7 @@ async def render_report_pdf(
         document_type_id=document_type_id,
         field_schema=field_schema,
         fields=fields,
+        language=language,
         output_path=f"{folder}/rendered.docx",
     )
     return await convert_docx_to_pdf(docx_path, f"{folder}/rendered.pdf")
