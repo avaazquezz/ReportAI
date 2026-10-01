@@ -58,6 +58,8 @@ def _readable(language: str, spec: dict[str, Any], value: Any) -> Any:
     kind = spec.get("type")
     if kind in ("date", "bool"):
         return format_value(language, spec, value)
+    if kind == "float" and isinstance(value, float) and value.is_integer():
+        return int(value)  # "1", not "1.0" — still a number, so a template can add it up
     if kind == TABLE:
         columns = spec.get("columns") or {}
         return [

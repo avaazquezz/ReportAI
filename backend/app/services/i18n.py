@@ -130,6 +130,14 @@ def format_date(language: str | None, value: date) -> str:
     return value.strftime("%d/%m/%Y") if normalize_language(language) == "es" else value.isoformat()
 
 
+def format_number(language: str | None, value: float) -> str:
+    """2.0 → "2"; 2.5 → "2,5" in Spanish and "2.5" in English."""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    text = str(value)
+    return text.replace(".", ",") if normalize_language(language) == "es" else text
+
+
 def format_time(value: time) -> str:
     return value.strftime("%H:%M")
 

@@ -11,7 +11,7 @@ from app.services.agent.tools.extraction_schema import (
     image_fields,
     missing_required_fields,
 )
-from app.services.i18n import format_date, t
+from app.services.i18n import format_date, format_number, t
 
 # Telegram rejects messages over 4096 characters; leave room for the heading and footer.
 CHUNK_LIMIT = 3600
@@ -24,6 +24,8 @@ def format_value(language: str, spec: dict[str, Any], value: Any) -> str:
     kind = spec.get("type")
     if kind == "bool":
         return t(language, "yes" if value else "no")
+    if kind in ("int", "float") and isinstance(value, int | float):
+        return format_number(language, value)
     if kind == "date":
         try:
             return format_date(language, date.fromisoformat(str(value)))

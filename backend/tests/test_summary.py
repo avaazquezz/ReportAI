@@ -62,3 +62,12 @@ def test_long_recaps_are_split_on_line_breaks_never_mid_field() -> None:
 def test_a_single_huge_line_is_cut_rather_than_dropped() -> None:
     chunks = chunk_text("y" * 2500, limit=1000)
     assert [len(c) for c in chunks] == [1000, 1000, 500]
+
+
+def test_numbers_read_as_people_write_them() -> None:
+    from app.services.agent.summary import format_value
+
+    assert format_value("es", {"type": "float"}, 2.0) == "2"
+    assert format_value("es", {"type": "float"}, 2.5) == "2,5"
+    assert format_value("en", {"type": "float"}, 2.5) == "2.5"
+    assert format_value("es", {"type": "int"}, 3) == "3"
