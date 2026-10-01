@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM_ADDRESS: str = ""
+    # starttls (port 587), ssl (port 465, TLS from the first byte) or none (a local relay or the
+    # dev Mailpit, never across the internet).
+    SMTP_SECURITY: Literal["starttls", "ssl", "none"] = "starttls"
 
     # ── WhatsApp Business Cloud API (experimental; platform-level — the per-tenant
     #    piece lives in channel_connections.credentials). Empty = webhook disabled. ──
