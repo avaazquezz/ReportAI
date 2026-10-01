@@ -27,7 +27,12 @@ from app.models.report_attachment import ReportAttachment
 from app.models.report_revision import ReportRevision
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
-from app.repositories.report_repository import PENDING_STATUSES, ReportFilters, ReportRepository
+from app.repositories.report_repository import (
+    FINISHED_STATUSES,
+    PENDING_STATUSES,
+    ReportFilters,
+    ReportRepository,
+)
 from app.schemas.common import PaginatedResponse
 from app.schemas.report import (
     ApproveRequest,
@@ -348,7 +353,7 @@ async def edit_report_fields(
     """Correct a delivered report and regenerate its PDF (with no changes, it only regenerates:
     after a template update, say). Nothing is sent: resending is a separate decision."""
     report = await _load(db, report_id, current_user)
-    if report.status != "delivered" or not report.file_path:
+    if report.status not in FINISHED_STATUSES or not report.file_path:
         raise ConflictException("Only a delivered report can be edited; approve a paused one with its edits")
     document_type = await _document_type(db, report)
     fields, changes = _apply_edits(document_type, report.extracted_fields or {}, payload.fields)
@@ -416,7 +421,7 @@ async def resend_report(
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     report = await _load(db, report_id, current_user)
-    if report.status != "delivered" or not report.file_path:
+    if report.status not in FINISHED_STATUSES or not report.file_path:
         raise ConflictException("Only a delivered report can be sent again")
     request = payload or ResendRequest()
     destinations = await request_resend(db, report.id, delivery_id=request.delivery_id, email=request.email)

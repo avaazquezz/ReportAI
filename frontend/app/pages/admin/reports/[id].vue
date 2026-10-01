@@ -36,7 +36,7 @@ const edits = computed(() =>
 const dirty = computed(() => Object.keys(edits.value).length > 0)
 const status = computed(() => report.value?.status ?? '')
 const awaitingApproval = computed(() => status.value === 'awaiting_approval')
-const delivered = computed(() => status.value === 'delivered')
+const delivered = computed(() => FINISHED_STATUSES.includes(status.value))
 const editable = computed(() => !isDemo.value && (awaitingApproval.value || delivered.value))
 const rejectable = computed(() => !isDemo.value && PAUSED_STATUSES.includes(status.value))
 const failedDeliveries = computed(() => report.value?.deliveries.filter((d) => d.status === 'failed') ?? [])

@@ -8,7 +8,12 @@ from app.models.report import Report
 from app.repositories.report_repository import TERMINAL_STATUSES
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.state import AgentState
-from app.services.delivery.deliveries import RETRY_DELAY_SECONDS, plan_deliveries, send_pending
+from app.services.delivery.deliveries import (
+    RETRY_DELAY_SECONDS,
+    outcome_status,
+    plan_deliveries,
+    send_pending,
+)
 from app.services.i18n import t
 from app.services.jobs.queue import DELIVER, enqueue
 from app.services.observability.execution_log import observed_node
@@ -56,7 +61,7 @@ async def finalize_report_node(state: AgentState) -> AgentState:
         await session.execute(
             update(Report)
             .where(Report.id == state.report_id)
-            .values(status="delivered", completed_at=datetime.now(UTC))
+            .values(status=await outcome_status(session, state.report_id), completed_at=datetime.now(UTC))
         )
         await session.commit()
     return state

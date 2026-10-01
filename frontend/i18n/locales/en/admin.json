@@ -198,6 +198,7 @@
         "awaiting_details": "Waiting for details",
         "awaiting_approval": "Awaiting approval",
         "delivered": "Delivered",
+        "delivery_failed": "Not delivered",
         "failed": "Failed",
         "cancelled": "Cancelled"
       },
