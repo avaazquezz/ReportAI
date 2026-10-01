@@ -43,12 +43,12 @@ def fill_template(
             context[name] = [_picture(doc, path) for path in value]
         else:
             context[name] = _picture(doc, value) if value else None
-    if branding is not None:
-        context[TEMPLATE_VARIABLE] = {
-            "name": branding.name,
-            "color": branding.color,
-            "logo": InlineImage(doc, branding.logo_path, height=Mm(_LOGO_HEIGHT_MM)) if branding.logo_path else None,
-        }
+    # Always defined: a template using {{ branding.* }} must render even where no company is known.
+    context[TEMPLATE_VARIABLE] = {
+        "name": branding.name if branding else "",
+        "color": branding.color if branding else "",
+        "logo": InlineImage(doc, branding.logo_path, height=Mm(_LOGO_HEIGHT_MM)) if branding and branding.logo_path else None,
+    }
     jinja_env = SandboxedEnvironment(finalize=lambda value: "" if value is None else value)
     doc.render(context, jinja_env=jinja_env, autoescape=True)
     doc.save(output_path)

@@ -91,3 +91,19 @@ async def test_installing_a_starter_creates_a_ready_document_type(
     templates = (await db.scalars(select(DocumentTemplate))).all()
     assert len(templates) == 2 and all(t.is_active and Path(t.file_path).exists() for t in templates)
     assert (await client.post("/starter-templates/nope/install", headers=headers)).status_code == 404
+
+
+def test_sections_with_nothing_in_them_are_left_out(tmp_path: Path) -> None:
+    template = tmp_path / "template.docx"
+    schema = starters.build("work_order", "es", str(template))
+
+    out = fill_template(
+        str(template),
+        template_values(schema, {"cliente": "Acme", "trabajos": ["Revisión"]}, "es"),
+        str(tmp_path / "out.docx"),
+        photos=assign_photos(schema, []),
+    )
+
+    text = "\n".join(p.text for p in Document(out).paragraphs)
+    assert "Trabajos realizados" in text
+    assert "Fotos" not in text and "Observaciones" not in text and "Materiales" not in text
