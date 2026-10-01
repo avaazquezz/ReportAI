@@ -54,8 +54,10 @@ login_by_ip = AttemptLimiter(max_attempts=30, window_seconds=15 * 60)
 # Every password-reset request counts — each one sends an email.
 forgot_by_email = AttemptLimiter(max_attempts=5, window_seconds=60 * 60)
 forgot_by_ip = AttemptLimiter(max_attempts=20, window_seconds=60 * 60)
+# Wrong setup codes: the code is long enough not to be guessed, this just keeps it that way.
+setup_code_by_ip = AttemptLimiter(max_attempts=10, window_seconds=15 * 60)
 
 
 def clear_all() -> None:
-    for limiter in (login_by_email, login_by_ip, forgot_by_email, forgot_by_ip):
+    for limiter in (login_by_email, login_by_ip, forgot_by_email, forgot_by_ip, setup_code_by_ip):
         limiter.clear()
