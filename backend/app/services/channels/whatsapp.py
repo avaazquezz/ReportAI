@@ -1,5 +1,8 @@
+import asyncio
+import mimetypes
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, ClassVar
 
 import httpx
@@ -13,6 +16,7 @@ from app.services.channels.base import (
 )
 
 _GRAPH_API_VERSION = "v21.0"
+_GRAPH_API = f"https://graph.facebook.com/{_GRAPH_API_VERSION}"
 
 
 class WhatsAppAdapter(ChannelAdapter):
@@ -62,31 +66,54 @@ class WhatsAppAdapter(ChannelAdapter):
         )
 
     async def send_message(self, message: OutgoingMessage) -> None:
-        async def _send() -> httpx.Response:
+        if not message.attachments:
+            await self._send(message.recipient_id, {"type": "text", "text": {"body": message.text}})
+            return
+        for attachment_path in message.attachments:
+            filename = message.attachment_name or Path(attachment_path).name
+
+            async def _upload(path: str = attachment_path, name: str = filename) -> str:
+                return await self._upload(path, name)
+
+            # Uploaded once and retried apart from the send: a failed send must not upload it again.
+            media_id = await retry_async(_upload)
+            await self._send(
+                message.recipient_id,
+                {"type": "document", "document": {"id": media_id, "filename": filename, "caption": message.text}},
+            )
+
+    async def _send(self, recipient_id: str, content: dict[str, Any]) -> None:
+        async def _post() -> httpx.Response:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.post(
-                    f"https://graph.facebook.com/{_GRAPH_API_VERSION}/{self._phone_number_id}/messages",
+                    f"{_GRAPH_API}/{self._phone_number_id}/messages",
                     headers=self._auth_headers(),
-                    json={
-                        "messaging_product": "whatsapp",
-                        "to": message.recipient_id,
-                        "type": "text",
-                        "text": {"body": message.text},
-                    },
+                    json={"messaging_product": "whatsapp", "to": recipient_id, **content},
                 )
                 response.raise_for_status()
                 return response
 
-        await retry_async(_send)
-        # Document/attachment delivery on WhatsApp requires a separate media-upload
-        # call before it can be referenced in a message — deferred, text-first is
-        # enough to prove the channel end to end; see docs/channel-adapter.md.
+        await retry_async(_post)
+
+    async def _upload(self, path: str, filename: str) -> str:
+        """WhatsApp only sends a file it already holds: upload it, and send its media id."""
+        content = await asyncio.to_thread(Path(path).read_bytes)
+        mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(
+                f"{_GRAPH_API}/{self._phone_number_id}/media",
+                headers=self._auth_headers(),
+                data={"messaging_product": "whatsapp"},
+                files={"file": (filename, content, mime_type)},
+            )
+            response.raise_for_status()
+            return str(response.json()["id"])
 
     async def download_media(self, media_reference: str) -> bytes:
         async def _get_media_url() -> str:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(
-                    f"https://graph.facebook.com/{_GRAPH_API_VERSION}/{media_reference}",
+                    f"{_GRAPH_API}/{media_reference}",
                     headers=self._auth_headers(),
                 )
                 response.raise_for_status()
