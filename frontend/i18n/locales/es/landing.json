@@ -286,13 +286,15 @@
             "feedback": "A cambio de tu opinión cada semana durante el piloto",
             "case": "Y de poder contar tu caso si te funciona"
           },
-          "cta": "Quiero ser piloto",
-          "mailSubject": "Quiero ser piloto de ReportAI"
+          "mailSubject": "Quiero ser piloto de ReportAI",
+          "spotsLeft": "Queda {left} plaza de {total} | Quedan {left} plazas de {total}",
+          "spotsFull": "Plazas de piloto completas",
+          "cta": "Quiero ser piloto"
         }
       },
       "extraHeading": "Lo que pagas aparte, directamente a cada proveedor",
       "extras": {
-        "server": "Servidor: unos 9 € al mes más IVA si no tienes uno (un CX33 de Hetzner).",
+        "server": "Servidor: unos 9 € al mes más IVA si no tienes uno.",
         "ai": "IA: céntimos por informe, en tu cuenta del proveedor que elijas.",
         "telegram": "Telegram: gratis."
       },

@@ -14,6 +14,11 @@ const pilotHref = useContactHref('landing.pricing.plans.pilot.mailSubject')
 const hrefs = computed(() => ({ selfHosted: INSTALL_GUIDE, managed: managedHref.value, pilot: pilotHref.value }))
 const EXTRAS = ['server', 'ai', 'telegram'] as const
 
+// Real places only: the numbers come from the deployment and change as pilots sign.
+const { public: config } = useRuntimeConfig()
+const spots = Number(config.pilotSpots)
+const spotsLeft = Math.max(spots - Number(config.pilotsTaken), 0)
+
 const root = ref<HTMLElement | null>(null)
 useSectionMotion(root, (tl) => {
   tl.fromTo('.head', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 })
@@ -52,6 +57,19 @@ useSectionMotion(root, (tl) => {
           <p class="mt-5 font-display text-2xl font-bold leading-tight" :class="plan.featured ? 'text-capture-500' : 'text-ink-900'">
             {{ t(`landing.pricing.plans.${plan.key}.price`) }}
           </p>
+          <div v-if="plan.key === 'pilot'" class="mt-3 flex items-center gap-3">
+            <span class="flex gap-1" aria-hidden="true">
+              <span
+                v-for="i in spots"
+                :key="i"
+                class="h-2.5 w-2.5 rounded-full"
+                :class="i <= spots - spotsLeft ? 'bg-ink-900/15' : 'bg-capture-600'"
+              />
+            </span>
+            <span class="font-body text-sm font-semibold text-capture-600">
+              {{ spotsLeft ? t('landing.pricing.plans.pilot.spotsLeft', { left: spotsLeft, total: spots }, spotsLeft) : t('landing.pricing.plans.pilot.spotsFull') }}
+            </span>
+          </div>
           <ul class="mb-0 mt-6 flex-1 list-none space-y-3 pl-0 font-body text-sm leading-relaxed">
             <li v-for="item in plan.items" :key="item" class="flex gap-2.5">
               <svg
