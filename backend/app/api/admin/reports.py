@@ -15,7 +15,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import require_tenant_admin
+from app.core.deps import require_approver, require_tenant_member
 from app.core.exceptions import ConflictException, ResourceNotFoundException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.channel_connection import ChannelConnection
@@ -198,7 +198,7 @@ async def list_reports(
     skip: int = 0,
     limit: int = Query(default=100, le=500),
     filters: ReportFilters = Depends(_filters),
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[ReportResponse]:
     tenant_id = require_tenant_id(current_user)
@@ -221,7 +221,7 @@ def _cell(value: object) -> str:
 @router.get("/export.csv")
 async def export_reports(
     filters: ReportFilters = Depends(_filters),
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """The filtered history as a spreadsheet. Filtered to one document type, each field gets its
@@ -275,7 +275,7 @@ async def export_reports(
 @router.get("/{report_id}")
 async def get_report(
     report_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     return await _detail(db, await _load(db, report_id, current_user))
@@ -285,7 +285,7 @@ async def get_report(
 async def approve_report(
     report_id: uuid.UUID,
     payload: ApproveRequest | None = None,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_approver),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """Approve a paused report, with the reviewer's corrections if any — the same as the requester
@@ -312,7 +312,7 @@ async def approve_report(
 async def reject_report(
     report_id: uuid.UUID,
     payload: RejectRequest | None = None,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_approver),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """End a paused report without generating it, and tell the requester why. Unblocks the sender:
@@ -347,7 +347,7 @@ async def reject_report(
 async def edit_report_fields(
     report_id: uuid.UUID,
     payload: EditFieldsRequest,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_approver),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """Correct a delivered report and regenerate its PDF (with no changes, it only regenerates:
@@ -388,7 +388,7 @@ async def edit_report_fields(
 async def preview_report(
     report_id: uuid.UUID,
     payload: EditFieldsRequest | None = None,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_approver),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """The PDF as it would come out with these edits, without saving or sending anything."""
@@ -417,7 +417,7 @@ async def preview_report(
 async def resend_report(
     report_id: uuid.UUID,
     payload: ResendRequest | None = None,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_approver),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     report = await _load(db, report_id, current_user)
@@ -434,7 +434,7 @@ async def resend_report(
 @router.get("/{report_id}/download")
 async def download_report(
     report_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     report = await _load(db, report_id, current_user)
@@ -452,7 +452,7 @@ async def download_report(
 @router.get("/{report_id}/audio")
 async def report_audio(
     report_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     report = await _load(db, report_id, current_user)
@@ -465,7 +465,7 @@ async def report_audio(
 async def report_photo(
     report_id: uuid.UUID,
     photo_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     report = await _load(db, report_id, current_user)

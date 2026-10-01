@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import require_tenant_admin
+from app.core.deps import require_tenant_admin, require_tenant_member
 from app.core.exceptions import ConflictException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.document_template import DocumentTemplate
@@ -60,7 +60,7 @@ async def create_document_type(
 async def list_document_types(
     skip: int = 0,
     limit: int = 100,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[DocumentTypeResponse]:
     tenant_id = require_tenant_id(current_user)
@@ -79,7 +79,7 @@ async def list_document_types(
 @router.get("/{document_type_id}")
 async def get_document_type(
     document_type_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentTypeResponse:
     tenant_id = require_tenant_id(current_user)
