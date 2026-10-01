@@ -46,6 +46,18 @@ Each client configures their own document templates, field definitions,
 connected channels, and recipients from an admin panel — onboarding a new
 document type is configuration, not a code change.
 
+## Install it on your own server
+
+One installation serves one company, on its own server, with its own AI provider account:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/avaazquezz/ReportAI/main/infra/install/install.sh | sudo bash
+```
+
+Then open the address it prints and follow the setup wizard. See
+[`docs/install.md`](docs/install.md) and [`docs/maintenance.md`](docs/maintenance.md) — keeping an
+installation updated (`reportai update`) is the job of whoever maintains it.
+
 ## Status
 
 This project is in active development. See
@@ -61,4 +73,4 @@ architecture decisions, and what's shipped so far.
 - **Database**: self-hosted Postgres
 - **Document rendering**: docxtpl + self-hosted Gotenberg
 - **Admin panel**: Vue/Nuxt + Vuetify/Tailwind
-- **Infra**: Docker Compose + Traefik on a private server
+- **Infra**: Docker Compose; Caddy with automatic HTTPS on a company's own server (`infra/install/`), Traefik on the hosted demo
