@@ -11,7 +11,7 @@ webhook (Telegram/WhatsApp/email) → start_or_resume_pipeline()
 Graph: `ingest → [transcribe if voice] → resolve_tenant_doctype → [ask if >1 doc type, interrupt] →
 extract → validate (retry loop back to extract) → human_approval_prompt → interrupt →
 [render pipeline if confirmed, or back to extract with the correction if not] →
-render → convert_pdf → deliver_email → deliver_channel_reply → finalize_report`
+render → convert_pdf → deliver → finalize_report`
 
 Full node table, edges, and the reasoning behind every design decision live in
 `app/services/agent/graph.py`'s module structure and were captured in the

@@ -47,6 +47,7 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "email_subject": "{doc_type} — {date}",
         "email_body": "Adjunto encontrarás el informe «{doc_type}».",
         "email_reply_subject": "Re: {subject}",
+        "report": "Informe",
         # values in summaries
         "yes": "Sí",
         "no": "No",
@@ -81,6 +82,7 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "email_subject": "{doc_type} — {date}",
         "email_body": "Attached is the report «{doc_type}».",
         "email_reply_subject": "Re: {subject}",
+        "report": "Report",
         "yes": "Yes",
         "no": "No",
         "none": "—",

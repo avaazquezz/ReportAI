@@ -74,9 +74,10 @@ Alternatively, approve from the API instead of the channel (the recovery path
 when the approval prompt never reached the requester): log in as the demo user
 and `POST /reports/{id}/approve`.
 
-With dev placeholder credentials the run ends `failed` at `deliver_email`
-(fake SMTP host) — expected; everything up to and including rendering the PDF
-via Gotenberg is still verified in the `execution_logs` trail.
+With dev placeholder credentials the report ends `delivered` but its email
+copies stay `failed` in the `deliveries` table (fake SMTP host) — expected;
+everything up to and including rendering the PDF via Gotenberg is still
+verified in the `execution_logs` trail.
 
 ## Common commands
 

@@ -25,8 +25,11 @@ from app.services.agent.persistence import save_report
 from app.services.agent.state import AgentState
 from app.services.channels.base import OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
+from app.services.delivery.deliveries import DeliveryFailed, send_pending
 from app.services.i18n import t
+from app.services.jobs.errors import PermanentJobError
 from app.services.jobs.queue import (
+    DELIVER,
     LEASE_SECONDS,
     RESUME,
     RUN,
@@ -45,10 +48,6 @@ _INTERRUPT_KIND_TO_STATUS = {
     "missing_fields": "awaiting_details",
     "confirm_report": "awaiting_approval",
 }
-
-
-class PermanentJobError(Exception):
-    """A failure another attempt cannot fix (the report is gone, a template is missing...)."""
 
 
 async def _mark_paused_if_interrupted(result: dict[str, Any], report_id: uuid.UUID) -> None:
@@ -149,6 +148,10 @@ async def execute(job: ClaimedJob) -> None:
             await _run(job, report, connection, tenant)
         elif job.kind == RESUME:
             await _resume(job, report, connection)
+        elif job.kind == DELIVER:
+            failures = await send_pending(report.id)
+            if failures:
+                raise DeliveryFailed("; ".join(failures))
         else:
             raise PermanentJobError(f"Unknown job kind {job.kind!r}")
         await _forget_finished_thread(report.id)
@@ -166,8 +169,10 @@ async def notify_failure(report_id: uuid.UUID, reason_key: str = "failure") -> N
 
 
 async def give_up(report_id: uuid.UUID, error: str, reason_key: str = "failure") -> None:
-    await mark_report_failed(report_id=report_id, error_detail=error)
-    await notify_failure(report_id, reason_key)
+    if await mark_report_failed(report_id=report_id, error_detail=error):
+        await notify_failure(report_id, reason_key)
+    else:
+        logger.error("A job for report %s gave up after the report had ended: %s", report_id, error)
     with contextlib.suppress(Exception):
         await get_checkpointer().adelete_thread(str(report_id))
 

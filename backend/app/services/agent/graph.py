@@ -17,12 +17,7 @@ from app.services.agent.nodes.completeness import (
     check_completeness_node,
     notify_missing_fields_limit_node,
 )
-from app.services.agent.nodes.deliver import (
-    deliver_channel_reply_node,
-    deliver_email_node,
-    fail_node,
-    finalize_report_node,
-)
+from app.services.agent.nodes.deliver import deliver_node, fail_node, finalize_report_node
 from app.services.agent.nodes.doctype import (
     await_document_type_reply_node,
     parse_document_type_selection_node,
@@ -116,8 +111,7 @@ def build_graph() -> StateGraph:
     graph.add_node("supersede_report", supersede_report_node)
     graph.add_node("render", render_node)
     graph.add_node("convert_pdf", convert_pdf_node)
-    graph.add_node("deliver_email", deliver_email_node)
-    graph.add_node("deliver_channel_reply", deliver_channel_reply_node)
+    graph.add_node("deliver", deliver_node)
     graph.add_node("finalize_report", finalize_report_node)
     graph.add_node("fail", fail_node)
 
@@ -174,9 +168,8 @@ def build_graph() -> StateGraph:
     graph.add_edge("supersede_report", END)
 
     graph.add_edge("render", "convert_pdf")
-    graph.add_edge("convert_pdf", "deliver_email")
-    graph.add_edge("deliver_email", "deliver_channel_reply")
-    graph.add_edge("deliver_channel_reply", "finalize_report")
+    graph.add_edge("convert_pdf", "deliver")
+    graph.add_edge("deliver", "finalize_report")
     graph.add_edge("finalize_report", END)
     graph.add_edge("fail", END)
 

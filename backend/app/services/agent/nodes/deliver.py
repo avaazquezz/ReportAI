@@ -1,79 +1,73 @@
 import logging
 from datetime import UTC, datetime
 
+from sqlalchemy import update
+
 from app.core.database import AsyncSessionLocal
-from app.models.channel_connection import ChannelConnection
 from app.models.report import Report
-from app.repositories.base import BaseRepository
+from app.repositories.report_repository import TERMINAL_STATUSES
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.state import AgentState
-from app.services.channels.base import OutgoingMessage
-from app.services.channels.factory import get_channel_adapter
-from app.services.delivery.email import send_report_email
+from app.services.delivery.deliveries import RETRY_DELAY_SECONDS, plan_deliveries, send_pending
+from app.services.i18n import t
+from app.services.jobs.queue import DELIVER, enqueue
 from app.services.observability.execution_log import observed_node
 
 logger = logging.getLogger(__name__)
 
 
-@observed_node("deliver_email")
-async def deliver_email_node(state: AgentState) -> AgentState:
-    if not state.notification_emails:
-        return state  # empty recipient list is a deliberate skip, not a failure
-
-    assert state.rendered_pdf_path is not None
-    await send_report_email(
-        to=state.notification_emails,
-        subject=f"{state.document_type_name} — generated report",
-        body="Your report is attached.",
-        attachment_path=state.rendered_pdf_path,
-    )
-    return state
-
-
-@observed_node("deliver_channel_reply")
-async def deliver_channel_reply_node(state: AgentState) -> AgentState:
+@observed_node("deliver")
+async def deliver_node(state: AgentState) -> AgentState:
+    """Records the PDF and every copy it must reach, then sends them. A copy that fails does not
+    fail the report — the document exists — it gets a job of its own that retries just that copy."""
     assert state.rendered_pdf_path is not None
     async with AsyncSessionLocal() as session:
-        repo = BaseRepository(ChannelConnection, session)
-        connection = await repo.get_by_id(state.channel_connection_id)
-        if connection is None:
-            raise ValueError(f"ChannelConnection {state.channel_connection_id} not found")
-    adapter = get_channel_adapter(connection)
-    await adapter.send_message(
-        OutgoingMessage(
-            recipient_id=state.sender_id,
-            text=f"Your {state.document_type_name} is ready.",
-            attachments=[state.rendered_pdf_path],
+        await session.execute(
+            update(Report)
+            .where(Report.id == state.report_id)
+            # Without these the panel can't offer the download or show/count the type.
+            .values(file_path=state.rendered_pdf_path, document_type_id=state.document_type_id)
         )
-    )
+        await plan_deliveries(
+            session,
+            state.report_id,
+            channel_type=state.channel_type,
+            sender_id=state.sender_id,
+            emails=state.notification_emails,
+        )
+        await session.commit()
+
+    if await send_pending(state.report_id):
+        async with AsyncSessionLocal() as session:
+            await enqueue(session, report_id=state.report_id, kind=DELIVER, delay_seconds=RETRY_DELAY_SECONDS)
+            await session.commit()
     return state
 
 
 @observed_node("finalize_report")
 async def finalize_report_node(state: AgentState) -> AgentState:
     async with AsyncSessionLocal() as session:
-        repo = BaseRepository(Report, session)
-        report = await repo.get_by_id(state.report_id)
-        if report is not None:
-            await repo.update(
-                report,
-                status="delivered",
-                completed_at=datetime.now(UTC),
-                # Without these the panel can't offer the download or show/count the type.
-                file_path=state.rendered_pdf_path,
-                document_type_id=state.document_type_id,
-            )
-            await session.commit()
+        await session.execute(
+            update(Report)
+            .where(Report.id == state.report_id)
+            .values(status="delivered", completed_at=datetime.now(UTC))
+        )
+        await session.commit()
     return state
 
 
-async def mark_report_failed(*, report_id: object, error_detail: str) -> None:
+async def mark_report_failed(*, report_id: object, error_detail: str) -> bool:
+    """False when the report had already ended: a copy that could not be sent, or a job that gave
+    up after the person cancelled, must not turn a finished report into a failed one."""
     async with AsyncSessionLocal() as session:
-        repo = BaseRepository(Report, session)
-        report = await repo.get_by_id(report_id)  # type: ignore[arg-type]
-        if report is not None:
-            await repo.update(report, status="failed", error_detail=error_detail[:2000])
-            await session.commit()
+        result = await session.execute(
+            update(Report)
+            .where(Report.id == report_id, Report.status.not_in(TERMINAL_STATUSES))
+            .values(status="failed", error_detail=error_detail[:2000])
+            .returning(Report.id)
+        )
+        await session.commit()
+        return result.first() is not None
 
 
 @observed_node("fail")
@@ -81,9 +75,7 @@ async def fail_node(state: AgentState) -> AgentState:
     error_detail = state.error_detail or state.last_validation_error or "Pipeline failed after exhausting retries"
     await mark_report_failed(report_id=state.report_id, error_detail=error_detail)
     try:
-        await send_on_origin_channel(
-            state, "Sorry, we couldn't generate your report. Please try again or contact support."
-        )
+        await send_on_origin_channel(state, t(state.language, "failure"))
     except Exception:
         logger.warning("Failed to notify sender %s of pipeline failure", state.sender_id, exc_info=True)
     return state
