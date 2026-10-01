@@ -19,6 +19,20 @@ _UNSUPPORTED_KINDS = (
 )
 
 
+def _without_token(exc: httpx.HTTPError) -> ChannelAdapterError:
+    """httpx quotes the request URL in its messages, and a Bot API URL contains the bot's token:
+    raised as is, it would reach the logs and the panel (a delivery's last error)."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        try:
+            description = exc.response.json().get("description")
+        except ValueError:
+            description = None
+        return ChannelAdapterError(
+            f"Telegram answered HTTP {exc.response.status_code}" + (f": {description}" if description else "")
+        )
+    return ChannelAdapterError(f"Couldn't reach Telegram ({type(exc).__name__})")
+
+
 def _display_name(user: dict[str, Any] | None) -> str | None:
     if not user:
         return None
@@ -84,12 +98,15 @@ class TelegramAdapter(ChannelAdapter):
         )
 
     async def send_message(self, message: OutgoingMessage) -> None:
-        async with httpx.AsyncClient(timeout=30) as client:
-            if not message.attachments:
-                await retry_async(lambda: self._post_text(client, message))
-                return
-            for attachment_path in message.attachments:
-                await self._send_document_with_retry(client, message, attachment_path)
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                if not message.attachments:
+                    await retry_async(lambda: self._post_text(client, message))
+                    return
+                for attachment_path in message.attachments:
+                    await self._send_document_with_retry(client, message, attachment_path)
+        except httpx.HTTPError as exc:
+            raise _without_token(exc) from None
 
     async def _send_document_with_retry(
         self, client: httpx.AsyncClient, message: OutgoingMessage, attachment_path: str
@@ -132,10 +149,19 @@ class TelegramAdapter(ChannelAdapter):
         return response
 
     async def acknowledge(self, callback_id: str) -> None:
-        async with httpx.AsyncClient(timeout=15) as client:
-            await client.post(f"{self._api_base}/answerCallbackQuery", json={"callback_query_id": callback_id})
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                await client.post(f"{self._api_base}/answerCallbackQuery", json={"callback_query_id": callback_id})
+        except httpx.HTTPError as exc:
+            raise _without_token(exc) from None
 
     async def download_media(self, media_reference: str) -> bytes:
+        try:
+            return await self._download(media_reference)
+        except httpx.HTTPError as exc:
+            raise _without_token(exc) from None
+
+    async def _download(self, media_reference: str) -> bytes:
         async def _get_file_path() -> str:
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(f"{self._api_base}/getFile", params={"file_id": media_reference})

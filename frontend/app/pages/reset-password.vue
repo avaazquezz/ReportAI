@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'auth', titleKey: 'auth.resetPassword.title' })
+
 const route = useRoute()
 const token = String(route.query.token ?? '')
 const { t } = useI18n()

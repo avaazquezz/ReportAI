@@ -28,6 +28,7 @@ from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
 from app.repositories.execution_log_repository import ExecutionLogRepository
 from app.repositories.report_repository import PENDING_STATUSES, ReportRepository
+from app.services import instance_settings, sender_invites
 from app.services.channels.base import IncomingMessage, OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.i18n import t
@@ -182,7 +183,7 @@ async def _handle_button(
     if active is None or active.status not in PENDING_STATUSES:
         return IngestResult("replied")
     if incoming.action == "correct":  # says what to do; waits for the correction itself
-        await say(connection, incoming.sender_id, t(language, "ask_correction"))
+        await say(connection, incoming.sender_id, t(language, "ask_correction"), meta=incoming.meta)
         return IngestResult("replied", active.id)
     if incoming.action in ("confirm", "cancel", "doctype"):
         reply = {"action": incoming.action, "arg": incoming.action_arg}
@@ -200,6 +201,12 @@ async def ingest_message(
     if incoming.external_id and not await _first_delivery(db, connection.id, incoming.external_id):
         return IngestResult("duplicate")
 
+    # An invitation code lets its holder in — and is answered, never turned into a report.
+    code = sender_invites.code_in(incoming.text)
+    if code and (invite := await sender_invites.redeem(db, connection, code, incoming.sender_id)):
+        await say(connection, incoming.sender_id, t(language, "enrolled", name=invite.label), meta=incoming.meta)
+        return IngestResult("replied")
+
     allowed = connection.allowed_senders
     if (allowed and incoming.sender_id not in allowed) or (not allowed and not settings.ALLOW_ANY_SENDER):
         # The id is logged so an administrator can copy it into the allow-list.
@@ -209,20 +216,30 @@ async def ingest_message(
             connection.id,
         )
         # The id the administrator must add to the allow-list: they cannot read the server logs.
-        await say(connection, incoming.sender_id, t(language, "rejected_sender", sender=incoming.sender_id))
+        await say(connection, incoming.sender_id, t(language, "rejected_sender", sender=incoming.sender_id), meta=incoming.meta)
         return IngestResult("rejected")
 
     # Global wallet guard, checked before both paths (a correction reply extracts again).
     if settings.DAILY_SPEND_CAP_USD > 0:
         midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
         if await ExecutionLogRepository(db).total_cost_since(midnight) >= settings.DAILY_SPEND_CAP_USD:
-            await say(connection, incoming.sender_id, t(language, "spend_capped"))
+            await say(connection, incoming.sender_id, t(language, "spend_capped"), meta=incoming.meta)
             return IngestResult("rejected")
+
+    if sender_invites.is_start_command(incoming.text):  # Telegram's Start button: say what to do
+        await say(connection, incoming.sender_id, t(language, "welcome"), meta=incoming.meta)
+        return IngestResult("replied")
 
     if not (incoming.text or incoming.media_reference or incoming.photo_reference or incoming.action):
         key = "unsupported_message" if incoming.unsupported else "empty_message"
-        await say(connection, incoming.sender_id, t(language, key))
+        await say(connection, incoming.sender_id, t(language, key), meta=incoming.meta)
         return IngestResult("replied")
+
+    # Better said now than as a failed report a minute later.
+    stored = await instance_settings.load(db)
+    if incoming.media_reference and not instance_settings.transcription_from(stored).configured:
+        await say(connection, incoming.sender_id, t(language, "voice_not_configured"), meta=incoming.meta)
+        return IngestResult("rejected")
 
     repo = ReportRepository(db)
     active = await repo.find_active_for_sender(
@@ -237,22 +254,26 @@ async def ingest_message(
             await _save_photo(db, connection, incoming, active.id if active else None)
         except Exception:
             logger.warning("Couldn't save a photo from %s", incoming.sender_id, exc_info=True)
-            await say(connection, incoming.sender_id, t(language, "photo_failed"))
+            await say(connection, incoming.sender_id, t(language, "photo_failed"), meta=incoming.meta)
             return IngestResult("replied")
         if not (incoming.text or incoming.media_reference):  # a photo on its own: nothing more to do
             key = "photo_attached" if active else "photo_without_report"
-            await say(connection, incoming.sender_id, t(language, key))
+            await say(connection, incoming.sender_id, t(language, key), meta=incoming.meta)
             return IngestResult("replied", active.id if active else None)
 
     if active is not None:
         if active.status not in PENDING_STATUSES:
-            await say(connection, incoming.sender_id, t(language, "busy"))
+            await say(connection, incoming.sender_id, t(language, "busy"), meta=incoming.meta)
             return IngestResult("busy", active.id)
         reply = {"text": incoming.text, "media_reference": incoming.media_reference}
         if await request_resume(db, active, reply):
             return IngestResult("resumed", active.id)
-        await say(connection, incoming.sender_id, t(language, "busy"))
+        await say(connection, incoming.sender_id, t(language, "busy"), meta=incoming.meta)
         return IngestResult("busy", active.id)
+
+    if not instance_settings.ai_from(stored).configured:
+        await say(connection, incoming.sender_id, t(language, "not_configured"), meta=incoming.meta)
+        return IngestResult("rejected")
 
     # New reports only — a reply to a paused report must never be rate-limited away.
     if settings.SENDER_RATE_LIMIT_PER_HOUR > 0:
@@ -262,7 +283,7 @@ async def ingest_message(
             since=datetime.now(UTC) - timedelta(hours=1),
         )
         if recent >= settings.SENDER_RATE_LIMIT_PER_HOUR:
-            await say(connection, incoming.sender_id, t(language, "rate_limited"))
+            await say(connection, incoming.sender_id, t(language, "rate_limited"), meta=incoming.meta)
             return IngestResult("rejected")
 
     report = await create_report_with_job(
@@ -278,6 +299,6 @@ async def ingest_message(
     )
     if report is None:
         # Two messages from one sender arrived at the same instant and the other created it.
-        await say(connection, incoming.sender_id, t(language, "busy"))
+        await say(connection, incoming.sender_id, t(language, "busy"), meta=incoming.meta)
         return IngestResult("busy")
     return IngestResult("created", report.id)

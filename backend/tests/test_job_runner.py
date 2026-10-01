@@ -18,6 +18,7 @@ from app.services.jobs import runner
 from app.services.jobs.errors import PermanentJobError
 from app.services.jobs.queue import RESUME, RUN, ClaimedJob, claim_next, enqueue
 from app.services.jobs.runner import execute, process
+from app.services.transcription import Transcript
 
 
 class FakeGraph:
@@ -156,13 +157,14 @@ async def test_a_voice_reply_is_transcribed_before_the_graph_sees_it(
     report = await _report(db)
     graph = _use_graph(monkeypatch, FakeGraph(paused=True))
     adapter.download_media.return_value = b"opus"
-    transcribe = AsyncMock(return_value="  la fecha era el martes ")
+    transcribe = AsyncMock(return_value=Transcript("  la fecha era el martes ", "whisper-large-v3-turbo"))
     monkeypatch.setattr(runner.transcription, "transcribe", transcribe)
 
     await execute(_job(report, RESUME, {"text": None, "media_reference": "voice-9"}))
 
     adapter.download_media.assert_awaited_once_with("voice-9")
     assert graph.ainvoke.await_args.args[0] == Command(resume="la fecha era el martes")
+    assert transcribe.await_args.args[2] == "es"  # in the company's language
 
 
 async def test_a_resume_for_a_report_that_is_no_longer_paused_is_a_no_op(

@@ -15,12 +15,16 @@ LANGUAGE_NAMES: Final = {"es": "Spanish", "en": "English"}
 _MESSAGES: Final[dict[str, dict[str, str]]] = {
     "es": {
         # channel guards
-        "rejected_sender": "Lo siento, no tienes permiso para usar este canal. Pásale este identificador a tu administrador para que te dé acceso: {sender}",
+        "rejected_sender": "Lo siento, no tienes acceso a este canal. Pide a tu administrador un enlace de invitación, o pásale este identificador: {sender}",
+        "enrolled": "¡Hola, {name}! Ya puedes enviarme tus informes: una nota de voz o un texto con los datos, y fotos si hacen falta.",
+        "welcome": "Envíame una nota de voz o un texto con los datos del informe (y fotos si hacen falta) y preparo el documento.",
         "rate_limited": "Has alcanzado el límite de informes por hora. Inténtalo de nuevo más tarde.",
         "spend_capped": "El servicio ha alcanzado su límite de uso diario. Inténtalo de nuevo mañana.",
         "busy": "Sigo procesando tu informe anterior. En cuanto termine te escribo.",
         "empty_message": "No he entendido ese mensaje. Envíame una nota de voz o un texto con los datos del informe.",
         "unsupported_message": "Ese tipo de mensaje no lo puedo usar todavía. Envíame una nota de voz, un texto o una foto.",
+        "not_configured": "Este servicio aún no está configurado. Avisa a tu administrador, por favor.",
+        "voice_not_configured": "Las notas de voz aún no están activadas. Envíame el informe por escrito, por favor.",
         # photos
         "photo_attached": "📎 Foto añadida al informe.",
         "photo_without_report": "He guardado la foto. Envíame la nota de voz o el texto del informe y la adjunto.",
@@ -50,18 +54,27 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "email_body": "Adjunto encontrarás el informe «{doc_type}».",
         "email_reply_subject": "Re: {subject}",
         "report": "Informe",
+        # emails from the panel
+        "invite_subject": "{company}: tu acceso a ReportAI",
+        "invite_body": "Hola, {name}:\n\n{company} te ha dado acceso a su panel de ReportAI. Elige tu contraseña aquí (el enlace caduca en 7 días):\n\n{link}",
+        "reset_subject": "Restablece tu contraseña de ReportAI",
+        "reset_body": "Para elegir una contraseña nueva, abre este enlace (caduca en 1 hora):\n\n{link}\n\nSi no lo has pedido tú, ignora este mensaje.",
         # values in summaries
         "yes": "Sí",
         "no": "No",
         "none": "—",
     },
     "en": {
-        "rejected_sender": "Sorry, you're not authorized to use this channel. Give this id to your administrator so they can let you in: {sender}",
+        "rejected_sender": "Sorry, you don't have access to this channel. Ask your administrator for an invitation link, or give them this id: {sender}",
+        "enrolled": "Hi {name}! You can now send me your reports: a voice note or a text with the details, and photos if needed.",
+        "welcome": "Send me a voice note or a text with the report details (and photos if needed) and I'll prepare the document.",
         "rate_limited": "You've reached the hourly report limit. Please try again later.",
         "spend_capped": "The service has reached its daily usage cap. Please try again tomorrow.",
         "busy": "I'm still processing your previous report. I'll message you as soon as it's done.",
         "empty_message": "I couldn't understand that message. Send me a voice note or a text with the report details.",
         "unsupported_message": "I can't use that kind of message yet. Send a voice note, a text or a photo.",
+        "not_configured": "This service isn't set up yet. Please let your administrator know.",
+        "voice_not_configured": "Voice notes aren't enabled yet. Please send me the report as text.",
         "photo_attached": "📎 Photo added to the report.",
         "photo_without_report": "I saved the photo. Send the voice note or text for the report and I'll attach it.",
         "photo_failed": "I couldn't download the photo. Please send it again.",
@@ -87,6 +100,10 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "email_body": "Attached is the report «{doc_type}».",
         "email_reply_subject": "Re: {subject}",
         "report": "Report",
+        "invite_subject": "{company}: your access to ReportAI",
+        "invite_body": "Hi {name},\n\n{company} has given you access to its ReportAI panel. Choose your password here (the link expires in 7 days):\n\n{link}",
+        "reset_subject": "Reset your ReportAI password",
+        "reset_body": "To choose a new password, open this link (it expires in 1 hour):\n\n{link}\n\nIf you didn't ask for it, ignore this message.",
         "yes": "Yes",
         "no": "No",
         "none": "—",
@@ -111,6 +128,14 @@ def catalog(language: str) -> dict[str, str]:
 
 def format_date(language: str | None, value: date) -> str:
     return value.strftime("%d/%m/%Y") if normalize_language(language) == "es" else value.isoformat()
+
+
+def format_number(language: str | None, value: float) -> str:
+    """2.0 → "2"; 2.5 → "2,5" in Spanish and "2.5" in English."""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    text = str(value)
+    return text.replace(".", ",") if normalize_language(language) == "es" else text
 
 
 def format_time(value: time) -> str:

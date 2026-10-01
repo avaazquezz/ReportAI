@@ -9,6 +9,26 @@ from app.core.exceptions import ValidationException
 logger = logging.getLogger(__name__)
 
 
+def _description(response: httpx.Response) -> str:
+    try:
+        return str(response.json().get("description", "")) or f"HTTP {response.status_code}"
+    except ValueError:
+        return f"HTTP {response.status_code}"
+
+
+async def verify_telegram_bot(bot_token: str) -> str:
+    """The bot's @username, from Telegram itself (getMe): a mistyped token is refused when it is
+    saved, not discovered when nobody's messages arrive. Errors never include the token."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.get(f"https://api.telegram.org/bot{bot_token}/getMe")
+    except httpx.HTTPError:
+        raise ValidationException("Couldn't reach Telegram to check the bot. Try again.") from None
+    if response.status_code != 200:
+        raise ValidationException(f"Telegram rejected the bot token: {_description(response)}")
+    return str(response.json()["result"]["username"])
+
+
 def telegram_webhook_url(connection_id: uuid.UUID) -> str:
     return f"{settings.PUBLIC_BASE_URL}{settings.API_ROOT_PATH}/webhooks/telegram/{connection_id}"
 
@@ -39,11 +59,5 @@ async def register_telegram_webhook(connection_id: uuid.UUID, credentials: dict[
         raise ValidationException("Couldn't reach Telegram to register the webhook. Try again.") from None
 
     if response.status_code != 200:
-        try:
-            description = str(response.json().get("description", ""))
-        except ValueError:
-            description = ""
-        raise ValidationException(
-            f"Telegram rejected the bot: {description or f'HTTP {response.status_code}'}"
-        )
+        raise ValidationException(f"Telegram rejected the bot: {_description(response)}")
     return True

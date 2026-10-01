@@ -7,7 +7,9 @@
         "documentTypes": "Document types",
         "channels": "Channels",
         "reports": "Reports",
-        "usage": "Usage & cost"
+        "usage": "Usage & cost",
+        "settings": "Settings",
+        "team": "Team"
       },
       "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here.",
       "toggleMenu": "Show or hide the menu"
@@ -44,12 +46,50 @@
       },
       "errors": {
         "statusUpdate": "Couldn't change the status."
-      }
+      },
+      "copied": "Copied.",
+      "copy": "Copy"
     },
     "dashboard": {
       "greeting": "Hi, {name}",
       "hint": "Use the menu on the left to manage your account.",
-      "title": "Home"
+      "title": "Home",
+      "errors": {
+        "load": "Couldn't load the overview."
+      },
+      "checklist": {
+        "title": "First steps",
+        "help": "{n} steps left before your first report.",
+        "optional": "optional",
+        "go": "Go",
+        "ai": "Connect the AI",
+        "aiHelp": "The model that reads the messages, with your key.",
+        "transcription": "Turn on voice notes",
+        "transcriptionHelp": "Without it, only text messages are accepted.",
+        "email": "Set up email",
+        "emailHelp": "To email reports and invite the team.",
+        "document_type": "Have a template",
+        "document_typeHelp": "Upload a Word example or start with a ready-made template.",
+        "channel": "Connect a channel",
+        "channelHelp": "A Telegram bot, for example.",
+        "senders": "Invite whoever will send reports",
+        "sendersHelp": "Under Channels, with a link: no ids to copy.",
+        "first_report": "Get the first report",
+        "first_reportHelp": "Send the bot a voice note describing a job."
+      },
+      "counts": {
+        "waiting": "Waiting on someone",
+        "processing": "Processing",
+        "delivered": "Delivered (7 days)",
+        "failed": "Failed (7 days)",
+        "failedCopies": "Copies not delivered (7 days)"
+      },
+      "lists": {
+        "waiting": "Waiting on someone",
+        "waitingEmpty": "Nothing pending.",
+        "failed": "Failed this week",
+        "failedEmpty": "No failures this week."
+      }
     },
     "channels": {
       "new": "New channel",
@@ -66,7 +106,7 @@
         "accessTokenLabel": "Access token",
         "inboundSlugLabel": "Inbound slug",
         "leaveBlank": "Leave blank to keep unchanged",
-        "allowedSendersHint": "Ids of who may send reports. When someone isn't on the list, the bot replies with their id so they can pass it on to you. Empty: the channel rejects everyone."
+        "allowedSendersHint": "Advanced: ids of the people who can send reports. Normally you use «Invite»."
       },
       "errors": {
         "list": "Couldn't load channels.",
@@ -114,7 +154,8 @@
       "templates": {
         "title": "Templates",
         "uploadLabel": "Upload new template (.docx)",
-        "uploadButton": "Upload"
+        "uploadButton": "Upload",
+        "manualHelp": "Already have a template with tags ({tag})? Upload it directly:"
       },
       "templateHeaders": {
         "file": "File",
@@ -159,7 +200,8 @@
         "duplicate": "Another one already has this name",
         "options": "Add at least two different options",
         "columns": "A table needs at least one column"
-      }
+      },
+      "help": "Each type is a document ReportAI produces: its fields and its Word template."
     },
     "tenants": {
       "new": "New company",
@@ -198,6 +240,7 @@
         "awaiting_details": "Waiting for details",
         "awaiting_approval": "Awaiting approval",
         "delivered": "Delivered",
+        "delivery_failed": "Not delivered",
         "failed": "Failed",
         "cancelled": "Cancelled"
       },
@@ -336,6 +379,218 @@
       "emptyTable": "No rows.",
       "evidence": "“{quote}”",
       "unverified": "(not found word for word in the message: check it)"
+    },
+    "roles": {
+      "tenant_admin": "Administrator",
+      "approver": "Approver",
+      "viewer": "Read only",
+      "super_admin": "Super admin"
+    },
+    "updates": {
+      "securityTitle": "Security update pending",
+      "securityBody": "The installed version ({version}) has a security flaw fixed in {fixed}. Update as soon as possible.",
+      "howTo": "How to update",
+      "current": "Installed version",
+      "latest": "Latest version",
+      "checked": "Checked",
+      "advisory": "{id} · {severity} severity · fixed in {fixed}.",
+      "details": "Details",
+      "available": "A new version is out: {version}.",
+      "upToDate": "You're on the latest version.",
+      "howTitle": "How to update",
+      "howHelp": "Keeping the installation up to date is the job of whoever installed and maintains it. On the server, run:",
+      "checkNow": "Check now"
+    },
+    "settings": {
+      "saved": "Settings saved.",
+      "keepSecret": "Saved ({hint}): leave blank to keep it",
+      "check": "Test",
+      "checkOk": "It works",
+      "checkFailed": "The test couldn't run.",
+      "tabs": {
+        "company": "Company",
+        "ai": "AI and voice",
+        "email": "Email",
+        "updates": "Version"
+      },
+      "company": {
+        "name": "Company name",
+        "language": "Language",
+        "languageHint": "The bot speaks it with your team, and documents come out in it",
+        "timezone": "Time zone",
+        "color": "Brand colour",
+        "colorHint": "Used in the emails ReportAI sends",
+        "logo": "Logo",
+        "logoHint": "Shown in emails and, when the template includes it ({tag}), in documents.",
+        "noLogo": "No logo",
+        "logoUpload": "Logo image (PNG, JPG or WebP)",
+        "upload": "Upload",
+        "removeLogo": "Remove",
+        "logoSaved": "Logo updated.",
+        "errors": {
+          "load": "Couldn't load the company details.",
+          "save": "Couldn't save the changes.",
+          "logo": "Couldn't update the logo."
+        }
+      },
+      "ai": {
+        "openaiCompatible": "OpenAI-compatible (OpenAI, DeepSeek, Mistral, Ollama…)",
+        "effortDefault": "The model's default",
+        "effortLow": "Low (faster and cheaper)",
+        "effortMedium": "Medium",
+        "effortHigh": "High",
+        "extractionTitle": "Reading the messages",
+        "extractionHelp": "The model that understands what each person says and fills in the fields. It uses your own key: the cost goes to your account.",
+        "provider": "Provider",
+        "model": "Model",
+        "baseUrl": "API URL",
+        "effort": "Reasoning effort",
+        "apiKey": "API key",
+        "voiceTitle": "Voice notes",
+        "voiceHelp": "The service that turns audio into text (any compatible with OpenAI's /audio/transcriptions).",
+        "errors": {
+          "save": "Couldn't save the AI settings.",
+          "load": "Couldn't load the AI settings."
+        }
+      },
+      "email": {
+        "noEncryption": "Unencrypted (local network only)",
+        "help": "The server that sends report emails, invitations and password resets.",
+        "host": "SMTP server",
+        "port": "Port",
+        "security": "Encryption",
+        "user": "User",
+        "password": "Password",
+        "from": "Sender",
+        "testTo": "Send the test to",
+        "sendTest": "Send a test email",
+        "sent": "Sent: check the inbox",
+        "errors": {
+          "save": "Couldn't save the email settings.",
+          "load": "Couldn't load the email settings."
+        }
+      }
+    },
+    "team": {
+      "help": "Who can sign in to the panel. People who send reports over Telegram or WhatsApp need no account: invite them under Channels.",
+      "invite": "Invite",
+      "role": "Role",
+      "you": "You",
+      "resend": "Resend invitation",
+      "send": "Send invitation",
+      "inviteHelp": "They'll get an email to choose their password. The link lasts 7 days.",
+      "linkTitle": "Invitation for {name}",
+      "linkHelp": "Email isn't set up, so nothing was sent. Give them this link to choose their password:",
+      "linkExpires": "It expires on {date} and works once.",
+      "confirmDeactivate": "Deactivate {name}? They won't be able to sign in, and their open sessions end.",
+      "roleHelp": {
+        "tenant_admin": "Everything: templates, channels, team and settings",
+        "approver": "Reviews, corrects, approves and resends reports",
+        "viewer": "Only reads reports"
+      },
+      "toast": {
+        "invited": "Invitation sent to {email}.",
+        "roleChanged": "{name}'s role updated."
+      },
+      "errors": {
+        "load": "Couldn't load the team.",
+        "invite": "Couldn't send the invitation.",
+        "update": "Couldn't save the change."
+      }
+    },
+    "profile": {
+      "title": "My profile",
+      "nameSaved": "Name updated.",
+      "passwordSaved": "Password changed. Your other sessions have been signed out.",
+      "account": "Account",
+      "password": "Password",
+      "passwordHelp": "Changing it signs you out on other devices.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Repeat the new one",
+      "change": "Change password",
+      "validation": {
+        "length": "At least 8 characters",
+        "match": "Doesn't match"
+      },
+      "errors": {
+        "name": "Couldn't save the name.",
+        "current": "The current password isn't right.",
+        "password": "Couldn't change the password."
+      }
+    },
+    "invites": {
+      "open": "Invite",
+      "title": "Invite to {channel}",
+      "helpTelegram": "Create an invitation for each person who will send reports: they just open the link in Telegram.",
+      "helpCode": "Create an invitation for each person who will send reports: they'll send the code as a message.",
+      "createdTitle": "Invitation for {name}",
+      "sendLink": "Send them this link (WhatsApp, email…). Opening it in Telegram signs them up:",
+      "orCode": "Or have them send the bot the code {code}.",
+      "sendCode": "Ask them to send this code as a message to {channel}:",
+      "once": "It works once, until {date}.",
+      "forWhom": "Who is it for?",
+      "forWhomHint": "Their name: so you know who sent each report",
+      "create": "Create invitation",
+      "list": "Invitations",
+      "revoke": "Revoke",
+      "state": {
+        "used": "Used on {date}",
+        "expired": "Expired on {date}",
+        "pending": "Pending · expires on {date}"
+      },
+      "errors": {
+        "load": "Couldn't load the invitations.",
+        "create": "Couldn't create the invitation.",
+        "revoke": "Couldn't revoke the invitation."
+      }
+    },
+    "assistant": {
+      "title": "Create the template from your own document",
+      "intro": "Upload a Word document you already fill in by hand (a work order, minutes…). ReportAI finds what changes from one report to the next and proposes the fields. You review it before applying.",
+      "upload": "Example document (.docx)",
+      "analyze": "Analyse",
+      "analyzing": "Reading the document… it can take a minute.",
+      "alreadyTagged": "This document is a template already: these are the fields it uses.",
+      "review": "Proposal: {n} fields. Check which field each value goes to, and remove what should stay fixed.",
+      "startOver": "Start over",
+      "mapTitle": "What each report will fill in",
+      "nothingFound": "Nothing that changes from one report to the next was found.",
+      "field": "Field",
+      "keepAsIs": "Keep this text fixed",
+      "tableRows": "Table «{header}», rows {first}–{last}: one row per item",
+      "listItems": "List starting with «{first}» ({n} items): one item per line",
+      "fieldsTitle": "Fields",
+      "label": "Label",
+      "name": "Name in the template",
+      "columns": "Columns: {columns}",
+      "previewLabels": "Preview with the names",
+      "previewExample": "Preview with your example",
+      "apply": "Apply as template",
+      "previewTitle": "Preview",
+      "applied": "Template created: its fields were added to this document type.",
+      "validation": {
+        "name": "Lowercase letters, digits and _, starting with a letter"
+      },
+      "errors": {
+        "analyze": "Couldn't analyse the document.",
+        "preview": "Couldn't make the preview.",
+        "apply": "Couldn't apply the template."
+      },
+      "unusedTitle": "Fields the new template doesn't use",
+      "unusedHelp": "If you keep them, they'll still be asked for in every report even though the document doesn't show them.",
+      "removeField": "Remove «{field}» ({name})"
+    },
+    "starters": {
+      "open": "Ready-made template",
+      "title": "Start with a ready-made template",
+      "help": "A document type ready to use, with your logo and in your language. You can change its fields later or replace the template with your own.",
+      "use": "Use this one",
+      "installed": "«{name}» created.",
+      "errors": {
+        "load": "Couldn't load the templates.",
+        "install": "Couldn't create the document type."
+      }
     }
   }
 }

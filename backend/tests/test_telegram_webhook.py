@@ -38,7 +38,7 @@ async def _create_connection(
 @pytest.fixture
 def _pipeline_mock(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     mock = AsyncMock(return_value=None)
-    monkeypatch.setattr("app.api.webhooks.telegram.ingest_message", mock)
+    monkeypatch.setattr("app.services.channels.telegram_updates.ingest_message", mock)
     return mock
 
 

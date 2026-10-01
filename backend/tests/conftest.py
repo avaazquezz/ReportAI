@@ -12,6 +12,7 @@ from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, Base, get_db
 from app.main import app
+from app.services import instance_settings
 
 TEST_DATABASE_URL = settings.DATABASE_URL.rsplit("/", 1)[0] + f"/{settings.POSTGRES_DB}_test"
 
@@ -87,3 +88,34 @@ def own_sessions(_test_engine):  # type: ignore[no-untyped-def]
     AsyncSessionLocal.configure(bind=_test_engine)
     yield
     AsyncSessionLocal.configure(bind=original)
+
+
+@pytest.fixture(autouse=True)
+def _nothing_saved_in_the_panel(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Instance settings are read from the database on every use. Outside the tests about them,
+    nothing is saved in the panel and the environment decides — and no test reads whatever the
+    development database happens to hold."""
+    if "stored_instance_settings" in request.fixturenames:
+        return
+
+    async def nothing_saved(session: object = None) -> dict[str, str]:
+        return {}
+
+    monkeypatch.setattr(instance_settings, "load", nothing_saved)
+
+
+@pytest.fixture
+def stored_instance_settings(own_sessions: None) -> None:
+    """Opt in to reading instance settings from the test database."""
+
+
+@pytest.fixture(autouse=True)
+def _telegram_tokens_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Saving a Telegram bot asks Telegram whether its token is real (getMe). Tests never reach
+    Telegram: every token is a bot called @acme_bot unless a test says otherwise."""
+    from app.api.admin import channel_connections
+
+    async def accepted(bot_token: str) -> str:
+        return "acme_bot"
+
+    monkeypatch.setattr(channel_connections, "verify_telegram_bot", accepted)

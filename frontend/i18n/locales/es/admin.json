@@ -7,7 +7,9 @@
         "documentTypes": "Tipos de documento",
         "channels": "Canales",
         "reports": "Informes",
-        "usage": "Uso y coste"
+        "usage": "Uso y coste",
+        "settings": "Ajustes",
+        "team": "Equipo"
       },
       "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
       "toggleMenu": "Mostrar u ocultar el menú"
@@ -44,12 +46,50 @@
       },
       "errors": {
         "statusUpdate": "No se pudo cambiar el estado."
-      }
+      },
+      "copied": "Copiado.",
+      "copy": "Copiar"
     },
     "dashboard": {
       "greeting": "Hola, {name}",
       "hint": "Usa el menú de la izquierda para gestionar tu cuenta.",
-      "title": "Inicio"
+      "title": "Inicio",
+      "errors": {
+        "load": "No se pudo cargar el resumen."
+      },
+      "checklist": {
+        "title": "Primeros pasos",
+        "help": "Te quedan {n} pasos para recibir el primer informe.",
+        "optional": "opcional",
+        "go": "Ir",
+        "ai": "Conectar la IA",
+        "aiHelp": "El modelo que lee los mensajes, con tu clave.",
+        "transcription": "Activar las notas de voz",
+        "transcriptionHelp": "Sin esto, solo se aceptan mensajes de texto.",
+        "email": "Configurar el email",
+        "emailHelp": "Para enviar informes por email e invitar al equipo.",
+        "document_type": "Tener una plantilla",
+        "document_typeHelp": "Sube un Word de ejemplo o empieza con una plantilla ya hecha.",
+        "channel": "Conectar un canal",
+        "channelHelp": "Por ejemplo, un bot de Telegram.",
+        "senders": "Invitar a quien enviará informes",
+        "sendersHelp": "Desde Canales, con un enlace: sin copiar identificadores.",
+        "first_report": "Recibir el primer informe",
+        "first_reportHelp": "Envía una nota de voz al bot describiendo un trabajo."
+      },
+      "counts": {
+        "waiting": "Esperando a alguien",
+        "processing": "Procesando",
+        "delivered": "Entregados (7 días)",
+        "failed": "Fallidos (7 días)",
+        "failedCopies": "Copias sin entregar (7 días)"
+      },
+      "lists": {
+        "waiting": "Esperando a alguien",
+        "waitingEmpty": "Nada pendiente.",
+        "failed": "Fallidos esta semana",
+        "failedEmpty": "Ningún fallo esta semana."
+      }
     },
     "channels": {
       "new": "Nuevo canal",
@@ -66,7 +106,7 @@
         "accessTokenLabel": "Access token",
         "inboundSlugLabel": "Inbound slug",
         "leaveBlank": "Dejar en blanco para no cambiar",
-        "allowedSendersHint": "Ids de quienes pueden enviar informes. Si alguien no está en la lista, el bot le responde con su id para que te lo pase. Vacío: el canal rechaza a todos."
+        "allowedSendersHint": "Avanzado: identificadores de quienes pueden enviar informes. Lo normal es usar «Invitar»."
       },
       "errors": {
         "list": "No se pudieron cargar los canales.",
@@ -114,7 +154,8 @@
       "templates": {
         "title": "Plantillas",
         "uploadLabel": "Subir nueva plantilla (.docx)",
-        "uploadButton": "Subir"
+        "uploadButton": "Subir",
+        "manualHelp": "¿Ya tienes una plantilla con etiquetas ({tag})? Súbela directamente:"
       },
       "templateHeaders": {
         "file": "Archivo",
@@ -159,7 +200,8 @@
         "duplicate": "Ya hay otro con este nombre",
         "options": "Añade al menos dos opciones distintas",
         "columns": "Una tabla necesita al menos una columna"
-      }
+      },
+      "help": "Cada tipo es un documento que ReportAI genera: sus campos y su plantilla de Word."
     },
     "tenants": {
       "new": "Nueva empresa",
@@ -198,6 +240,7 @@
         "awaiting_details": "Esperando datos",
         "awaiting_approval": "Esperando aprobación",
         "delivered": "Entregado",
+        "delivery_failed": "No entregado",
         "failed": "Fallido",
         "cancelled": "Cancelado"
       },
@@ -336,6 +379,218 @@
       "emptyTable": "Sin filas.",
       "evidence": "«{quote}»",
       "unverified": "(no aparece tal cual en el mensaje: compruébalo)"
+    },
+    "roles": {
+      "tenant_admin": "Administrador",
+      "approver": "Aprobador",
+      "viewer": "Solo lectura",
+      "super_admin": "Super admin"
+    },
+    "updates": {
+      "securityTitle": "Actualización de seguridad pendiente",
+      "securityBody": "La versión instalada ({version}) tiene un fallo de seguridad corregido en la {fixed}. Actualiza cuanto antes.",
+      "howTo": "Cómo actualizar",
+      "current": "Versión instalada",
+      "latest": "Última versión",
+      "checked": "Comprobado",
+      "advisory": "{id} · gravedad {severity} · corregido en la {fixed}.",
+      "details": "Detalles",
+      "available": "Hay una versión nueva: {version}.",
+      "upToDate": "Estás en la última versión.",
+      "howTitle": "Cómo se actualiza",
+      "howHelp": "Mantener la instalación al día es tarea de quien la instaló y la mantiene. En el servidor, ejecuta:",
+      "checkNow": "Comprobar ahora"
+    },
+    "settings": {
+      "saved": "Ajustes guardados.",
+      "keepSecret": "Guardada ({hint}): déjalo en blanco para no cambiarla",
+      "check": "Probar",
+      "checkOk": "Funciona",
+      "checkFailed": "No se pudo hacer la prueba.",
+      "tabs": {
+        "company": "Empresa",
+        "ai": "IA y voz",
+        "email": "Email",
+        "updates": "Versión"
+      },
+      "company": {
+        "name": "Nombre de la empresa",
+        "language": "Idioma",
+        "languageHint": "En el que el bot habla con tu equipo y salen los documentos",
+        "timezone": "Zona horaria",
+        "color": "Color de marca",
+        "colorHint": "Se usa en los emails que envía ReportAI",
+        "logo": "Logo",
+        "logoHint": "Sale en los emails y, si la plantilla lo incluye ({tag}), en los documentos.",
+        "noLogo": "Sin logo",
+        "logoUpload": "Imagen del logo (PNG, JPG o WebP)",
+        "upload": "Subir",
+        "removeLogo": "Quitar",
+        "logoSaved": "Logo actualizado.",
+        "errors": {
+          "load": "No se pudieron cargar los datos de la empresa.",
+          "save": "No se pudieron guardar los cambios.",
+          "logo": "No se pudo actualizar el logo."
+        }
+      },
+      "ai": {
+        "openaiCompatible": "Compatible con OpenAI (OpenAI, DeepSeek, Mistral, Ollama…)",
+        "effortDefault": "El del modelo",
+        "effortLow": "Bajo (más rápido y barato)",
+        "effortMedium": "Medio",
+        "effortHigh": "Alto",
+        "extractionTitle": "Lectura de los mensajes",
+        "extractionHelp": "El modelo que entiende lo que dice cada persona y rellena los campos. Usa tu propia clave: el coste va a tu cuenta.",
+        "provider": "Proveedor",
+        "model": "Modelo",
+        "baseUrl": "URL de la API",
+        "effort": "Esfuerzo de razonamiento",
+        "apiKey": "Clave de la API",
+        "voiceTitle": "Notas de voz",
+        "voiceHelp": "El servicio que pasa el audio a texto (cualquiera compatible con /audio/transcriptions de OpenAI).",
+        "errors": {
+          "save": "No se pudieron guardar los ajustes de IA.",
+          "load": "No se pudieron cargar los ajustes de IA."
+        }
+      },
+      "email": {
+        "noEncryption": "Sin cifrar (solo en red local)",
+        "help": "El servidor por el que salen los informes por email, las invitaciones y los cambios de contraseña.",
+        "host": "Servidor SMTP",
+        "port": "Puerto",
+        "security": "Cifrado",
+        "user": "Usuario",
+        "password": "Contraseña",
+        "from": "Remitente",
+        "testTo": "Enviar la prueba a",
+        "sendTest": "Enviar email de prueba",
+        "sent": "Enviado: revisa la bandeja",
+        "errors": {
+          "save": "No se pudieron guardar los ajustes de email.",
+          "load": "No se pudieron cargar los ajustes de email."
+        }
+      }
+    },
+    "team": {
+      "help": "Quién puede entrar al panel. Quien envía informes por Telegram o WhatsApp no necesita cuenta: se le invita desde Canales.",
+      "invite": "Invitar",
+      "role": "Rol",
+      "you": "Tú",
+      "resend": "Reenviar invitación",
+      "send": "Enviar invitación",
+      "inviteHelp": "Recibirá un email para elegir su contraseña. El enlace dura 7 días.",
+      "linkTitle": "Invitación para {name}",
+      "linkHelp": "El email no está configurado, así que no se ha enviado nada. Pásale este enlace para que elija su contraseña:",
+      "linkExpires": "Caduca el {date} y solo sirve una vez.",
+      "confirmDeactivate": "¿Desactivar a {name}? No podrá entrar y se cerrarán sus sesiones abiertas.",
+      "roleHelp": {
+        "tenant_admin": "Todo: plantillas, canales, equipo y ajustes",
+        "approver": "Revisa, corrige, aprueba y reenvía informes",
+        "viewer": "Solo consulta los informes"
+      },
+      "toast": {
+        "invited": "Invitación enviada a {email}.",
+        "roleChanged": "Rol de {name} actualizado."
+      },
+      "errors": {
+        "load": "No se pudo cargar el equipo.",
+        "invite": "No se pudo enviar la invitación.",
+        "update": "No se pudo guardar el cambio."
+      }
+    },
+    "profile": {
+      "title": "Mi perfil",
+      "nameSaved": "Nombre actualizado.",
+      "passwordSaved": "Contraseña cambiada. Se han cerrado tus otras sesiones.",
+      "account": "Cuenta",
+      "password": "Contraseña",
+      "passwordHelp": "Al cambiarla se cierran tus sesiones en otros dispositivos.",
+      "current": "Contraseña actual",
+      "new": "Contraseña nueva",
+      "confirm": "Repite la nueva",
+      "change": "Cambiar contraseña",
+      "validation": {
+        "length": "Al menos 8 caracteres",
+        "match": "No coincide"
+      },
+      "errors": {
+        "name": "No se pudo guardar el nombre.",
+        "current": "La contraseña actual no es correcta.",
+        "password": "No se pudo cambiar la contraseña."
+      }
+    },
+    "invites": {
+      "open": "Invitar",
+      "title": "Invitar a {channel}",
+      "helpTelegram": "Crea una invitación para cada persona que vaya a enviar informes: solo tiene que abrir el enlace en Telegram.",
+      "helpCode": "Crea una invitación para cada persona que vaya a enviar informes: tendrá que enviar el código como mensaje.",
+      "createdTitle": "Invitación para {name}",
+      "sendLink": "Envíale este enlace (por WhatsApp, email…). Al abrirlo en Telegram, queda dada de alta:",
+      "orCode": "O que envíe al bot el código {code}.",
+      "sendCode": "Pídele que envíe este código como mensaje a {channel}:",
+      "once": "Sirve una sola vez, hasta el {date}.",
+      "forWhom": "¿Para quién es?",
+      "forWhomHint": "Su nombre: así sabrás quién envía cada informe",
+      "create": "Crear invitación",
+      "list": "Invitaciones",
+      "revoke": "Anular",
+      "state": {
+        "used": "Usada el {date}",
+        "expired": "Caducó el {date}",
+        "pending": "Pendiente · caduca el {date}"
+      },
+      "errors": {
+        "load": "No se pudieron cargar las invitaciones.",
+        "create": "No se pudo crear la invitación.",
+        "revoke": "No se pudo anular la invitación."
+      }
+    },
+    "assistant": {
+      "title": "Crear la plantilla desde un documento tuyo",
+      "intro": "Sube un documento de Word que ya rellenéis a mano (un parte, un acta…). ReportAI detecta qué datos cambian de un informe a otro y te propone los campos. Tú lo revisas antes de aplicarlo.",
+      "upload": "Documento de ejemplo (.docx)",
+      "analyze": "Analizar",
+      "analyzing": "Leyendo el documento… puede tardar un minuto.",
+      "alreadyTagged": "Este documento ya es una plantilla: estos son los campos que usa.",
+      "review": "Propuesta: {n} campos. Revisa a qué campo va cada dato y quita lo que deba quedar fijo.",
+      "startOver": "Empezar de nuevo",
+      "mapTitle": "Qué se rellenará en cada informe",
+      "nothingFound": "No se ha encontrado nada que cambie de un informe a otro.",
+      "field": "Campo",
+      "keepAsIs": "Dejar este texto fijo",
+      "tableRows": "Tabla «{header}», filas {first}–{last}: una fila por elemento",
+      "listItems": "Lista que empieza por «{first}» ({n} elementos): un elemento por línea",
+      "fieldsTitle": "Campos",
+      "label": "Etiqueta",
+      "name": "Nombre en la plantilla",
+      "columns": "Columnas: {columns}",
+      "previewLabels": "Vista previa con los nombres",
+      "previewExample": "Vista previa con tu ejemplo",
+      "apply": "Aplicar como plantilla",
+      "previewTitle": "Vista previa",
+      "applied": "Plantilla creada: los campos se han añadido a este tipo de documento.",
+      "validation": {
+        "name": "Minúsculas, números y _, empezando por letra"
+      },
+      "errors": {
+        "analyze": "No se pudo analizar el documento.",
+        "preview": "No se pudo generar la vista previa.",
+        "apply": "No se pudo aplicar la plantilla."
+      },
+      "unusedTitle": "Campos que la nueva plantilla no usa",
+      "unusedHelp": "Si los dejas, se seguirán pidiendo en cada informe aunque no salgan en el documento.",
+      "removeField": "Quitar «{field}» ({name})"
+    },
+    "starters": {
+      "open": "Plantilla ya hecha",
+      "title": "Empezar con una plantilla ya hecha",
+      "help": "Un tipo de documento listo para usar, con tu logo y en tu idioma. Después puedes cambiar sus campos o sustituir la plantilla por la tuya.",
+      "use": "Usar esta",
+      "installed": "«{name}» creado.",
+      "errors": {
+        "load": "No se pudieron cargar las plantillas.",
+        "install": "No se pudo crear el tipo de documento."
+      }
     }
   }
 }

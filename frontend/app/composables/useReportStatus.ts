@@ -6,12 +6,15 @@ export const REPORT_STATUSES = [
   'awaiting_details',
   'awaiting_approval',
   'delivered',
+  'delivery_failed',
   'failed',
   'cancelled'
 ] as const
 
 // Waiting on a person: these can be rejected from the panel.
 export const PAUSED_STATUSES = ['awaiting_doctype_selection', 'awaiting_details', 'awaiting_approval']
+// The PDF exists, whether or not its copies arrived: it can be edited and sent again.
+export const FINISHED_STATUSES = ['delivered', 'delivery_failed']
 
 const COLORS: Record<string, string> = {
   pending: 'pending',
@@ -19,6 +22,7 @@ const COLORS: Record<string, string> = {
   awaiting_details: 'pending',
   awaiting_approval: 'pending',
   delivered: 'approved',
+  delivery_failed: 'failed',
   failed: 'failed',
   cancelled: 'default'
 }
