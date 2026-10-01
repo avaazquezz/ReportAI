@@ -63,7 +63,7 @@
     "facts": {
       "handsFree": {
         "title": "Manos libres",
-        "body": "Dictas al salir de la obra. Ni formularios en el móvil ni Word por la noche."
+        "body": "Dictas al terminar la visita. Ni formularios en el móvil ni Word por la noche."
       },
       "yourTemplate": {
         "title": "Tu plantilla, tal cual",
@@ -102,7 +102,7 @@
         "record": {
           "artifact": "nota_de_voz.ogg",
           "title": "Dictas la visita",
-          "body": "Al salir de la obra, en el coche o en la caseta. En Telegram, como un audio más, con las fotos si quieres."
+          "body": "Al terminar la visita, en el coche o donde estés. En Telegram, como un audio más, con las fotos si quieres."
         },
         "transcribe": {
           "artifact": "transcripcion.txt",
@@ -112,7 +112,7 @@
         "extract": {
           "artifact": "campos.json",
           "title": "Se rellenan los campos",
-          "body": "Obra, empresas, deficiencias con responsable y plazo: los apartados de tu plantilla. Si falta un dato obligatorio, te lo pregunta."
+          "body": "Los apartados de tu plantilla: lugar, deficiencias con su responsable y plazo, observaciones. Si falta un dato obligatorio, te lo pregunta."
         },
         "approve": {
           "artifact": "aprobado ✓",
@@ -120,21 +120,21 @@
           "body": "Revisas el borrador en el chat y confirmas, o corriges respondiendo con un audio o un texto."
         },
         "deliver": {
-          "artifact": "visita_las_acacias.pdf",
+          "artifact": "informe_visita.pdf",
           "title": "Se entrega",
-          "body": "Tu plantilla en PDF, por email a la contrata, al promotor o a quien hayas configurado, y guardada en el historial."
+          "body": "Tu plantilla en PDF, por email al cliente, al responsable o a quien hayas configurado, y guardada en el historial."
         }
       }
     },
     "useCases": {
-      "heading": "Hecho para quien pisa la obra, no la oficina.",
+      "heading": "Hecho para quien trabaja sobre el terreno, no en la oficina.",
       "sub": "Empieza por la visita de seguridad y salud. Cualquier documento con apartados fijos se dicta igual.",
       "fieldsLabel": "campos",
       "items": {
         "safetyVisit": {
-          "title": "Visitas de coordinación de seguridad y salud",
-          "body": "Empresas presentes, deficiencias con su empresa responsable, medida correctora y plazo, paralizaciones y anotación en el libro de incidencias. Viene como plantilla de inicio.",
-          "fields": "obra · empresas_presentes · deficiencias · paralizacion · proxima_visita"
+          "title": "Visitas e inspecciones de seguridad",
+          "body": "Deficiencias con su responsable, medida correctora y plazo, paralizaciones y observaciones. Viene como plantilla de inicio.",
+          "fields": "deficiencias · paralizacion · observaciones · proxima_visita"
         },
         "incident": {
           "title": "Incidentes y accidentes",
@@ -143,7 +143,7 @@
         },
         "custom": {
           "title": "Lo que hoy rellenas a mano",
-          "body": "Actas de reunión de coordinación, listas de comprobación, partes de trabajo. Subes tu Word y el asistente propone los campos.",
+          "body": "Partes de trabajo de mantenimiento (también vienen como plantilla), listas de comprobación, actas. Si ya tienes tu Word, el asistente propone los campos.",
           "fields": "los que tenga tu plantilla"
         }
       }
@@ -169,7 +169,7 @@
             "after": "Si falta un dato obligatorio, el bot lo pregunta"
           },
           "send": {
-            "before": "Reenviar el PDF a la contrata y al promotor",
+            "before": "Reenviar el PDF al cliente y a cada responsable",
             "after": "Se envía solo a quien toca en cada tipo de informe"
           },
           "find": {

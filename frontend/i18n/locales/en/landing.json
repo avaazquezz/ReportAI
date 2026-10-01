@@ -63,7 +63,7 @@
     "facts": {
       "handsFree": {
         "title": "Hands-free",
-        "body": "Dictate as you leave the site. No forms on your phone, no typing it up at night."
+        "body": "Dictate when you finish the visit. No forms on your phone, no typing it up at night."
       },
       "yourTemplate": {
         "title": "Your template, as it is",
@@ -102,7 +102,7 @@
         "record": {
           "artifact": "voice_note.ogg",
           "title": "You dictate the inspection",
-          "body": "Leaving the site, in the car or the site office. On Telegram, like any voice note, with photos if you like."
+          "body": "When you finish the visit, in the car or wherever you are. On Telegram, like any voice note, with photos if you like."
         },
         "transcribe": {
           "artifact": "transcript.txt",
@@ -112,7 +112,7 @@
         "extract": {
           "artifact": "fields.json",
           "title": "The fields are filled in",
-          "body": "Site, contractors, issues with who fixes them and by when: your template's sections. If something required is missing, it asks."
+          "body": "Your template's sections: place, issues with who fixes them and by when, notes. If something required is missing, it asks."
         },
         "approve": {
           "artifact": "approved ✓",
@@ -120,21 +120,21 @@
           "body": "Review the draft in the chat and confirm, or correct it with a voice or text reply."
         },
         "deliver": {
-          "artifact": "maple_ridge_inspection.pdf",
+          "artifact": "inspection_report.pdf",
           "title": "It's delivered",
-          "body": "Your template as a PDF, emailed to the contractor, the client or whoever you set up, and kept in the history."
+          "body": "Your template as a PDF, emailed to the client, the person in charge or whoever you set up, and kept in the history."
         }
       }
     },
     "useCases": {
-      "heading": "Built for people on site, not in the office.",
-      "sub": "Start with the site safety inspection. Any document with fixed sections can be dictated the same way.",
+      "heading": "Built for people in the field, not in the office.",
+      "sub": "Start with the safety inspection. Any document with fixed sections can be dictated the same way.",
       "fieldsLabel": "fields",
       "items": {
         "safetyVisit": {
-          "title": "Site safety inspections",
-          "body": "Contractors on site, issues with the contractor responsible, corrective action and deadline, work stopped and site log entries. Comes as a starter template.",
-          "fields": "site · contractors · issues · work_stopped · next_visit"
+          "title": "Safety visits and inspections",
+          "body": "Issues with who's responsible, corrective action and deadline, work stopped and notes. Comes as a starter template.",
+          "fields": "issues · work_stopped · notes · next_visit"
         },
         "incident": {
           "title": "Incidents and accidents",
@@ -143,7 +143,7 @@
         },
         "custom": {
           "title": "Whatever you fill in by hand today",
-          "body": "Coordination meeting minutes, checklists, work orders. Upload your Word file and the assistant proposes the fields.",
+          "body": "Maintenance work orders (also a starter template), checklists, minutes. If you already have your Word file, the assistant proposes the fields.",
           "fields": "whatever your template has"
         }
       }
@@ -169,7 +169,7 @@
             "after": "If something required is missing, the bot asks"
           },
           "send": {
-            "before": "Forwarding the PDF to the contractor and the client",
+            "before": "Forwarding the PDF to the client and everyone responsible",
             "after": "Sent to the right people for each report type"
           },
           "find": {
@@ -329,7 +329,7 @@
         },
         "documents": {
           "q": "Does it work for other documents?",
-          "a": "Yes. It comes with starter templates for site safety inspections, work orders, site visit reports and incident reports, and you can upload any Word file with fixed sections."
+          "a": "Yes. It comes with starter templates for safety inspections, work orders, site visit reports and incident reports, and you can upload any Word file with fixed sections."
         },
         "price": {
           "q": "How much does it cost?",
