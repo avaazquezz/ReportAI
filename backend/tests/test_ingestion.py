@@ -383,3 +383,12 @@ async def test_a_voice_note_without_transcription_asks_for_text(
 
     assert result.outcome == "rejected" and await _reports(db) == []
     assert "por escrito" in adapter.send_message.await_args.args[0].text
+
+
+async def test_an_immediate_reply_stays_in_the_persons_email_thread(db: AsyncSession, adapter: AsyncMock) -> None:
+    connection = await _connection(db, allowed=["7"])
+    thread = {"message_id": "<abc@mail.test>", "subject": "Parte de hoy"}
+
+    await ingest_message(db=db, connection=connection, incoming=_incoming(connection, sender="99", meta=thread))
+
+    assert adapter.send_message.await_args.args[0].meta == thread
