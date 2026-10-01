@@ -1,5 +1,11 @@
 import type { NuxtApp } from '#app'
+import type { FetchOptions } from 'ofetch'
 import type { TokenResponse } from '~/types'
+
+// A plain signature instead of $fetch's own: the API is the external backend, not Nitro routes,
+// and comparing $fetch's generated route types made the type checker give up ("excessive stack
+// depth") once enough pages called the API.
+export type Api = <T = unknown>(url: string, options?: FetchOptions) => Promise<T>
 
 export const ACCESS_COOKIE = 'reportai_token'
 export const REFRESH_COOKIE = 'reportai_refresh'
@@ -54,7 +60,7 @@ export function useApi() {
         options.headers.set('Authorization', `Bearer ${access.value}`)
       }
     }
-  })
+  }) as unknown as Api
 
   async function renew(): Promise<boolean> {
     const spent = refresh.value
@@ -96,18 +102,18 @@ export function useApi() {
     })
   }
 
-  const api = (async (url: string, options?: Parameters<typeof request>[1]) => {
+  const api: Api = async <T>(url: string, options?: FetchOptions) => {
     try {
-      return await request(url, options)
+      return await request<T>(url, options)
     } catch (error) {
       const status = (error as { response?: Response }).response?.status
       // No cookies at all: a visitor, not an expired session — the caller handles it.
       if (status !== 401 || NO_RENEW.includes(url) || !(access.value || refresh.value)) throw error
-      if (await renewOnce()) return await request(url, options)
+      if (await renewOnce()) return await request<T>(url, options)
       await endSession()
       throw error
     }
-  }) as typeof request
+  }
 
   return api
 }
