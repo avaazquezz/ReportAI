@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, update
+from sqlalchemy import exists, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,7 @@ from app.models.delivery import Delivery
 from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.models.tenant import Tenant
+from app.repositories.report_repository import FINISHED_STATUSES
 from app.services.channels.base import OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.delivery.email import send_report_email
@@ -49,6 +50,15 @@ def attachment_name(document_type_name: str, day: date) -> str:
     """'Visit report 2026-10-01.pdf' instead of 'rendered.pdf', safe as a file name anywhere."""
     safe = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', "-", document_type_name).strip(" .-") or "report"
     return f"{safe} {day.isoformat()}.pdf"
+
+
+async def outcome_status(session: AsyncSession, report_id: uuid.UUID) -> str:
+    """What a finished report reads as: 'delivered' once any copy arrived, 'delivery_failed' while
+    every copy that was tried failed — so a report nobody received doesn't look done."""
+    copies = Delivery.report_id == report_id
+    any_sent = await session.scalar(select(exists().where(copies, Delivery.status == "sent")))
+    any_failed = await session.scalar(select(exists().where(copies, Delivery.status == "failed")))
+    return "delivery_failed" if any_failed and not any_sent else "delivered"
 
 
 async def plan_deliveries(
@@ -152,4 +162,12 @@ async def send_pending(report_id: uuid.UUID) -> list[str]:
                 delivery.status, delivery.last_error, delivery.sent_at = "sent", None, datetime.now(UTC)
             delivery.attempts += 1
             await session.commit()
+
+        # Only once the graph has finished the report: its own last step sets the first outcome.
+        await session.execute(
+            update(Report)
+            .where(Report.id == report_id, Report.status.in_(FINISHED_STATUSES))
+            .values(status=await outcome_status(session, report_id))
+        )
+        await session.commit()
     return failures

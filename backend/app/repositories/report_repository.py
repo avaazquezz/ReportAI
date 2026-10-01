@@ -15,7 +15,9 @@ from app.repositories.base import BaseRepository
 PENDING_STATUSES = ("awaiting_doctype_selection", "awaiting_details", "awaiting_approval")
 # A sender has at most one of these (see uq_reports_one_active_per_sender).
 ACTIVE_STATUSES = ("pending", *PENDING_STATUSES)
-TERMINAL_STATUSES = ("delivered", "failed", "cancelled")
+# The PDF exists. "delivery_failed" means none of its copies arrived (a resend can still fix that).
+FINISHED_STATUSES = ("delivered", "delivery_failed")
+TERMINAL_STATUSES = (*FINISHED_STATUSES, "failed", "cancelled")
 
 _Query = TypeVar("_Query", bound=Select[*tuple[Any, ...]])
 

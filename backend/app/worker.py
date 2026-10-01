@@ -59,7 +59,7 @@ async def drop_finished_checkpoints() -> int:
                     """
                     SELECT DISTINCT r.id FROM reports r
                     JOIN checkpoints c ON c.thread_id = r.id::text
-                    WHERE r.status IN ('delivered', 'failed', 'cancelled')
+                    WHERE r.status IN ('delivered', 'delivery_failed', 'failed', 'cancelled')
                     """
                 )
             )
