@@ -37,7 +37,7 @@ test: ## Run the backend test suite (fast, free, deterministic)
 	$(COMPOSE) exec backend pytest -v -m "not eval"
 
 eval: ## Run the golden-set eval suite (costs real AI provider API calls)
-	$(COMPOSE) exec backend pytest -v -m eval
+	$(COMPOSE) exec backend pytest -v -s -m eval
 
 lint: ## Run ruff and mypy against the backend
 	$(COMPOSE) exec backend sh -c "ruff check . && mypy app"
