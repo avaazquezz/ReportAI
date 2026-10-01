@@ -2,24 +2,30 @@ import secrets
 import uuid
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_tenant_admin
-from app.core.exceptions import ConflictException
+from app.core.exceptions import ConflictException, ResourceNotFoundException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.channel_connection import ChannelConnection
+from app.models.sender_invite import SenderInvite
 from app.models.tenant_user import TenantUser
 from app.repositories.base import BaseRepository
 from app.schemas.channel_connection import (
     ChannelConnectionCreateRequest,
     ChannelConnectionResponse,
     ChannelConnectionUpdateRequest,
+    SenderInviteCreatedResponse,
+    SenderInviteCreateRequest,
+    SenderInviteResponse,
     routing_key_for,
 )
 from app.schemas.common import PaginatedResponse
 from app.services.channels.telegram_webhook import register_telegram_webhook, verify_telegram_bot
+from app.services.sender_invites import create_invite, sender_labels, telegram_link
 
 router = APIRouter(prefix="/channels", tags=["admin:channels"])
 
@@ -55,7 +61,8 @@ async def create_channel_connection(
         )
     except IntegrityError as exc:
         raise ConflictException(_ROUTING_TAKEN) from exc
-    return ChannelConnectionResponse.from_model(connection)
+    labels = await sender_labels(db, [connection.id])
+    return ChannelConnectionResponse.from_model(connection, labels.get(connection.id))
 
 
 @router.get("")
@@ -70,8 +77,9 @@ async def list_channel_connections(
     filters = {"tenant_id": tenant_id}
     items = await repo.list(skip=skip, limit=limit, filters=filters)
     total = await repo.count(filters=filters)
+    labels = await sender_labels(db, [c.id for c in items])
     return PaginatedResponse(
-        items=[ChannelConnectionResponse.from_model(c) for c in items],
+        items=[ChannelConnectionResponse.from_model(c, labels.get(c.id)) for c in items],
         total=total,
         skip=skip,
         limit=limit,
@@ -87,7 +95,8 @@ async def get_channel_connection(
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(ChannelConnection, db)
     connection = await get_scoped_or_404(repo, connection_id, tenant_id=tenant_id)
-    return ChannelConnectionResponse.from_model(connection)
+    labels = await sender_labels(db, [connection.id])
+    return ChannelConnectionResponse.from_model(connection, labels.get(connection.id))
 
 
 @router.patch("/{connection_id}")
@@ -126,4 +135,59 @@ async def update_channel_connection(
         )
     except IntegrityError as exc:
         raise ConflictException(_ROUTING_TAKEN) from exc
-    return ChannelConnectionResponse.from_model(connection)
+    labels = await sender_labels(db, [connection.id])
+    return ChannelConnectionResponse.from_model(connection, labels.get(connection.id))
+
+
+@router.post("/{connection_id}/invites", status_code=201)
+async def create_sender_invite(
+    connection_id: uuid.UUID,
+    payload: SenderInviteCreateRequest,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> SenderInviteCreatedResponse:
+    """An invitation for one person: a link to open (Telegram) or a code to send to the channel."""
+    tenant_id = require_tenant_id(current_user)
+    connection = await get_scoped_or_404(BaseRepository(ChannelConnection, db), connection_id, tenant_id=tenant_id)
+    if connection.channel_type == "telegram" and not connection.credentials.get("bot_username"):
+        # Saved before bots were looked up: the link needs the bot's @username.
+        username = await verify_telegram_bot(connection.credentials["bot_token"])
+        connection.credentials = {**connection.credentials, "bot_username": username}
+    invite, code = await create_invite(db, connection, payload.label, current_user.id)
+    return SenderInviteCreatedResponse(
+        **SenderInviteResponse.model_validate(invite).model_dump(),
+        code=code,
+        link=telegram_link(connection, code) if connection.channel_type == "telegram" else None,
+    )
+
+
+@router.get("/{connection_id}/invites")
+async def list_sender_invites(
+    connection_id: uuid.UUID,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> list[SenderInviteResponse]:
+    tenant_id = require_tenant_id(current_user)
+    await get_scoped_or_404(BaseRepository(ChannelConnection, db), connection_id, tenant_id=tenant_id)
+    invites = await db.scalars(
+        select(SenderInvite).where(SenderInvite.connection_id == connection_id).order_by(SenderInvite.created_at.desc())
+    )
+    return [SenderInviteResponse.model_validate(i) for i in invites]
+
+
+@router.delete("/{connection_id}/invites/{invite_id}", status_code=204)
+async def revoke_sender_invite(
+    connection_id: uuid.UUID,
+    invite_id: uuid.UUID,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """An unused invitation stops working. (A used one is history: remove the sender instead.)"""
+    tenant_id = require_tenant_id(current_user)
+    await get_scoped_or_404(BaseRepository(ChannelConnection, db), connection_id, tenant_id=tenant_id)
+    invite = await db.get(SenderInvite, invite_id)
+    if invite is None or invite.connection_id != connection_id:
+        raise ResourceNotFoundException()
+    if invite.used_at is not None:
+        raise ConflictException("This invitation was already used")
+    await db.delete(invite)

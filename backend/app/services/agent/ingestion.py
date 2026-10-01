@@ -28,7 +28,7 @@ from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
 from app.repositories.execution_log_repository import ExecutionLogRepository
 from app.repositories.report_repository import PENDING_STATUSES, ReportRepository
-from app.services import instance_settings
+from app.services import instance_settings, sender_invites
 from app.services.channels.base import IncomingMessage, OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.i18n import t
@@ -201,6 +201,12 @@ async def ingest_message(
     if incoming.external_id and not await _first_delivery(db, connection.id, incoming.external_id):
         return IngestResult("duplicate")
 
+    # An invitation code lets its holder in — and is answered, never turned into a report.
+    code = sender_invites.code_in(incoming.text)
+    if code and (invite := await sender_invites.redeem(db, connection, code, incoming.sender_id)):
+        await say(connection, incoming.sender_id, t(language, "enrolled", name=invite.label))
+        return IngestResult("replied")
+
     allowed = connection.allowed_senders
     if (allowed and incoming.sender_id not in allowed) or (not allowed and not settings.ALLOW_ANY_SENDER):
         # The id is logged so an administrator can copy it into the allow-list.
@@ -219,6 +225,10 @@ async def ingest_message(
         if await ExecutionLogRepository(db).total_cost_since(midnight) >= settings.DAILY_SPEND_CAP_USD:
             await say(connection, incoming.sender_id, t(language, "spend_capped"))
             return IngestResult("rejected")
+
+    if sender_invites.is_start_command(incoming.text):  # Telegram's Start button: say what to do
+        await say(connection, incoming.sender_id, t(language, "welcome"))
+        return IngestResult("replied")
 
     if not (incoming.text or incoming.media_reference or incoming.photo_reference or incoming.action):
         key = "unsupported_message" if incoming.unsupported else "empty_message"

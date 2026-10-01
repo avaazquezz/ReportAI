@@ -195,7 +195,7 @@ async def test_a_sender_outside_the_allow_list_is_turned_away(db: AsyncSession, 
 
     assert result.outcome == "rejected"
     assert await _reports(db) == []
-    assert "permiso" in adapter.send_message.await_args.args[0].text
+    assert "enlace de invitación" in adapter.send_message.await_args.args[0].text
 
 
 async def test_an_empty_allow_list_rejects_everyone_unless_explicitly_opened(
