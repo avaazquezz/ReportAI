@@ -162,6 +162,13 @@ export interface ReportRevision {
   created_at: string
 }
 
+// The quote from the message that backs a field; `verified` is false when the model's quote does
+// not appear word for word in what the person said.
+export interface FieldEvidence {
+  quote: string
+  verified: boolean
+}
+
 export interface ReportPhoto {
   id: string
   url: string
@@ -175,7 +182,7 @@ export interface ReportDetail extends Report {
   audio_url: string | null
   reject_reason: string | null
   extracted_fields: Record<string, FieldValue> | null
-  evidence: Record<string, string> | null
+  evidence: Record<string, FieldEvidence> | null
   field_schema: Record<string, FieldSchemaEntry> | null
   photos: ReportPhoto[]
   deliveries: ReportDelivery[]

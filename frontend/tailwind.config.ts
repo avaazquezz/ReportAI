@@ -20,7 +20,7 @@ export default <Partial<Config>>{
         // backgrounds — white-on-500 and 500-as-text-on-white both fail WCAG (~2.5-2.8:1).
         capture: { 100: '#FFE7DF', 500: '#FF6A45', 600: '#C0432A' },
         approved: { 100: '#DDF3EA', 600: '#1C8F6A' },
-        pending: { 600: '#B8860B' },
+        pending: { 600: '#B8860B', 700: '#7A5800' },
         failed: { 600: '#C0392B' },
         slate: { 300: '#C6CCD3' },
         // The demo document's own heading color — document mockups wear the *client's*

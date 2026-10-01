@@ -334,7 +334,8 @@
       "addRow": "Añadir fila",
       "removeRow": "Quitar fila",
       "emptyTable": "Sin filas.",
-      "evidence": "«{quote}»"
+      "evidence": "«{quote}»",
+      "unverified": "(no aparece tal cual en el mensaje: compruébalo)"
     }
   }
 }
