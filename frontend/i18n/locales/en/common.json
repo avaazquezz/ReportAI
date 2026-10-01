@@ -1,1 +1,12 @@
-{}
+{
+  "common": {
+    "error": {
+      "title": "Something went wrong",
+      "body": "We couldn't show this page. Please try again in a moment.",
+      "notFoundTitle": "Page not found",
+      "notFoundBody": "The link may be wrong, or the page no longer exists.",
+      "backToPanel": "Back to the panel",
+      "backHome": "Back to the home page"
+    }
+  }
+}

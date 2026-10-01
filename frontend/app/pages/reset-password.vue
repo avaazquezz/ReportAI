@@ -43,14 +43,14 @@ async function onSubmit() {
 
     <div v-if="!token" class="mt-8 rounded-md border border-slate-300 bg-surface-0 p-6">
       <p class="font-body text-sm text-ink-900">{{ t('auth.resetPassword.missingToken') }}</p>
-      <NuxtLink to="/forgot-password" class="mt-4 inline-block font-body text-sm font-medium text-capture-500">
+      <NuxtLink to="/forgot-password" class="mt-4 inline-block font-body text-sm font-medium text-capture-600">
         {{ t('auth.resetPassword.requestLink') }}
       </NuxtLink>
     </div>
 
     <div v-else-if="done" class="mt-8 rounded-md border border-slate-300 bg-surface-0 p-6">
       <p class="font-body text-sm text-ink-900">{{ t('auth.resetPassword.success') }}</p>
-      <NuxtLink to="/login" class="mt-4 inline-block font-body text-sm font-medium text-capture-500">
+      <NuxtLink to="/login" class="mt-4 inline-block font-body text-sm font-medium text-capture-600">
         {{ t('auth.resetPassword.goToLogin') }}
       </NuxtLink>
     </div>
@@ -82,7 +82,7 @@ async function onSubmit() {
       <button
         type="submit"
         :disabled="loading"
-        class="w-full rounded-md bg-capture-500 px-4 py-2.5 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
+        class="w-full rounded-md bg-capture-600 px-4 py-2.5 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
       >
         {{ loading ? t('auth.resetPassword.submitting') : t('auth.resetPassword.submit') }}
       </button>

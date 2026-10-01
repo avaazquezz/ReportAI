@@ -10,7 +10,7 @@ from sqlalchemy.pool import NullPool
 from app import models  # noqa: F401  — registers all tables on Base.metadata
 from app.core import rate_limit
 from app.core.config import settings
-from app.core.database import Base, get_db
+from app.core.database import AsyncSessionLocal, Base, get_db
 from app.main import app
 
 TEST_DATABASE_URL = settings.DATABASE_URL.rsplit("/", 1)[0] + f"/{settings.POSTGRES_DB}_test"
@@ -77,3 +77,13 @@ def _channel_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "WHATSAPP_APP_SECRET", "test-whatsapp-app-secret")
     monkeypatch.setattr(settings, "WHATSAPP_VERIFY_TOKEN", "test-whatsapp-verify-token")
     monkeypatch.setattr(settings, "MAILGUN_SIGNING_KEY", "test-mailgun-signing-key")
+
+
+@pytest.fixture
+def own_sessions(_test_engine):  # type: ignore[no-untyped-def]
+    """Code outside a request (the worker, the queue, the nodes) opens its own sessions from
+    AsyncSessionLocal; point that factory at the test database for the duration of a test."""
+    original = AsyncSessionLocal.kw.get("bind")
+    AsyncSessionLocal.configure(bind=_test_engine)
+    yield
+    AsyncSessionLocal.configure(bind=original)

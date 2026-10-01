@@ -1,1 +1,12 @@
-{}
+{
+  "common": {
+    "error": {
+      "title": "Algo ha fallado",
+      "body": "No hemos podido mostrar esta página. Inténtalo de nuevo en un momento.",
+      "notFoundTitle": "Página no encontrada",
+      "notFoundBody": "Puede que el enlace esté mal o que ya no exista.",
+      "backToPanel": "Volver al panel",
+      "backHome": "Volver al inicio"
+    }
+  }
+}

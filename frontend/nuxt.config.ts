@@ -52,13 +52,15 @@ export default defineNuxtConfig({
             colors: {
               background: '#EEF1F4',
               surface: '#FFFFFF',
-              primary: '#FF6A45',
-              success: '#1C8F6A',
+              // capture-600, not the brand's #FF6A45: white text on #FF6A45 is 2.84:1 (FE-10).
+              primary: '#C0432A',
+              success: '#136B4F',
               // Mirror tailwind.config.ts's semantic tokens so v-chip/v-btn `color`
               // props can use the same names as Tailwind classes — Vuetify's theme
               // and Tailwind's config are two separate systems that don't share values.
-              approved: '#1C8F6A',
-              pending: '#B8860B',
+              // Darker than tailwind's approved/pending-600 so tonal chips reach 4.5:1 (FE-10).
+              approved: '#136B4F',
+              pending: '#7A5800',
               failed: '#C0392B',
               'on-background': '#12151C',
               'on-surface': '#12151C'

@@ -89,7 +89,7 @@ async def test_creating_a_bot_registers_its_webhook(
     assert url == "https://api.telegram.org/bot111:AAA/setWebhook"
     assert body["url"] == f"https://app.example.com/api/webhooks/telegram/{connection.id}"
     assert body["secret_token"] == connection.credentials["secret_token"]
-    assert body["allowed_updates"] == ["message"]
+    assert body["allowed_updates"] == ["message", "callback_query"]
 
 
 async def test_a_token_telegram_refuses_is_reported_and_nothing_is_saved(

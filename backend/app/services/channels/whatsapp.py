@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 import httpx
@@ -32,20 +33,31 @@ class WhatsAppAdapter(ChannelAdapter):
         except (KeyError, IndexError) as exc:
             raise ChannelAdapterError(f"Unsupported WhatsApp payload: {payload!r}") from exc
 
-        sender_id = message["from"]
         text = None
         media_reference = None
-        if message.get("type") == "text":
+        photo_reference = None
+        kind = message.get("type")
+        if kind == "text":
             text = message["text"]["body"]
-        elif message.get("type") in ("audio", "voice"):
-            media_reference = message[message["type"]]["id"]
+        elif kind in ("audio", "voice"):
+            media_reference = message[kind]["id"]
+        elif kind == "image":
+            photo_reference = message["image"]["id"]
+            text = message["image"].get("caption")
 
+        contacts = value.get("contacts") or [{}]
+        timestamp = message.get("timestamp")
         return IncomingMessage(
             channel_type=self.channel_type,
             channel_connection_id=self._connection_id,
-            sender_id=sender_id,
+            sender_id=message["from"],
             text=text,
             media_reference=media_reference,
+            photo_reference=photo_reference,
+            unsupported=not (text or media_reference or photo_reference),
+            external_id=message.get("id"),
+            sent_at=datetime.fromtimestamp(int(timestamp), UTC) if timestamp else None,
+            sender_label=(contacts[0].get("profile") or {}).get("name"),
             raw_payload=payload,
         )
 

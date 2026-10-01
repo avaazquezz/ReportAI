@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from app.api.webhooks import email as email_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
 from app.core.config import Settings, settings
+from app.services import llm, transcription
 from app.services.agent.nodes import extract, media
 from app.services.agent.state import AgentState
 from app.services.agent.tools.pricing import estimate_cost_usd, require_priced_model_for_spend_cap
@@ -47,12 +48,12 @@ async def test_anthropic_extraction_uses_structured_output_not_forced_tool(
 ) -> None:
     create = AsyncMock(
         return_value=SimpleNamespace(
-            content=[SimpleNamespace(type="text", text=json.dumps({"summary": "all good"}))],
+            content=[SimpleNamespace(type="text", text=json.dumps({"fields": {"summary": "all good"}, "evidence": {"summary": "Visited the site"}}))],
             stop_reason="end_turn",
             usage=SimpleNamespace(input_tokens=1_000_000, output_tokens=1_000_000),
         )
     )
-    monkeypatch.setattr(extract, "_anthropic_client", lambda: SimpleNamespace(messages=SimpleNamespace(create=create)))
+    monkeypatch.setattr(llm, "_anthropic_client", lambda: SimpleNamespace(messages=SimpleNamespace(create=create)))
     monkeypatch.setattr(settings, "EXTRACTION_PROVIDER", "anthropic")
     monkeypatch.setattr(settings, "EXTRACTION_MODEL", "claude-sonnet-5-5")
 
@@ -77,7 +78,7 @@ async def test_openai_compatible_extraction_forces_the_function_and_logs_tokens(
                         tool_calls=[
                             SimpleNamespace(
                                 type="function",
-                                function=SimpleNamespace(arguments=json.dumps({"summary": "ok"})),
+                                function=SimpleNamespace(arguments=json.dumps({"fields": {"summary": "ok"}, "evidence": {}})),
                             )
                         ]
                     )
@@ -87,7 +88,7 @@ async def test_openai_compatible_extraction_forces_the_function_and_logs_tokens(
         )
     )
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
-    monkeypatch.setattr(extract, "_openai_client", lambda: client)
+    monkeypatch.setattr(llm, "_openai_client", lambda: client)
     monkeypatch.setattr(settings, "EXTRACTION_PROVIDER", "openai_compatible")
     monkeypatch.setattr(settings, "EXTRACTION_MODEL", "deepseek-chat")
 
@@ -95,6 +96,7 @@ async def test_openai_compatible_extraction_forces_the_function_and_logs_tokens(
 
     kwargs = create.await_args.kwargs
     assert kwargs["tool_choice"] == {"type": "function", "function": {"name": extract.TOOL_NAME}}
+    assert result.extracted_fields is not None
     assert result.extracted_fields == {"summary": "ok"}
     assert result.last_tool_usage is not None
     assert result.last_tool_usage.model_used == "deepseek-chat"
@@ -110,7 +112,7 @@ async def test_openai_compatible_extraction_fails_loudly_when_the_model_skips_th
         )
     )
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
-    monkeypatch.setattr(extract, "_openai_client", lambda: client)
+    monkeypatch.setattr(llm, "_openai_client", lambda: client)
     monkeypatch.setattr(settings, "EXTRACTION_PROVIDER", "openai_compatible")
 
     with pytest.raises(ValueError, match="did not call the extraction function"):
@@ -156,13 +158,13 @@ def test_webhooks_reject_signatures_made_with_an_empty_secret(monkeypatch: pytes
 
 
 async def test_transcription_goes_through_the_configured_openai_compatible_client(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, own_sessions: None
 ) -> None:
     audio = tmp_path / "audio.ogg"
     audio.write_bytes(b"fake-audio")
     create = AsyncMock(return_value=SimpleNamespace(text="hola mundo"))
     client = SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create)))
-    monkeypatch.setattr(media, "_transcription_client", lambda: client)
+    monkeypatch.setattr(transcription, "_client", lambda: client)
 
     result = await media.transcribe_node.__wrapped__(_state(media_local_path=str(audio)))
 
@@ -173,9 +175,9 @@ async def test_transcription_goes_through_the_configured_openai_compatible_clien
 def test_transcription_without_a_key_explains_what_to_set(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "TRANSCRIPTION_API_KEY", "")
     monkeypatch.setattr(settings, "GROQ_API_KEY", "")
-    media._transcription_client.cache_clear()
+    transcription.clear_client_cache()
     with pytest.raises(RuntimeError, match="TRANSCRIPTION_API_KEY"):
-        media._transcription_client()
+        transcription._client()
 
 
 def test_prices_match_anthropics_list_and_unknown_models_are_unpriced() -> None:

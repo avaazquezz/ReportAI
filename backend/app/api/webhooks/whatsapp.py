@@ -3,7 +3,7 @@ import hmac
 import logging
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import AuthenticationException
 from app.models.channel_connection import ChannelConnection
-from app.services.agent.invoke import start_or_resume_pipeline
+from app.services.agent.ingestion import ingest_message
 from app.services.channels.whatsapp import WhatsAppAdapter
 
 router = APIRouter(tags=["webhooks"])
@@ -47,7 +47,7 @@ def _verify_signature(raw_body: bytes, signature_header: str | None) -> bool:
 
 @router.post("/webhooks/whatsapp")
 async def whatsapp_webhook(
-    request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db)
 ) -> dict[str, str]:
     raw_body = await request.body()
     # WhatsApp disables a webhook after repeated non-2xx responses — always
@@ -84,7 +84,5 @@ async def whatsapp_webhook(
         logger.exception("Failed to parse WhatsApp payload")
         return {"status": "ignored"}
 
-    await start_or_resume_pipeline(
-        db=db, connection=connection, incoming=incoming, background_tasks=background_tasks
-    )
+    await ingest_message(db=db, connection=connection, incoming=incoming)
     return {"status": "ok"}

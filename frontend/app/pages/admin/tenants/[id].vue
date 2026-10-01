@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Tenant } from '~/types'
 
-definePageMeta({ middleware: ['auth', 'require-super-admin'], layout: 'app' })
+definePageMeta({ middleware: ['auth', 'require-super-admin'], layout: 'app', titleKey: 'admin.layout.nav.tenants' })
 
 const { t } = useI18n()
 const { formatDate } = useLocaleDate()
@@ -41,9 +41,13 @@ async function onResendInvite() {
 
 async function onToggleActive() {
   if (!tenant.value) return
-  await setActive(tenant.value.id, !tenant.value.is_active)
-  show(t('admin.common.toastStatusUpdated'), 'success')
-  await load()
+  try {
+    await setActive(tenant.value.id, !tenant.value.is_active)
+    show(t('admin.common.toastStatusUpdated'), 'success')
+    await load()
+  } catch {
+    show(t('admin.common.errors.statusUpdate'), 'error')
+  }
 }
 
 onMounted(load)

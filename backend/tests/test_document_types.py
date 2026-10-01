@@ -122,3 +122,16 @@ async def test_update_document_type_round_trips_notification_emails(
 
     assert response.status_code == 200
     assert response.json()["notification_emails"] == ["a@acme.test", "b@acme.test"]
+
+
+async def test_fields_keep_the_order_they_were_defined_in(client: AsyncClient, db: AsyncSession) -> None:
+    user = await _create_tenant_admin(db)
+    token = await _login(client, user.email)
+    ordered = ["visit_date", "client", "observations", "id"]  # JSONB would return id, client, ...
+    payload = {**_VALID_PAYLOAD, "field_schema": {name: {"type": "str"} for name in ordered}}
+
+    created = await client.post("/document-types", json=payload, headers={"Authorization": f"Bearer {token}"})
+    db.expunge_all()  # read it back from the database, not from the session
+    fetched = await client.get(f"/document-types/{created.json()['id']}", headers={"Authorization": f"Bearer {token}"})
+
+    assert list(fetched.json()["field_schema"]) == ordered

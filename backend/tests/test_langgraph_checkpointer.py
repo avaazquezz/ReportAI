@@ -29,3 +29,35 @@ async def test_init_fails_fast_until_the_migrate_step_has_run(monkeypatch: pytes
         async with admin.connect() as conn:
             await conn.execute(text(f'DROP DATABASE IF EXISTS "{scratch_db}" WITH (FORCE)'))
         await admin.dispose()
+
+
+def test_the_graph_state_survives_a_checkpoint_round_trip_and_other_classes_do_not(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """What a paused report carries — asyncpg's own UUIDs from the ORM, the document-type choices —
+    must read back intact; a class nobody listed must not be instantiated from a checkpoint row."""
+    from datetime import UTC, datetime
+
+    from asyncpg.pgproto.pgproto import UUID as AsyncpgUUID
+    from pydantic import BaseModel
+
+    from app.services.agent.state import DocumentTypeOption
+
+    serde = checkpointer_module.CHECKPOINT_SERDE
+    report_id = AsyncpgUUID(str(uuid.uuid4()))
+    state = {
+        "report_id": report_id,
+        "received_at": datetime(2026, 3, 12, 9, 15, tzinfo=UTC),
+        "available_document_types": [DocumentTypeOption(id=uuid.uuid4(), name="Acta")],
+    }
+
+    restored = serde.loads_typed(serde.dumps_typed(state))
+
+    assert restored == state and restored["report_id"] == report_id
+    assert isinstance(restored["available_document_types"][0], DocumentTypeOption)
+    assert not any("Blocked" in record.getMessage() for record in caplog.records)
+
+    class Intruder(BaseModel):
+        payload: str
+
+    assert not isinstance(serde.loads_typed(serde.dumps_typed(Intruder(payload="x"))), Intruder)

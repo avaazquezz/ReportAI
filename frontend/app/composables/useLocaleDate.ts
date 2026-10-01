@@ -3,6 +3,15 @@ const INTL_LOCALES: Record<string, string> = {
   en: 'en-US'
 }
 
+/**
+ * 'YYYY-MM-DD' as midnight on the viewer's own clock. `new Date('2026-09-30')` is midnight UTC,
+ * which west of Greenwich is still the 29th — the day-off-by-one of FE-9.
+ */
+export function parseLocalDay(value: string, offsetDays = 0): Date {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year!, month! - 1, day! + offsetDays)
+}
+
 export function useLocaleDate() {
   const { locale } = useI18n()
 

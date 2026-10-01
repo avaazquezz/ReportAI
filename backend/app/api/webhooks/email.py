@@ -4,14 +4,14 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.channel_connection import ChannelConnection
-from app.services.agent.invoke import start_or_resume_pipeline
+from app.services.agent.ingestion import ingest_message
 from app.services.channels.email_inbound import EmailInboundAdapter
 
 router = APIRouter(tags=["webhooks"])
@@ -32,7 +32,7 @@ def _verify_signature(timestamp: str, token: str, signature: str) -> bool:
 
 @router.post("/webhooks/email")
 async def email_webhook(
-    request: Request, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db)
 ) -> dict[str, str]:
     form = await request.form()
 
@@ -73,6 +73,9 @@ async def email_webhook(
         "stripped_text": str(form.get("stripped-text", "")) or None,
         "body_plain": str(form.get("body-plain", "")) or None,
         "saved_attachment_path": saved_attachment_path,
+        "message_id": str(form.get("Message-Id", "")) or None,
+        "subject": str(form.get("subject", "")) or None,
+        "from": str(form.get("from", "")) or None,
     }
 
     adapter = EmailInboundAdapter(
@@ -84,7 +87,5 @@ async def email_webhook(
         logger.exception("Failed to parse inbound email payload")
         return {"status": "ignored"}
 
-    await start_or_resume_pipeline(
-        db=db, connection=connection, incoming=incoming, background_tasks=background_tasks
-    )
+    await ingest_message(db=db, connection=connection, incoming=incoming)
     return {"status": "ok"}
