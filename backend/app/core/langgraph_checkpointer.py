@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from psycopg import AsyncConnection
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -14,6 +15,19 @@ logger = logging.getLogger(__name__)
 # same database — langgraph-checkpoint-postgres requires psycopg, not asyncpg.
 _pool: AsyncConnectionPool[AsyncConnection[dict[str, Any]]] | None = None
 _checkpointer: AsyncPostgresSaver | None = None
+
+# The only classes a checkpoint may bring back, on top of LangGraph's built-in safe types: a row
+# that names anything else is refused instead of instantiated. asyncpg returns its own UUID
+# subclass for every uuid column, and those ids travel in the graph state; LangGraph is turning
+# unlisted types from a warning into a refusal, which would leave paused reports unable to resume.
+CHECKPOINT_SERDE = JsonPlusSerializer(
+    allowed_msgpack_modules=[
+        ("asyncpg.pgproto.pgproto", "UUID"),
+        ("app.services.agent.state", "AgentState"),
+        ("app.services.agent.state", "DocumentTypeOption"),
+        ("app.services.agent.state", "ToolUsage"),
+    ]
+)
 
 
 def _dsn() -> str:
@@ -65,7 +79,7 @@ async def init_checkpointer() -> AsyncPostgresSaver:
         await _pool.close()
         _pool = None
         raise
-    _checkpointer = AsyncPostgresSaver(_pool)
+    _checkpointer = AsyncPostgresSaver(_pool, serde=CHECKPOINT_SERDE)
     return _checkpointer
 
 
