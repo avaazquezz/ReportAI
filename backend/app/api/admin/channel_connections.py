@@ -2,10 +2,12 @@ import secrets
 import uuid
 
 from fastapi import APIRouter, Depends
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_tenant_admin
+from app.core.exceptions import ConflictException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.channel_connection import ChannelConnection
 from app.models.tenant_user import TenantUser
@@ -14,11 +16,15 @@ from app.schemas.channel_connection import (
     ChannelConnectionCreateRequest,
     ChannelConnectionResponse,
     ChannelConnectionUpdateRequest,
+    routing_key_for,
 )
 from app.schemas.common import PaginatedResponse
 from app.services.channels.telegram_webhook import register_telegram_webhook
 
 router = APIRouter(prefix="/channels", tags=["admin:channels"])
+
+# Two connections answering the same WhatsApp number or inbound address could not be told apart.
+_ROUTING_TAKEN = "Another connection already uses this phone number id or inbound address"
 
 
 @router.post("", status_code=201)
@@ -35,15 +41,19 @@ async def create_channel_connection(
         # Echoed back by Telegram on every webhook update and verified there.
         credentials.setdefault("secret_token", secrets.token_urlsafe(32))
         await register_telegram_webhook(connection_id, credentials)
-    connection = await repo.create(
-        id=connection_id,
-        tenant_id=tenant_id,
-        channel_type=payload.channel_type,
-        display_name=payload.display_name,
-        credentials=credentials,
-        allowed_senders=payload.allowed_senders,
-        is_active=True,
-    )
+    try:
+        connection = await repo.create(
+            id=connection_id,
+            tenant_id=tenant_id,
+            channel_type=payload.channel_type,
+            display_name=payload.display_name,
+            credentials=credentials,
+            routing_key=routing_key_for(payload.channel_type, credentials),
+            allowed_senders=payload.allowed_senders,
+            is_active=True,
+        )
+    except IntegrityError as exc:
+        raise ConflictException(_ROUTING_TAKEN) from exc
     return ChannelConnectionResponse.from_model(connection)
 
 
@@ -102,11 +112,15 @@ async def update_channel_connection(
         merged_credentials.setdefault("secret_token", secrets.token_urlsafe(32))
         await register_telegram_webhook(connection.id, merged_credentials)
 
-    connection = await repo.update(
-        connection,
-        display_name=payload.display_name,
-        credentials=merged_credentials,
-        allowed_senders=payload.allowed_senders,
-        is_active=payload.is_active,
-    )
+    try:
+        connection = await repo.update(
+            connection,
+            display_name=payload.display_name,
+            credentials=merged_credentials,
+            routing_key=routing_key_for(connection.channel_type, merged_credentials),
+            allowed_senders=payload.allowed_senders,
+            is_active=payload.is_active,
+        )
+    except IntegrityError as exc:
+        raise ConflictException(_ROUTING_TAKEN) from exc
     return ChannelConnectionResponse.from_model(connection)

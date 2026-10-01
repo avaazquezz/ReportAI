@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # ── Secrets at rest (app.core.crypto). Any long random string; empty = derived from
+    #    SECRET_KEY (older installations). Changing it makes stored secrets unreadable. ──
+    ENCRYPTION_KEY: str = ""
+
     # ── Application ──────────────────────────────────────────────────────
     ENVIRONMENT: str = "development"
 

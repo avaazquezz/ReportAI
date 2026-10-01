@@ -50,7 +50,7 @@ async def email_webhook(
     result = await db.execute(
         select(ChannelConnection).where(
             ChannelConnection.channel_type == "email",
-            ChannelConnection.credentials["inbound_slug"].astext == inbound_slug,
+            ChannelConnection.routing_key == inbound_slug,
         )
     )
     connection = result.scalar_one_or_none()
