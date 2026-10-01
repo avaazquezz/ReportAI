@@ -106,6 +106,12 @@ async def _document_type(db: AsyncSession, report: Report) -> DocumentType:
     return document_type
 
 
+async def _language(db: AsyncSession, report: Report) -> str:
+    tenant = await db.get(Tenant, report.tenant_id)
+    assert tenant is not None
+    return tenant.language
+
+
 def _apply_edits(
     document_type: DocumentType, current: dict[str, Any], edits: dict[str, Any]
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -353,6 +359,7 @@ async def edit_report_fields(
             document_type_id=document_type.id,
             field_schema=document_type.field_schema,
             fields=fields,
+            language=await _language(db, report),
             folder=str(Path(report.file_path).parent),
         )
     except MissingTemplateError as exc:
@@ -392,6 +399,7 @@ async def preview_report(
                 document_type_id=document_type.id,
                 field_schema=document_type.field_schema,
                 fields=fields,
+                language=await _language(db, report),
                 folder=folder,
             )
         except MissingTemplateError as exc:
