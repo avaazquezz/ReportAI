@@ -8,5 +8,14 @@
       "backToPanel": "Volver al panel",
       "backHome": "Volver al inicio"
     }
+  },
+  "checks": {
+    "ok": "Funciona",
+    "auth": "El proveedor rechaza la clave (o el usuario y la contraseña).",
+    "not_found": "El proveedor no reconoce ese modelo o esa URL.",
+    "unreachable": "No se puede conectar con el servidor: revisa la dirección y el puerto.",
+    "timeout": "El servidor no ha respondido a tiempo.",
+    "not_configured": "Faltan datos para poder probarlo.",
+    "other": "La prueba ha fallado."
   }
 }
