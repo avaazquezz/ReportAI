@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth, health, setup
 from app.api.admin import channel_connections as admin_channel_connections
+from app.api.admin import company as admin_company
 from app.api.admin import document_types as admin_document_types
 from app.api.admin import instance_settings as admin_instance_settings
 from app.api.admin import reports as admin_reports
@@ -69,6 +70,7 @@ app.include_router(admin_reports.router)
 app.include_router(admin_usage.router)
 app.include_router(admin_instance_settings.router)
 app.include_router(admin_team.router)
+app.include_router(admin_company.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)

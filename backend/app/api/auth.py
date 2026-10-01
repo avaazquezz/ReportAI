@@ -38,6 +38,7 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services.branding import Branding
 from app.services.i18n import t
 from app.services.notifications.email import send_plain_email
 from app.services.notifications.tokens import consume_reset_token, issue_reset_token
@@ -193,6 +194,7 @@ async def forgot_password(
                 to=[user.email],
                 subject=t(language, "reset_subject"),
                 body=t(language, "reset_body", link=reset_link),
+                branding=Branding.of(tenant) if tenant else None,
             )
         except Exception:
             logger.exception("Failed to send password reset email to %s", user.email)

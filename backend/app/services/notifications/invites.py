@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
+from app.services.branding import Branding
 from app.services.i18n import t
 from app.services.notifications.email import send_plain_email
 from app.services.notifications.tokens import INVITE_TTL, issue_reset_token
@@ -25,6 +26,7 @@ async def send_invite(db: AsyncSession, user: TenantUser) -> tuple[bool, str]:
             to=[user.email],
             subject=t(language, "invite_subject", company=tenant.name if tenant else "ReportAI"),
             body=t(language, "invite_body", name=user.full_name, company=tenant.name if tenant else "ReportAI", link=link),
+            branding=Branding.of(tenant) if tenant else None,
         )
     except Exception:
         logger.exception("Failed to send the invitation email to %s", user.email)

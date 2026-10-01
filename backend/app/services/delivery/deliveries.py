@@ -22,6 +22,7 @@ from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.repositories.report_repository import FINISHED_STATUSES
+from app.services.branding import Branding
 from app.services.channels.base import OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.delivery.email import send_report_email
@@ -153,6 +154,7 @@ async def send_pending(report_id: uuid.UUID) -> list[str]:
                         body=t(language, "email_body", doc_type=name),
                         attachment_path=report.file_path,
                         attachment_name=filename,
+                        branding=Branding.of(tenant),
                     )
             except Exception as exc:
                 logger.warning("Couldn't deliver report %s to %s", report_id, delivery.destination, exc_info=True)
