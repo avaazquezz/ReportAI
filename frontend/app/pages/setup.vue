@@ -83,7 +83,7 @@ async function check(what: 'ai' | 'voice') {
       }
     })
   } catch (err) {
-    target.value = { ok: false, reason: null, detail: apiError(err, t('setup.errors.check')) }
+    target.value = failedCheck(err, t('setup.errors.check'))
   } finally {
     checking.value = null
   }
@@ -108,7 +108,7 @@ async function checkEmail() {
       body: { code: code.value, to: admin.email, settings: smtp }
     })
   } catch (err) {
-    emailCheck.value = { ok: false, reason: null, detail: apiError(err, t('setup.errors.check')) }
+    emailCheck.value = failedCheck(err, t('setup.errors.check'))
   } finally {
     checking.value = null
   }
