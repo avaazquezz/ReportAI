@@ -68,3 +68,14 @@ async def require_super_admin(
     if current_user.role != "super_admin":
         raise AuthorizationException("Super admin role required")
     return current_user
+
+
+async def require_instance_admin(
+    current_user: TenantUser = Depends(get_current_user),
+) -> TenantUser:
+    """Whoever runs this installation (its AI provider, mail server, updates): the company's
+    admin when it serves one company, the super admin when it hosts several."""
+    expected = "tenant_admin" if settings.SINGLE_TENANT else "super_admin"
+    if current_user.role != expected:
+        raise AuthorizationException("Only the administrator of this installation can do this")
+    return current_user

@@ -28,6 +28,7 @@ from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
 from app.repositories.execution_log_repository import ExecutionLogRepository
 from app.repositories.report_repository import PENDING_STATUSES, ReportRepository
+from app.services import instance_settings
 from app.services.channels.base import IncomingMessage, OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.i18n import t
@@ -224,6 +225,12 @@ async def ingest_message(
         await say(connection, incoming.sender_id, t(language, key))
         return IngestResult("replied")
 
+    # Better said now than as a failed report a minute later.
+    stored = await instance_settings.load(db)
+    if incoming.media_reference and not instance_settings.transcription_from(stored).configured:
+        await say(connection, incoming.sender_id, t(language, "voice_not_configured"))
+        return IngestResult("rejected")
+
     repo = ReportRepository(db)
     active = await repo.find_active_for_sender(
         tenant_id=connection.tenant_id, channel=incoming.channel_type, identifier=incoming.sender_id
@@ -253,6 +260,10 @@ async def ingest_message(
             return IngestResult("resumed", active.id)
         await say(connection, incoming.sender_id, t(language, "busy"))
         return IngestResult("busy", active.id)
+
+    if not instance_settings.ai_from(stored).configured:
+        await say(connection, incoming.sender_id, t(language, "not_configured"))
+        return IngestResult("rejected")
 
     # New reports only — a reply to a paused report must never be rate-limited away.
     if settings.SENDER_RATE_LIMIT_PER_HOUR > 0:
