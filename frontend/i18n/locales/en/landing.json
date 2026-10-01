@@ -22,7 +22,7 @@
     "hero": {
       "placeholderTag": "inspection_report",
       "eyebrow": "For safety, inspection and maintenance teams",
-      "headlineLine1": "Dictate the site inspection.",
+      "headlineLine1": "Dictate the inspection.",
       "headlineLine2": "Get the report.",
       "subheadline": "When the visit's done, you send a voice note on Telegram. ReportAI fills in your Word template with it: what you saw, the issues, who fixes them and by when. Once you approve it, it goes to the right people.",
       "note": "Installed on your own server: the recordings and reports stay with you.",
