@@ -1,10 +1,11 @@
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, health
+from app.api import auth, health, setup
 from app.api.admin import channel_connections as admin_channel_connections
 from app.api.admin import document_types as admin_document_types
 from app.api.admin import instance_settings as admin_instance_settings
@@ -15,15 +16,24 @@ from app.api.webhooks import email as email_webhook
 from app.api.webhooks import telegram as telegram_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
 from app.core.logging import configure_logging
 from app.services.agent.tools.pricing import require_priced_model_for_spend_cap
+from app.services.setup import needs_setup
 
 configure_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     require_priced_model_for_spend_cap(settings.EXTRACTION_MODEL, settings.DAILY_SPEND_CAP_USD)
+    async with AsyncSessionLocal() as session:
+        if await needs_setup(session):
+            logger.warning(
+                "This installation is not set up yet: get a setup code with `reportai setup-code` "
+                "and open %s/setup", settings.FRONTEND_ORIGIN
+            )
     yield
 
 
@@ -50,6 +60,7 @@ app.add_middleware(
 )
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(setup.router)
 app.include_router(admin_tenants.router)
 app.include_router(admin_document_types.router)
 app.include_router(admin_channel_connections.router)
