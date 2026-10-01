@@ -1,6 +1,7 @@
 # Infra
 
 - `docker-compose.yml` — local development (hot reload, Postgres port exposed, source bind-mounted). Run via the root `Makefile`.
+- `install/` — what a company's own server runs: `install.sh` (one-command installer), a self-contained `docker-compose.yml` with Caddy for HTTPS, and the `reportai` command (update, setup-code, logs…). See [`docs/install.md`](../docs/install.md).
 - `docker-compose.prod.yml` — private-server deployment behind Traefik. Assumes an external `web` Docker network and a Traefik certificate resolver named `le` already exist on the server. Single-domain routing: `${APP_DOMAIN}/api/*` → backend (StripPrefix + `API_ROOT_PATH=/api`), everything else → the Nuxt frontend.
 
 ## Production deploy runbook
