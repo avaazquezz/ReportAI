@@ -14,7 +14,7 @@ const pilotHref = useContactHref('landing.pricing.plans.pilot.mailSubject')
 const hrefs = computed(() => ({ selfHosted: INSTALL_GUIDE, managed: managedHref.value, pilot: pilotHref.value }))
 const EXTRAS = ['server', 'ai', 'telegram'] as const
 
-// Real places only: the numbers come from the deployment and change as pilots sign.
+// Pilot places: the numbers come from the deployment's runtime config.
 const { public: config } = useRuntimeConfig()
 const spots = Number(config.pilotSpots)
 const spotsLeft = Math.max(spots - Number(config.pilotsTaken), 0)
