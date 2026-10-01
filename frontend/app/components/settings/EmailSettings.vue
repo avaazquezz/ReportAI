@@ -57,7 +57,7 @@ async function sendTest() {
   try {
     result.value = await api<CheckResult>('/instance/email/check', { method: 'POST', body: { to: testTo.value, settings: body() } })
   } catch (err) {
-    result.value = { ok: false, reason: null, detail: errorText(err, t('admin.settings.checkFailed')) }
+    result.value = failedCheck(err, t('admin.settings.checkFailed'))
   } finally {
     checking.value = false
   }
