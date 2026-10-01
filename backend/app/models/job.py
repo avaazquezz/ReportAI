@@ -25,7 +25,7 @@ class Job(Base):
     report_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("reports.id", ondelete="CASCADE"), nullable=False
     )
-    # run | resume | deliver | rerender
+    # run | resume | deliver
     kind: Mapped[str] = mapped_column(String(20), nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="{}"

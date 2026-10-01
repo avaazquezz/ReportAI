@@ -12,7 +12,7 @@ from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.persistence import save_report
 from app.services.agent.state import AgentState, ToolUsage
 from app.services.agent.summary import build_summary, chunk_text
-from app.services.agent.tools.extraction_schema import build_extraction_model
+from app.services.agent.tools.extraction_schema import merge_edits
 from app.services.agent.tools.intent import classify_reply
 from app.services.agent.tools.pricing import estimate_cost_usd
 from app.services.channels.base import Button
@@ -88,9 +88,7 @@ def _apply_edited_fields(state: AgentState, edited: dict[str, Any]) -> AgentStat
     """Fields a person corrected in the panel replace the extracted ones — validated like any
     extraction, and their evidence dropped: the quote no longer backs what is now there."""
     assert state.field_schema is not None and state.document_type_name is not None
-    model = build_extraction_model(state.document_type_name, state.field_schema)
-    merged = {**(state.extracted_fields or {}), **edited}
-    validated = model.model_validate(merged).model_dump(mode="json")
+    validated, _ = merge_edits(state.document_type_name, state.field_schema, state.extracted_fields or {}, edited)
     evidence = {name: quote for name, quote in state.evidence.items() if name not in edited}
     return state.model_copy(update={"extracted_fields": validated, "evidence": evidence})
 
