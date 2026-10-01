@@ -9,7 +9,7 @@ const showLegalLink = computed(() => Boolean(config.legalName && config.legalId 
 const NAV = [
   { hash: '#ejemplo-real', key: 'realExample' },
   { hash: '#como-funciona', key: 'howItWorks' },
-  { hash: '#diferencia', key: 'difference' },
+  { hash: '#precios', key: 'pricing' },
   { hash: '#preguntas', key: 'faq' }
 ] as const
 </script>
@@ -50,6 +50,14 @@ const NAV = [
 
         <div class="flex flex-col gap-2.5 font-body text-sm">
           <a :href="`mailto:${CONTACT_EMAIL}`" class="w-fit text-ink-900/80 hover:text-capture-600">{{ CONTACT_EMAIL }}</a>
+          <a
+            href="https://github.com/avaazquezz/ReportAI"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="w-fit text-ink-900/80 hover:text-capture-600"
+          >
+            {{ t('landing.footer.code') }}
+          </a>
           <a
             href="https://www.vazquezdev.pro"
             target="_blank"

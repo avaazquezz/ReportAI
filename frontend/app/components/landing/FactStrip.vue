@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const { t } = useI18n()
 
-const FACTS = ['noApp', 'yourTemplate', 'approval', 'realExample'] as const
+const FACTS = ['handsFree', 'yourTemplate', 'approval', 'ownServer'] as const
 
 const root = ref<HTMLElement | null>(null)
 useSectionMotion(root, (tl) => {

@@ -11,7 +11,7 @@ const tag = (key: string) => `{{ ${t(`landing.hero.stage.tags.${key}`)} }}`
 // The page's one orchestrated moment: the copy lands, then the stage tells the
 // product's story once — voice note in, fields resolve on the client's own
 // document, approval stamp, delivery — and offers a replay.
-const SLOTS = ['date', 'place', 'attendee1', 'attendee2', 'attendee3', 'decision'] as const
+const COMPANIES = ['company1', 'company2', 'company3'] as const
 const WAVE = [5, 9, 13, 8, 15, 6, 11, 16, 7, 12, 9, 5, 10, 14, 6]
 
 const root = ref<HTMLElement | null>(null)
@@ -19,7 +19,7 @@ const { replay } = useSectionMotion(
   root,
   (tl) => {
     tl.to('.hero-tag', { opacity: 0, y: -8, duration: 0.35 }, 0.55)
-      .fromTo('.hero-h1', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5 }, '<')
+      .fromTo(['.hero-eyebrow', '.hero-h1'], { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5 }, '<')
       .fromTo(
         ['.hero-sub', '.hero-ctas', '.hero-note'],
         { opacity: 0, y: 14 },
@@ -81,6 +81,7 @@ const { replay } = useSectionMotion(
       class="mx-auto grid max-w-[1200px] items-center gap-14 px-6 pb-20 pt-10 md:pb-28 md:pt-16 lg:grid-cols-[1.2fr_0.8fr] lg:gap-16"
     >
       <div>
+        <p class="hero-eyebrow m-hide mb-5 font-body text-sm font-semibold text-capture-600">{{ t('landing.hero.eyebrow') }}</p>
         <div class="relative">
           <p class="hero-tag absolute inset-0 font-mono text-2xl text-ink-900/30 md:text-3xl" aria-hidden="true">
             {{ placeholderTag }}
@@ -134,16 +135,18 @@ const { replay } = useSectionMotion(
               <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ tag('date') }}</span>
               <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.hero.stage.values.date') }}</span>
             </span>
-            <b class="ml-4 font-semibold">{{ t('landing.hero.stage.placeLabel') }}</b>
-            <span class="ml-1 inline-grid align-top">
-              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ tag('place') }}</span>
-              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.hero.stage.values.place') }}</span>
+            <span class="ml-4 inline-block whitespace-nowrap max-[420px]:ml-0">
+              <b class="font-semibold">{{ t('landing.hero.stage.stageLabel') }}</b>
+              <span class="ml-1 inline-grid align-top">
+                <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ tag('stage') }}</span>
+                <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.hero.stage.values.stage') }}</span>
+              </span>
             </span>
           </p>
 
-          <p class="mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.hero.stage.attendeesLabel') }}</p>
+          <p class="mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.hero.stage.companiesLabel') }}</p>
           <ul class="mb-0 mt-1 space-y-0.5 pl-4 font-body text-[13px] leading-6 text-ink-900" style="list-style: disc">
-            <li v-for="key in SLOTS.slice(2, 5)" :key="key">
+            <li v-for="key in COMPANIES" :key="key">
               <span class="inline-grid align-top">
                 <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ tag(key) }}</span>
                 <span class="val col-start-1 row-start-1 opacity-0">{{ t(`landing.hero.stage.values.${key}`) }}</span>
@@ -151,11 +154,11 @@ const { replay } = useSectionMotion(
             </li>
           </ul>
 
-          <p class="mt-4 hidden font-body text-sm font-semibold text-doc-700 sm:block">{{ t('landing.hero.stage.decisionsLabel') }}</p>
+          <p class="mt-4 hidden font-body text-sm font-semibold text-doc-700 sm:block">{{ t('landing.hero.stage.issueLabel') }}</p>
           <p class="mt-1 hidden font-body text-[13px] leading-6 text-ink-900 sm:block">
             <span class="inline-grid align-top">
-              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ tag('decision') }}</span>
-              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.hero.stage.values.decision') }}</span>
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ tag('issue') }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.hero.stage.values.issue') }}</span>
             </span>
           </p>
 
@@ -198,14 +201,14 @@ const { replay } = useSectionMotion(
               {{ t('landing.hero.stage.approve') }}
             </div>
 
-            <div class="b-sent m-hide flex w-fit items-center gap-2.5 rounded-2xl rounded-bl-md bg-paper-50 px-3 py-2">
+            <div class="b-sent m-hide flex w-fit max-w-full items-center gap-2.5 rounded-2xl rounded-bl-md bg-paper-50 px-3 py-2">
               <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-ink-900 text-white">
                 <svg viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5">
                   <path d="M4 2h8l4 4v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm7 1.5V7h3.5L11 3.5ZM6 10h8v1.2H6V10Zm0 3h8v1.2H6V13Z" />
                 </svg>
               </span>
-              <span class="leading-tight">
-                <span class="block font-mono text-[10px] text-ink-900/70">acta_reunion.pdf</span>
+              <span class="min-w-0 leading-tight">
+                <span class="block truncate font-mono text-[10px] text-ink-900/70">{{ t('landing.hero.stage.filename') }}</span>
                 <span class="block font-body text-[11px] font-medium text-approved-600">{{ t('landing.hero.stage.sent') }} ✓</span>
               </span>
             </div>

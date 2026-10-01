@@ -4,10 +4,10 @@ const { t } = useI18n()
 // Real docxtpl syntax: the panel shows the client's .docx as the engine sees it,
 // then does what the product does — each tag resolves into its value.
 const TAGS = {
-  date: ['{{', 'meeting_date', '}}'].join(' '),
-  place: ['{{', 'location', '}}'].join(' '),
-  attendees: '{% for a in attendees %}{{ a }}{% endfor %}',
-  summary: ['{{', 'summary', '}}'].join(' ')
+  date: ['{{', 'fecha', '}}'].join(' '),
+  site: ['{{', 'obra', '}}'].join(' '),
+  companies: '{% for e in empresas_presentes %}{{ e }}{% endfor %}',
+  issue: ['{{', 'deficiencias[0].deficiencia', '}}'].join(' ')
 }
 
 const root = ref<HTMLElement | null>(null)
@@ -40,24 +40,24 @@ useSectionMotion(root, (tl) => {
             </span>
           </p>
           <p class="line m-hide mt-1 font-body text-[13px] leading-6 text-ink-900">
-            <b class="font-semibold">{{ t('landing.templateFidelity.labels.place') }}</b>
+            <b class="font-semibold">{{ t('landing.templateFidelity.labels.site') }}</b>
             <span class="ml-1 inline-grid align-top">
-              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.place }}</span>
-              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.place') }}</span>
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.site }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.site') }}</span>
             </span>
           </p>
-          <p class="line m-hide mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.attendees') }}</p>
+          <p class="line m-hide mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.companies') }}</p>
           <p class="line m-hide mt-1 font-body text-[13px] leading-6 text-ink-900">
             <span class="inline-grid align-top">
-              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.attendees }}</span>
-              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.attendees') }}</span>
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.companies }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.companies') }}</span>
             </span>
           </p>
-          <p class="line m-hide mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.summary') }}</p>
+          <p class="line m-hide mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.issue') }}</p>
           <p class="line m-hide mt-1 font-body text-[13px] leading-6 text-ink-900">
             <span class="inline-grid align-top">
-              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.summary }}</span>
-              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.summary') }}</span>
+              <span class="tag col-start-1 row-start-1 font-mono text-[12px] text-capture-600">{{ TAGS.issue }}</span>
+              <span class="val col-start-1 row-start-1 opacity-0">{{ t('landing.templateFidelity.values.issue') }}</span>
             </span>
           </p>
         </div>

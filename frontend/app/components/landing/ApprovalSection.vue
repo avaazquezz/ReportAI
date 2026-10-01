@@ -12,7 +12,7 @@ useSectionMotion(root, (tl) => {
     .fromTo(
       '.bubble',
       { opacity: 0, y: 10, scale: 0.96 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.45, ease: 'back.out(1.4)' },
+      { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.4, ease: 'back.out(1.4)' },
       '-=0.1'
     )
 })
@@ -54,16 +54,24 @@ useSectionMotion(root, (tl) => {
               <span class="flex items-end gap-0.5">
                 <span v-for="(h, i) in WAVE_HEIGHTS" :key="i" class="w-0.5 rounded-full bg-white/70" :style="{ height: `${h}px` }" />
               </span>
-              <span class="font-mono text-xs text-white">0:47</span>
+              <span class="font-mono text-xs text-white">{{ t('landing.hero.stage.voiceDuration') }}</span>
             </div>
+          </div>
+
+          <div class="bubble m-hide w-fit max-w-[85%] rounded-2xl rounded-bl-md bg-paper-50 px-4 py-3 font-body text-sm text-ink-900">
+            {{ t('landing.approval.mockup.question') }}
+          </div>
+
+          <div class="bubble m-hide ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-capture-600 px-4 py-2 font-body text-sm text-white">
+            {{ t('landing.approval.mockup.answer') }}
           </div>
 
           <div class="bubble m-hide w-fit max-w-[85%] rounded-2xl rounded-bl-md bg-paper-50 px-4 py-3">
             <p class="font-body text-sm font-medium text-ink-900">{{ t('landing.approval.mockup.draftReady') }}</p>
             <div class="mt-2 space-y-1 font-mono text-xs text-ink-900">
-              <p><span class="text-ink-900/60">company_name:</span> {{ t('landing.approval.mockup.company') }}</p>
-              <p><span class="text-ink-900/60">meeting_date:</span> {{ t('landing.approval.mockup.date') }}</p>
-              <p><span class="text-ink-900/60">decisions:</span> 2</p>
+              <p><span class="text-ink-900/60">{{ t('landing.approval.mockup.siteLabel') }}:</span> {{ t('landing.approval.mockup.site') }}</p>
+              <p><span class="text-ink-900/60">{{ t('landing.approval.mockup.dateLabel') }}:</span> {{ t('landing.approval.mockup.date') }}</p>
+              <p><span class="text-ink-900/60">{{ t('landing.approval.mockup.issuesLabel') }}:</span> 3</p>
             </div>
             <div class="mt-3 flex gap-2">
               <span class="rounded-md border border-approved-600 px-2.5 py-1 font-body text-xs font-medium text-approved-600">{{ t('landing.approval.mockup.approve') }}</span>
@@ -83,7 +91,7 @@ useSectionMotion(root, (tl) => {
                 </svg>
               </span>
               <div>
-                <p class="font-mono text-xs text-ink-900">{{ t('landing.approval.mockup.filename') }}</p>
+                <p class="break-all font-mono text-xs text-ink-900">{{ t('landing.approval.mockup.filename') }}</p>
                 <p class="mt-0.5 font-body text-xs font-medium text-approved-600">{{ t('landing.approval.mockup.sentTo') }}</p>
               </div>
             </div>

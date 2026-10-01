@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const { t } = useI18n()
 
-const ITEMS = ['install', 'channels', 'errors', 'data', 'languages', 'documents', 'price'] as const
+const ITEMS = ['install', 'channels', 'errors', 'data', 'ai', 'languages', 'documents', 'price'] as const
 
 // Same questions and answers the page shows, exposed for search engines.
 useHead({
@@ -25,7 +25,7 @@ useHead({
 </script>
 
 <template>
-  <section id="preguntas" class="bg-paper-50 py-20 md:py-28">
+  <section id="preguntas" class="bg-surface-0 py-20 md:py-28">
     <div class="mx-auto grid max-w-[1200px] gap-10 px-6 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
       <h2 class="font-display text-[clamp(1.9rem,3.4vw,2.9rem)] font-bold leading-[1.05] tracking-[-0.02em] text-ink-900 [text-wrap:balance] lg:sticky lg:top-28">
         {{ t('landing.faq.heading') }}
