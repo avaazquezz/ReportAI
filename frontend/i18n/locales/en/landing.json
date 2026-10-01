@@ -286,13 +286,15 @@
             "feedback": "In exchange for your feedback every week of the pilot",
             "case": "And for telling your story if it works for you"
           },
-          "cta": "I want to be a pilot",
-          "mailSubject": "I want to be a ReportAI pilot"
+          "mailSubject": "I want to be a ReportAI pilot",
+          "spotsLeft": "{left} of {total} places left",
+          "spotsFull": "All pilot places are taken",
+          "cta": "I want to be a pilot"
         }
       },
       "extraHeading": "What you pay separately, straight to each provider",
       "extras": {
-        "server": "Server: about €9 a month plus VAT if you don't have one (a Hetzner CX33).",
+        "server": "Server: about €9 a month plus VAT if you don't have one.",
         "ai": "AI: cents per report, on your account with the provider you choose.",
         "telegram": "Telegram: free."
       },
