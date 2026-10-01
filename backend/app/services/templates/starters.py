@@ -84,6 +84,14 @@ class _Writer:
         heading_run.bold, heading_run.font.size, heading_run.font.color.rgb = True, Pt(17), _INK
         heading.paragraph_format.space_after = Pt(10)
 
+    def only_if(self, field_name: str) -> None:
+        """What follows, until done(), is left out when the report has nothing for it: no empty
+        "Photos" heading on a report without photos."""
+        self.document.add_paragraph("{%p if " + field_name + " %}")
+
+    def done(self) -> None:
+        self.document.add_paragraph("{%p endif %}")
+
     def section(self, text: str) -> None:
         paragraph = self.document.add_paragraph()
         run = paragraph.add_run(text)
@@ -174,15 +182,21 @@ def _work_order(w: _Writer, language: str) -> None:
     w.line(("Técnico" if es else "Technician", "tecnico"))
     w.section("Trabajos realizados" if es else "Work done")
     w.bullets("trabajos")
+    w.only_if("materiales")
     w.section("Materiales" if es else "Materials")
     w.table("materiales", [("Material", "material"), ("Cantidad" if es else "Quantity", "cantidad"), ("Unidad" if es else "Unit", "unidad")])
+    w.done()
+    w.only_if("observaciones")
     w.section("Observaciones" if es else "Notes")
     w.text("observaciones")
+    w.done()
     w.line(("Trabajo terminado" if es else "Finished", "terminado"))
     # Signed under the work, photos after: a photo would otherwise push the signatures alone onto page 2.
     w.signatures("Firma del técnico" if es else "Technician's signature", "Firma del cliente" if es else "Client's signature")
+    w.only_if("fotos")
     w.section("Fotos" if es else "Photos")
     w.photos("fotos")
+    w.done()
 
 
 _VISIT_FIELDS = (
@@ -206,10 +220,14 @@ def _visit(w: _Writer, language: str) -> None:
     w.bullets("asistentes")
     w.section("Conclusiones" if es else "Findings")
     w.text("conclusiones")
+    w.only_if("proximos_pasos")
     w.section("Próximos pasos" if es else "Next steps")
     w.bullets("proximos_pasos")
+    w.done()
+    w.only_if("fotos")
     w.section("Fotos" if es else "Photos")
     w.photos("fotos")
+    w.done()
 
 
 _SEVERITY = {"es": ["Baja", "Media", "Alta"], "en": ["Low", "Medium", "High"]}
@@ -234,12 +252,18 @@ def _incident(w: _Writer, language: str) -> None:
     w.line(("Comunicado por" if es else "Reported by", "comunicado_por"), ("Gravedad" if es else "Severity", "gravedad"))
     w.section("Descripción" if es else "Description")
     w.text("descripcion")
+    w.only_if("acciones")
     w.section("Acciones tomadas" if es else "Actions taken")
     w.bullets("acciones")
+    w.done()
+    w.only_if("pendiente")
     w.section("Pendiente" if es else "Pending")
     w.text("pendiente")
+    w.done()
+    w.only_if("fotos")
     w.section("Fotos" if es else "Photos")
     w.photos("fotos")
+    w.done()
 
 
 STARTERS: dict[str, Starter] = {
