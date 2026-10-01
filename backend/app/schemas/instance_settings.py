@@ -155,4 +155,6 @@ class EmailCheckRequest(BaseModel):
 
 class CheckResponse(BaseModel):
     ok: bool
-    detail: str | None = None
+    # auth | not_found | unreachable | timeout | not_configured | other — said in the panel's language
+    reason: str | None = None
+    detail: str | None = None  # what the provider itself answered

@@ -85,7 +85,7 @@ async def setup_check_ai(
         if payload.transcription is not None:
             await check_transcription(merged_transcription({}, payload.transcription), payload.language)
     except CheckFailed as exc:
-        return CheckResponse(ok=False, detail=str(exc))
+        return CheckResponse(ok=False, reason=exc.reason, detail=str(exc))
     return CheckResponse(ok=True)
 
 
@@ -97,7 +97,7 @@ async def setup_check_email(
     try:
         await check_smtp(merged_email({}, payload.settings), payload.to)
     except CheckFailed as exc:
-        return CheckResponse(ok=False, detail=str(exc))
+        return CheckResponse(ok=False, reason=exc.reason, detail=str(exc))
     return CheckResponse(ok=True)
 
 
