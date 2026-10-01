@@ -103,6 +103,12 @@ class Proposal(BaseModel):
     lists: list[ProposedList] = []
 
 
+class ApplyRequest(Proposal):
+    # Fields of the document type the new template no longer prints: left in, a required one would
+    # make the bot ask for something the document never shows.
+    remove_fields: list[str] = []
+
+
 class Draft(BaseModel):
     id: uuid.UUID
     document_type_id: uuid.UUID
@@ -396,10 +402,10 @@ def preview_docx(
     return fill_template(template, values, f"{folder}/preview.docx", branding=branding)
 
 
-def merged_schema(existing: dict[str, Any], proposal: Proposal) -> dict[str, Any]:
-    """The document type's fields after applying: its own first, then the template's — a field
-    the admin edited in the assistant takes the assistant's definition."""
-    schema = dict(existing)
+def merged_schema(existing: dict[str, Any], proposal: Proposal, remove: list[str] | None = None) -> dict[str, Any]:
+    """The document type's fields after applying: its own first (less the ones removed), then the
+    template's — a field the admin edited in the assistant takes the assistant's definition."""
+    schema = {name: spec for name, spec in existing.items() if name not in set(remove or [])}
     for f in proposal.fields:
         schema[f.name] = f.spec().model_dump(mode="json", exclude_none=True)
     return schema
