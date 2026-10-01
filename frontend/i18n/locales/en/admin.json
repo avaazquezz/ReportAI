@@ -145,35 +145,126 @@
     },
     "reports": {
       "status": {
-        "all": "All",
-        "pending": "Pending",
-        "awaitingApproval": "Awaiting approval",
-        "awaitingDoctypeSelection": "Awaiting selection",
+        "pending": "Processing",
+        "awaiting_doctype_selection": "Waiting for type",
+        "awaiting_details": "Waiting for details",
+        "awaiting_approval": "Awaiting approval",
         "delivered": "Delivered",
-        "failed": "Failed"
+        "failed": "Failed",
+        "cancelled": "Cancelled"
       },
+      "noType": "No type",
       "headers": {
-        "documentType": "Document type"
+        "documentType": "Document type",
+        "requester": "Sender"
       },
-      "dialog": {
+      "filters": {
+        "search": "Search (client, sender, text…)",
+        "from": "From",
+        "to": "To",
+        "clear": "Clear filters",
+        "exportCsv": "Export CSV"
+      },
+      "detail": {
         "title": "Report",
-        "type": "Type: {type}",
-        "channel": "Channel: {channel} ({identifier})"
+        "from": "From {who} via {channel}",
+        "processing": "The report is being processed. This page updates by itself.",
+        "awaitingDetails": "Waiting for the requester to send: {fields}",
+        "rejectedBecause": "Rejected: {reason}",
+        "fillRequired": "Fill in the required fields to continue: {fields}",
+        "fields": "Report details",
+        "evidenceHint": "Under each detail, the words in the message it comes from.",
+        "noFields": "Nothing has been extracted yet.",
+        "source": "What was said",
+        "audio": "Voice note",
+        "noSource": "No text yet.",
+        "photos": "Photos",
+        "photo": "Report photo",
+        "deliveries": "Deliveries",
+        "noDeliveries": "Nothing has been sent yet.",
+        "timeline": "History",
+        "cost": "AI cost: {cost} USD"
       },
       "actions": {
-        "approve": "Approve",
+        "approve": "Approve and generate",
+        "approveWithChanges": "Approve with changes",
         "reject": "Reject",
-        "downloadPdf": "Download PDF"
+        "preview": "Preview",
+        "downloadPdf": "Download PDF",
+        "saveAndRegenerate": "Save and regenerate PDF",
+        "regenerate": "Regenerate PDF",
+        "discard": "Discard changes",
+        "resendFailed": "Resend failed",
+        "resend": "Resend",
+        "sendTo": "Send to another email",
+        "send": "Send"
+      },
+      "deliveryStatus": {
+        "pending": "Sending",
+        "sent": "Sent",
+        "failed": "Failed"
+      },
+      "revisions": {
+        "approve": "{name} approved",
+        "reject": "{name} rejected",
+        "edit": "{name} corrected",
+        "rerender": "{name} regenerated the PDF",
+        "resend": "{name} resent",
+        "someone": "Someone"
+      },
+      "dialog": {
+        "rejectTitle": "Reject report",
+        "rejectHelp": "The report won't be generated and the requester will be told.",
+        "rejectReason": "Reason (sent to the requester)",
+        "sendToTitle": "Send the PDF to another email",
+        "email": "Email",
+        "previewTitle": "PDF preview"
       },
       "errors": {
-        "list": "Couldn't load reports.",
+        "list": "Couldn't load the reports.",
+        "load": "Couldn't load the report.",
         "download": "Couldn't download the report.",
         "approve": "Couldn't approve the report.",
-        "reject": "Couldn't reject the report."
+        "reject": "Couldn't reject the report.",
+        "save": "Couldn't save or regenerate the PDF.",
+        "preview": "Couldn't generate the preview.",
+        "resend": "Couldn't resend.",
+        "export": "Couldn't export the CSV.",
+        "email": "Enter a valid email."
       },
       "toast": {
         "approved": "Report approved — generating the document.",
-        "rejected": "Report rejected."
+        "rejected": "Report rejected.",
+        "saved": "Changes saved and PDF regenerated.",
+        "regenerated": "PDF regenerated.",
+        "resent": "Resending."
+      },
+      "steps": {
+        "ingest": "Message received",
+        "download_media": "Audio downloaded",
+        "transcribe": "Audio transcribed",
+        "resolve_tenant_doctype": "Document type chosen",
+        "send_document_type_prompt": "Asked for the document type",
+        "await_document_type_reply": "Waiting for the document type",
+        "parse_document_type_selection": "Document type received",
+        "extract": "Details extracted",
+        "validate": "Details validated",
+        "check_completeness": "Required details checked",
+        "ask_missing_fields": "Asked for missing details",
+        "await_missing_fields": "Waiting for missing details",
+        "notify_missing_fields_limit": "Details missing: moved to review",
+        "human_approval_prompt": "Summary sent for confirmation",
+        "await_human_approval": "Waiting for confirmation",
+        "classify_approval_reply": "Reply understood",
+        "ask_what_to_correct": "Asked what to correct",
+        "correction_limit": "Chat correction limit reached",
+        "cancel_report": "Cancelled by the requester",
+        "supersede_report": "Replaced by a new report",
+        "render": "Document filled in",
+        "convert_pdf": "PDF generated",
+        "deliver": "Delivered",
+        "finalize_report": "Report closed",
+        "fail": "Failed"
       }
     },
     "usageSummary": {
@@ -187,6 +278,15 @@
       "errors": {
         "load": "Couldn't load the usage summary."
       }
+    },
+    "reportFields": {
+      "yes": "Yes",
+      "no": "No",
+      "requiredMissing": "Required",
+      "addRow": "Add row",
+      "removeRow": "Remove row",
+      "emptyTable": "No rows.",
+      "evidence": "“{quote}”"
     }
   }
 }

@@ -145,35 +145,126 @@
     },
     "reports": {
       "status": {
-        "all": "Todos",
-        "pending": "Pendiente",
-        "awaitingApproval": "Esperando aprobación",
-        "awaitingDoctypeSelection": "Esperando selección",
+        "pending": "Procesando",
+        "awaiting_doctype_selection": "Esperando tipo",
+        "awaiting_details": "Esperando datos",
+        "awaiting_approval": "Esperando aprobación",
         "delivered": "Entregado",
-        "failed": "Fallido"
+        "failed": "Fallido",
+        "cancelled": "Cancelado"
       },
+      "noType": "Sin tipo",
       "headers": {
-        "documentType": "Tipo de documento"
+        "documentType": "Tipo de documento",
+        "requester": "Remitente"
       },
-      "dialog": {
+      "filters": {
+        "search": "Buscar (cliente, remitente, texto…)",
+        "from": "Desde",
+        "to": "Hasta",
+        "clear": "Quitar filtros",
+        "exportCsv": "Exportar CSV"
+      },
+      "detail": {
         "title": "Informe",
-        "type": "Tipo: {type}",
-        "channel": "Canal: {channel} ({identifier})"
+        "from": "De {who} por {channel}",
+        "processing": "El informe se está procesando. Esta página se actualiza sola.",
+        "awaitingDetails": "Esperando a que la persona envíe: {fields}",
+        "rejectedBecause": "Rechazado: {reason}",
+        "fillRequired": "Rellena los obligatorios para continuar: {fields}",
+        "fields": "Datos del informe",
+        "evidenceHint": "Bajo cada dato, la frase del mensaje de la que sale.",
+        "noFields": "Todavía no se ha extraído nada.",
+        "source": "Lo que dijo",
+        "audio": "Nota de voz",
+        "noSource": "Sin texto todavía.",
+        "photos": "Fotos",
+        "photo": "Foto del informe",
+        "deliveries": "Entregas",
+        "noDeliveries": "Aún no se ha enviado nada.",
+        "timeline": "Historial",
+        "cost": "Coste IA: {cost} USD"
       },
       "actions": {
-        "approve": "Aprobar",
+        "approve": "Aprobar y generar",
+        "approveWithChanges": "Aprobar con cambios",
         "reject": "Rechazar",
-        "downloadPdf": "Descargar PDF"
+        "preview": "Vista previa",
+        "downloadPdf": "Descargar PDF",
+        "saveAndRegenerate": "Guardar y regenerar PDF",
+        "regenerate": "Regenerar PDF",
+        "discard": "Descartar cambios",
+        "resendFailed": "Reenviar fallidos",
+        "resend": "Reenviar",
+        "sendTo": "Enviar a otro email",
+        "send": "Enviar"
+      },
+      "deliveryStatus": {
+        "pending": "Enviando",
+        "sent": "Enviado",
+        "failed": "Fallido"
+      },
+      "revisions": {
+        "approve": "{name} aprobó",
+        "reject": "{name} rechazó",
+        "edit": "{name} corrigió",
+        "rerender": "{name} regeneró el PDF",
+        "resend": "{name} reenvió",
+        "someone": "Alguien"
+      },
+      "dialog": {
+        "rejectTitle": "Rechazar informe",
+        "rejectHelp": "El informe no se generará y avisaremos a quien lo envió.",
+        "rejectReason": "Motivo (se le envía a la persona)",
+        "sendToTitle": "Enviar el PDF a otro email",
+        "email": "Email",
+        "previewTitle": "Vista previa del PDF"
       },
       "errors": {
         "list": "No se pudieron cargar los informes.",
+        "load": "No se pudo cargar el informe.",
         "download": "No se pudo descargar el informe.",
         "approve": "No se pudo aprobar el informe.",
-        "reject": "No se pudo rechazar el informe."
+        "reject": "No se pudo rechazar el informe.",
+        "save": "No se pudo guardar ni regenerar el PDF.",
+        "preview": "No se pudo generar la vista previa.",
+        "resend": "No se pudo reenviar.",
+        "export": "No se pudo exportar el CSV.",
+        "email": "Escribe un email válido."
       },
       "toast": {
         "approved": "Informe aprobado — generando el documento.",
-        "rejected": "Informe rechazado."
+        "rejected": "Informe rechazado.",
+        "saved": "Cambios guardados y PDF regenerado.",
+        "regenerated": "PDF regenerado.",
+        "resent": "Reenvío en marcha."
+      },
+      "steps": {
+        "ingest": "Mensaje recibido",
+        "download_media": "Audio descargado",
+        "transcribe": "Audio transcrito",
+        "resolve_tenant_doctype": "Tipo de documento elegido",
+        "send_document_type_prompt": "Preguntado el tipo de documento",
+        "await_document_type_reply": "Esperando el tipo de documento",
+        "parse_document_type_selection": "Tipo de documento recibido",
+        "extract": "Datos extraídos",
+        "validate": "Datos validados",
+        "check_completeness": "Comprobados los obligatorios",
+        "ask_missing_fields": "Pedidos los datos que faltan",
+        "await_missing_fields": "Esperando los datos que faltan",
+        "notify_missing_fields_limit": "Faltan datos: pasa a revisión",
+        "human_approval_prompt": "Resumen enviado para confirmar",
+        "await_human_approval": "Esperando confirmación",
+        "classify_approval_reply": "Respuesta interpretada",
+        "ask_what_to_correct": "Preguntado qué corregir",
+        "correction_limit": "Límite de correcciones por chat",
+        "cancel_report": "Cancelado por la persona",
+        "supersede_report": "Sustituido por un informe nuevo",
+        "render": "Documento rellenado",
+        "convert_pdf": "PDF generado",
+        "deliver": "Entregado",
+        "finalize_report": "Informe cerrado",
+        "fail": "Fallido"
       }
     },
     "usageSummary": {
@@ -187,6 +278,15 @@
       "errors": {
         "load": "No se pudo cargar el resumen de uso."
       }
+    },
+    "reportFields": {
+      "yes": "Sí",
+      "no": "No",
+      "requiredMissing": "Obligatorio",
+      "addRow": "Añadir fila",
+      "removeRow": "Quitar fila",
+      "emptyTable": "Sin filas.",
+      "evidence": "«{quote}»"
     }
   }
 }
