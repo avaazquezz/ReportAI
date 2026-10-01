@@ -55,10 +55,10 @@ Keys and tokens are stored encrypted with the server's `ENCRYPTION_KEY`.
 
 The dashboard's *First steps* list says what is left:
 
-- **A template.** Under *Document types*, either start from a ready-made one (work order, site
-  visit, incident report — with your logo and in your language) or create a type and upload a
-  Word document you already fill in by hand: the template assistant proposes the fields and where
-  each one goes, you correct it, preview it as a PDF and apply it.
+- **A template.** Under *Document types*, either start from a ready-made one (site safety
+  inspection, work order, site visit, incident report — with your logo and in your language) or
+  create a type and upload a Word document you already fill in by hand: the template assistant
+  proposes the fields and where each one goes, you correct it, preview it as a PDF and apply it.
 - **People who send reports.** Under *Channels*, *Invite* creates a one-time link for each person
   (Telegram: opening it is all they do). Nobody copies chat ids.
 - **Your team in the panel.** Under *Team*, invite admins, approvers (review, correct, approve,
