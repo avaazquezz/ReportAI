@@ -3,15 +3,20 @@
 ## Flow
 
 ```
-webhook (Telegram/WhatsApp/email) → start_or_resume_pipeline()
-  → new sender+tenant with no pending report → new Report row, background task runs the graph from START
-  → sender+tenant already awaiting a reply → background task resumes the same graph via Command(resume=...)
+webhook (Telegram/WhatsApp/email) → ingest_message() — deduplicated by the channel's message id
+  → no report in flight for the sender → new Report row + a `run` job, in one transaction
+  → a report waiting on the sender → a `resume` job carrying the reply (text, voice, or a button)
+worker (python -m app.worker) → claims jobs from Postgres → runs or resumes the graph
 ```
 
-Graph: `ingest → [transcribe if voice] → resolve_tenant_doctype → [ask if >1 doc type, interrupt] →
-extract → validate (retry loop back to extract) → human_approval_prompt → interrupt →
-[render pipeline if confirmed, or back to extract with the correction if not] →
+Graph: `ingest → [transcribe if voice] → resolve_tenant_doctype → [ask if the type is unclear, interrupt] →
+extract → validate (retry loop back to extract) → check_completeness → [ask for missing required fields, interrupt] →
+human_approval_prompt → interrupt → [render if confirmed; extract again with a correction; cancel; or start a new report] →
 render → convert_pdf → deliver → finalize_report`
+
+`deliver` records one row per copy in `deliveries` (the PDF back on the channel, one email per
+notification address) and sends them; a copy that fails gets a `deliver` job that retries only
+the copies that did not arrive, and the panel can send any copy again.
 
 Full node table, edges, and the reasoning behind every design decision live in
 `app/services/agent/graph.py`'s module structure and were captured in the
@@ -27,15 +32,15 @@ after extraction, shows the requester a plain-language summary on the origin
 channel, and waits for `CONFIRM` (proceed) or free text (treated as a
 correction, routed back into extraction).
 
-## Why BackgroundTasks, not a job queue
+## Why a job queue in Postgres
 
-The human-approval pause means the graph must survive across two separate
-HTTP requests regardless of which task runner kicks off execution — that
-durability comes from LangGraph's Postgres checkpointer, not from
-`BackgroundTasks` itself. `BackgroundTasks` avoids new infra (no Redis, no
-worker process) at Phase 1's scale. Move to `arq` + Redis when either the
-backend runs more than one instance, or a crashed in-flight run needs
-automatic retry without the requester re-sending their message.
+Phase 1 ran the graph in FastAPI `BackgroundTasks`: a deploy or a crash lost
+whatever was in flight. Since Fase 2 the API only records the message and a
+job in the same transaction; the worker leases jobs (`FOR UPDATE SKIP LOCKED`,
+renewed by a heartbeat), retries with backoff, and resumes a retried run from
+its last LangGraph checkpoint instead of paying for the transcription and the
+extraction again. The queue is a table in the database the app already has —
+no Redis, no broker to install at a client's.
 
 ## Local verification
 
