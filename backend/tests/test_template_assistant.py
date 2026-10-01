@@ -209,3 +209,18 @@ async def test_a_file_that_is_not_word_is_refused(client: AsyncClient, db: Async
     response = await _upload(client, doc_type, headers, b"%PDF-1.4 not a docx")
 
     assert response.status_code == 400 and ".docx" in response.json()["detail"]
+
+
+async def test_fields_the_new_template_no_longer_prints_can_be_removed(
+    client: AsyncClient, db: AsyncSession, model: AsyncMock
+) -> None:
+    doc_type, headers = await _setup(client, db)
+    draft = (await _upload(client, doc_type, headers, _example())).json()
+
+    applied = await client.post(
+        f"/document-types/{doc_type.id}/template-assistant/{draft['id']}/apply",
+        json={**draft["proposal"], "remove_fields": ["observaciones"]},
+        headers=headers,
+    )
+
+    assert list(applied.json()["field_schema"]) == ["cliente", "fecha", "materiales"]

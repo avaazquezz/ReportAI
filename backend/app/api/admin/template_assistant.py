@@ -24,7 +24,7 @@ from app.services.branding import Branding
 from app.services.instance_settings import NotConfiguredError
 from app.services.rendering.gotenberg_client import convert_docx_to_pdf
 from app.services.templates import assistant
-from app.services.templates.assistant import Draft, PlanError, Proposal
+from app.services.templates.assistant import ApplyRequest, Draft, PlanError, Proposal
 from app.services.templates.library import activate_template, new_template_path
 
 router = APIRouter(prefix="/document-types", tags=["admin:template-assistant"])
@@ -106,7 +106,7 @@ async def preview_template(
 async def apply_template(
     document_type_id: uuid.UUID,
     draft_id: uuid.UUID,
-    payload: Proposal,
+    payload: ApplyRequest,
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentTypeResponse:
@@ -120,7 +120,7 @@ async def apply_template(
     except PlanError as exc:
         destination.unlink(missing_ok=True)
         raise ValidationException(str(exc)) from exc
-    doc_type.field_schema = assistant.merged_schema(doc_type.field_schema, payload)
+    doc_type.field_schema = assistant.merged_schema(doc_type.field_schema, payload, payload.remove_fields)
     await activate_template(
         db,
         tenant_id=tenant_id,
