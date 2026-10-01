@@ -1,6 +1,5 @@
-"""IA-1: the pipeline used to finish without ever recording the PDF or the document type,
-so the panel's history never offered the download. The tests that seeded reports inserted
-file_path by hand, which is why nothing caught it."""
+"""The last step marks the report finished. Recording the PDF and the document type (IA-1) is
+the deliver step's job now: see test_deliveries.py."""
 
 import uuid
 
@@ -15,7 +14,7 @@ from app.services.agent.state import AgentState
 from app.services.observability import execution_log
 
 
-async def test_finalize_records_pdf_path_and_document_type(
+async def test_finalize_marks_the_report_delivered(
     db: AsyncSession, monkeypatch: pytest.MonkeyPatch, _test_engine
 ) -> None:
     test_sessions = async_sessionmaker(_test_engine, class_=AsyncSession, expire_on_commit=False)
@@ -48,6 +47,4 @@ async def test_finalize_records_pdf_path_and_document_type(
 
     await db.refresh(report)
     assert report.status == "delivered"
-    assert report.file_path == f"storage/{report.id}/rendered.pdf"
-    assert report.document_type_id == doc_type.id
     assert report.completed_at is not None

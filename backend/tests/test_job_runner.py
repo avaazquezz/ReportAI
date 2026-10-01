@@ -15,8 +15,9 @@ from app.models.job import Job
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.services.jobs import runner
+from app.services.jobs.errors import PermanentJobError
 from app.services.jobs.queue import RESUME, RUN, ClaimedJob, claim_next, enqueue
-from app.services.jobs.runner import PermanentJobError, execute, process
+from app.services.jobs.runner import execute, process
 
 
 class FakeGraph:
