@@ -137,6 +137,8 @@ services:
       NUXT_PUBLIC_LEGAL_NAME: ${LEGAL_NAME:-}
       NUXT_PUBLIC_LEGAL_ID: ${LEGAL_ID:-}
       NUXT_PUBLIC_LEGAL_ADDRESS: ${LEGAL_ADDRESS:-}
+      NUXT_PUBLIC_PILOT_SPOTS: ${PILOT_SPOTS:-5}
+      NUXT_PUBLIC_PILOTS_TAKEN: ${PILOTS_TAKEN:-3}
     restart: always
     mem_limit: 512m
     logging: *logging

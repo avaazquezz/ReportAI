@@ -1,277 +1,353 @@
 {
   "landing": {
     "seo": {
-      "title": "ReportAI — From audio to report, without touching a template",
-      "description": "Send a voice note over Telegram, WhatsApp or email and get the meeting minutes or visit report filled into your company's own Word template. With human review before anything is sent."
+      "title": "ReportAI — Inspection reports, dictated by voice",
+      "description": "Dictate the visit on Telegram when you finish and get the report in your own Word template, with the issues, who fixes them and by when. For safety, inspection and maintenance teams. On your own server."
     },
     "header": {
       "nav": {
-        "realExample": "Real example",
+        "realExample": "Example",
         "howItWorks": "How it works",
-        "difference": "The difference",
-        "faq": "Questions"
+        "pricing": "Pricing",
+        "faq": "FAQ"
       },
       "openMenu": "Open menu",
       "closeMenu": "Close menu"
     },
     "cta": {
-      "becomeClient": "I want to become a client",
-      "mailSubject": "I want to become a ReportAI client",
-      "listenExample": "Hear the real example"
+      "becomeClient": "Try it",
+      "mailSubject": "I want to try ReportAI with my template",
+      "listenExample": "Hear the example"
     },
     "hero": {
-      "placeholderTag": "your_report",
-      "headlineLine1": "Send a voice note.",
-      "headlineLine2": "Get the minutes back.",
-      "subheadline": "ReportAI transcribes what you say, fills in the Word template your company already uses, and delivers the document to the right person. Over Telegram, WhatsApp or email.",
-      "note": "No new app, no video call, no generic templates.",
+      "placeholderTag": "inspection_report",
+      "eyebrow": "For safety, inspection and maintenance teams",
+      "headlineLine1": "Dictate the inspection.",
+      "headlineLine2": "Get the report.",
+      "subheadline": "When the visit's done, you send a voice note on Telegram. ReportAI fills in your Word template with it: what you saw, the issues, who fixes them and by when. Once you approve it, it goes to the right people.",
+      "note": "Installed on your own server: the recordings and reports stay with you.",
       "replay": "Play again",
       "stage": {
-        "voiceDuration": "0:47",
+        "voiceDuration": "1:06",
         "transcribing": "Transcribing…",
-        "extracting": "Extracting fields…",
+        "extracting": "Filling in the template…",
         "draftReady": "Draft ready for review",
         "approve": "✓ Approve",
-        "sent": "Sent to Sarah Mitchell",
-        "docTitle": "MEETING MINUTES",
-        "company": "Harbor Point Industrial Supply",
+        "sent": "Sent to contractor and client",
+        "filename": "maple_ridge_inspection.pdf",
+        "docTitle": "SITE SAFETY INSPECTION",
+        "company": "Maple Ridge Apartments · Riverside",
         "dateLabel": "Date:",
-        "placeLabel": "Location:",
-        "attendeesLabel": "Attendees",
-        "decisionsLabel": "Decisions made",
+        "stageLabel": "Stage:",
+        "companiesLabel": "Contractors on site",
+        "issueLabel": "Issues found",
         "tags": {
           "date": "date",
-          "place": "location",
-          "attendee1": "attendees[0]",
-          "attendee2": "attendees[1]",
-          "attendee3": "attendees[2]",
-          "decision": "decisions[0]"
+          "stage": "stage",
+          "company1": "contractors[0]",
+          "company2": "contractors[1]",
+          "company3": "contractors[2]",
+          "issue": "issues[0]"
         },
         "values": {
-          "date": "08/18/2025",
-          "place": "Savannah, Georgia",
-          "attendee1": "Sarah Mitchell — VP of Procurement",
-          "attendee2": "Marcus Reed — Technical Department",
-          "attendee3": "Emily Chen — Logistics",
-          "decision": "Accept the 15% quarterly volume increase by reducing the delivery window to two weeks."
+          "date": "2026-10-01",
+          "stage": "Structure",
+          "company1": "Harbor Build (general contractor)",
+          "company2": "Summit Concrete (formwork)",
+          "company3": "Iron Line Rebar (rebar)",
+          "issue": "Edge protection missing on the north side of the third-floor deck. Summit Concrete · Immediate."
         },
         "stamp": "APPROVED"
       }
     },
     "facts": {
-      "noApp": {
-        "title": "Nothing to install",
-        "body": "Works inside Telegram, WhatsApp or the email your team already uses."
+      "handsFree": {
+        "title": "Hands-free",
+        "body": "Dictate when you finish the visit. No forms on your phone, no typing it up at night."
       },
       "yourTemplate": {
-        "title": "Your template, as is",
-        "body": "Upload your .docx and it gets filled with your format, your logo, your sections."
+        "title": "Your template, as it is",
+        "body": "Your Word file, your logo, your sections. No template yet? Start with ours."
       },
       "approval": {
-        "title": "Nothing goes out without your OK",
-        "body": "The draft reaches you before it's sent. Approve or correct with a reply."
+        "title": "Nothing goes out unapproved",
+        "body": "The draft arrives in the chat. Approve it, or correct it with a reply."
       },
-      "realExample": {
-        "title": "Real example below",
-        "body": "Audio, transcript and document produced by the system, unedited."
+      "ownServer": {
+        "title": "On your server",
+        "body": "Your data never goes through a shared service. The AI is the provider you choose."
       }
     },
     "realDemo": {
       "heading": "This isn't a mockup.",
-      "paragraph": "A real voice note, transcribed, extracted and filled into the template by the system itself. Nothing was touched up afterwards. Hit play and watch it appear.",
+      "paragraph": "A site inspection, dictated and run through the real system: transcription, extraction and the filled-in template. Nothing was touched up afterwards, not even the transcript's typos. Press play.",
       "play": "Play",
       "pause": "Pause",
       "seek": "Audio position",
       "transcriptLabel": "Transcript",
-      "playPlaceholder": "The transcript shows up here, in step with the audio.",
+      "playPlaceholder": "The transcript appears here, in step with the audio.",
       "fieldsLabel": "Extracted fields",
       "documentLabel": "Generated document",
-      "pageMeta": "1 page · PDF from your .docx template",
+      "pageMeta": "1 page · 'Site safety inspection' template",
       "downloadPdf": "Download the PDF",
-      "pageAlt": "Meeting minutes generated by ReportAI from the voice note",
-      "note": "Unedited output, flaws included: the note never says the year, so the model assumed one. That's what the human review step is for."
+      "pageAlt": "Site safety inspection report generated by ReportAI from the voice note",
+      "note": "The voice is synthetic, and the site, companies and people are fictional. Everything else is the system's real output, which cost under 3 cents of AI."
     },
     "howItWorks": {
-      "heading": "From voice note to delivered minutes.",
-      "sub": "Five steps. You do two of them: record and approve.",
+      "heading": "From voice note to delivered report.",
+      "sub": "Five steps. You do two: dictate and approve.",
       "you": "You",
       "system": "ReportAI",
       "steps": {
         "record": {
           "artifact": "voice_note.ogg",
-          "title": "Record a voice note",
-          "body": "In the car, in the hallway, right after hanging up. In the chat you already have open."
+          "title": "You dictate the inspection",
+          "body": "When you finish the visit, in the car or wherever you are. On Telegram, like any voice note, with photos if you like."
         },
         "transcribe": {
           "artifact": "transcript.txt",
-          "title": "It gets transcribed",
-          "body": "The audio becomes text in seconds, in English or Spanish."
+          "title": "It's transcribed",
+          "body": "In seconds, in English or Spanish, with the speech service you choose."
         },
         "extract": {
           "artifact": "fields.json",
-          "title": "The data gets extracted",
-          "body": "Date, attendees, decisions, action items: exactly your document's fields, validated against its schema."
+          "title": "The fields are filled in",
+          "body": "Your template's sections: place, issues with who fixes them and by when, notes. If something required is missing, it asks."
         },
         "approve": {
           "artifact": "approved ✓",
           "title": "You approve it",
-          "body": "You review the draft in the chat and confirm, or ask for a quick correction."
+          "body": "Review the draft in the chat and confirm, or correct it with a voice or text reply."
         },
         "deliver": {
-          "artifact": "meeting_minutes.pdf",
-          "title": "It gets delivered",
-          "body": "Your .docx template, filled in, converted to PDF and sent to the right person."
+          "artifact": "inspection_report.pdf",
+          "title": "It's delivered",
+          "body": "Your template as a PDF, emailed to the client, the person in charge or whoever you set up, and kept in the history."
         }
       }
     },
     "useCases": {
-      "heading": "For the team that's out in the field, not in the meeting room.",
-      "sub": "Any document that always has the same sections can be dictated.",
-      "fieldsLabel": "typical fields",
+      "heading": "Built for people in the field, not in the office.",
+      "sub": "Start with the safety inspection. Any document with fixed sections can be dictated the same way.",
+      "fieldsLabel": "fields",
       "items": {
-        "minutes": {
-          "title": "Meeting minutes",
-          "body": "Meetings with clients, suppliers or your own team. Attendees, agenda, decisions and action items with owners, in your format.",
-          "fields": "date · attendees · agenda · decisions · action_items"
+        "safetyVisit": {
+          "title": "Safety visits and inspections",
+          "body": "Issues with who's responsible, corrective action and deadline, work stopped and notes. Comes as a starter template.",
+          "fields": "issues · work_stopped · notes · next_visit"
         },
-        "visit": {
-          "title": "Sales visit reports",
-          "body": "The rep dictates the visit from the car. The report reaches the manager before the rep reaches the office.",
-          "fields": "client · contact · situation · next_step · follow_up_date"
+        "incident": {
+          "title": "Incidents and accidents",
+          "body": "What happened, where, how serious and what has been done already. Dictated on the spot, reviewed calmly. Also a starter template.",
+          "fields": "date · place · description · severity · actions"
         },
         "custom": {
-          "title": "Any report with fixed fields",
-          "body": "Service call reports, technical reports, call summaries. Set up as one more document type from the panel, no code.",
+          "title": "Whatever you fill in by hand today",
+          "body": "Maintenance work orders (also a starter template), checklists, minutes. If you already have your Word file, the assistant proposes the fields.",
           "fields": "whatever your template has"
         }
       }
     },
     "differentiator": {
-      "heading": "It's not a bot that sneaks into your video call.",
-      "paragraph": "Otter, Fireflies or Fathom need a scheduled video call with a link. Most of your sales visits and calls don't have one. ReportAI works from a voice note recorded afterwards and turns it into the document with the exact format your company already uses.",
+      "heading": "No more writing reports at night.",
+      "paragraph": "Today an inspection means notes in a notebook and photos on your phone, typed up into Word at the end of the day. With ReportAI it's done before you're back at the car.",
       "table": {
-        "caption": "Meeting bots compared with ReportAI",
-        "feature": "What you need",
-        "bots": "Meeting bots",
-        "botsSub": "Otter, Fireflies, Fathom",
-        "reportai": "ReportAI",
-        "yes": "Yes",
-        "no": "No",
+        "caption": "How it's done today compared with ReportAI",
+        "before": "Today",
+        "after": "With ReportAI",
         "rows": {
-          "noCall": "Works without a video call or a link",
-          "afterVisit": "Built for in-person visits and phone calls",
-          "ownTemplate": "Fills in your own Word template",
-          "chat": "Used from the chat you already have",
-          "approval": "Nothing delivered without human approval"
+          "notes": {
+            "before": "Notes in a notebook and loose photos",
+            "after": "One voice note as you leave, photos in the same chat"
+          },
+          "word": {
+            "before": "Typing it up in Word at night",
+            "after": "The draft arrives in the chat in a couple of minutes"
+          },
+          "missing": {
+            "before": "Forgetting a deadline or who owns an action",
+            "after": "If something required is missing, the bot asks"
+          },
+          "send": {
+            "before": "Forwarding the PDF to the client and everyone responsible",
+            "after": "Sent to the right people for each report type"
+          },
+          "find": {
+            "before": "Searching your inbox for what you saw last month",
+            "after": "Searchable history, with the audio and transcript"
+          }
         }
       },
-      "kicker": "None of this is needed. Just a voice note."
+      "kicker": "The only new thing in your day: a one-minute voice note."
     },
     "templateFidelity": {
       "heading": "Your template, not ours.",
-      "paragraph": "You upload the .docx your company already uses. ReportAI fills in those same fields, in that same format. No generic PDF with your logo pasted on top.",
-      "check": "Before a template goes live, the panel checks that the fields it contains match the document type's. If one is missing, it tells you.",
-      "filename": "meeting_minutes.docx",
-      "docTitle": "MEETING MINUTES",
+      "paragraph": "Upload the Word file you already use, with your logo and layout. The assistant reads it and proposes its fields and where each one goes; you correct it, preview it as a PDF with sample data and switch it on. No generic PDF with your logo slapped on top.",
+      "check": "No template yet? Start with the site safety inspection one, already with your logo, and adjust it in Word.",
+      "filename": "site_inspection.docx",
+      "docTitle": "SITE SAFETY INSPECTION",
       "labels": {
         "date": "Date:",
-        "place": "Location:",
-        "attendees": "Attendees",
-        "summary": "Summary"
+        "site": "Site:",
+        "companies": "Contractors on site",
+        "issue": "Issues found"
       },
       "values": {
-        "date": "August 18, 2025",
-        "place": "Savannah, Georgia",
-        "attendees": "James Whitfield, Sarah Mitchell, Marcus Reed, Emily Chen",
-        "summary": "Quarterly order +15% with two-week delivery and renewal of the maintenance contract."
+        "date": "October 1, 2026",
+        "site": "Maple Ridge Apartments, Riverside",
+        "companies": "Harbor Build, Summit Concrete, Iron Line Rebar, Apex Crane",
+        "issue": "Edge protection missing on the north side of the third-floor deck · Summit Concrete · Immediate"
       }
     },
     "approval": {
-      "heading": "Nothing goes out without your approval.",
-      "paragraph1": "Every report goes through mandatory human review before it's delivered. If something's off, you correct it with a simple reply and ReportAI generates it again.",
-      "paragraph2": "By default, everything goes through Telegram. WhatsApp Business and inbound email are available too; Slack or Microsoft Teams are set up on request.",
-      "defaultChannelBadge": "Telegram · default channel",
-      "otherChannelNote": "WhatsApp Business · Email",
+      "heading": "It asks for what's missing. Nothing goes out unapproved.",
+      "paragraph1": "Every report reaches the chat first as a draft. If something required is missing, like a deadline, the bot asks you. If something is off, you correct it with a reply and it's generated again.",
+      "paragraph2": "It runs on Telegram: your team installs it once and talks to your company's bot like any other contact. Approvers can also review, correct and approve from the panel.",
+      "defaultChannelBadge": "Telegram",
+      "otherChannelNote": "Review from the panel too",
       "mockup": {
         "channel": "Telegram",
-        "draftReady": "Draft minutes ready:",
+        "question": "When does the electrical panel door have to be replaced?",
+        "answer": "By Friday the 9th",
+        "draftReady": "Inspection draft ready:",
         "approve": "✓ Approve",
         "correct": "Correct",
-        "filename": "meeting_minutes.pdf",
-        "sentTo": "Sent to Sarah Mitchell ✓",
-        "company": "Harbor Point Industrial",
-        "date": "08/18/2025"
+        "filename": "maple_ridge_inspection.pdf",
+        "sentTo": "Sent to the contractor and the client ✓",
+        "site": "Maple Ridge Apartments",
+        "date": "2026-10-01",
+        "siteLabel": "Site",
+        "dateLabel": "Date",
+        "issuesLabel": "Issues"
       }
     },
     "onboarding": {
-      "heading": "Getting set up is a conversation, not a project.",
-      "sub": "Every deployment is built to fit, with us. Here's what happens:",
+      "heading": "We leave it running on your server.",
+      "sub": "We install and maintain it; the data and the keys are yours. This is how we start:",
       "steps": {
         "tell": {
-          "title": "You tell us which documents you produce",
-          "body": "You send us your .docx template and who should receive each report."
+          "title": "You send us your template",
+          "body": "The Word file of your inspection report and who should receive it. No template? We start from ours."
         },
         "configure": {
-          "title": "We configure it with you",
-          "body": "Document types, fields, channel and the people allowed to send. All of it visible in your panel."
+          "title": "We install it on your server",
+          "body": "One of yours, or a VPS in your name. We set up the AI with your account, the Telegram bot and your template."
         },
         "first": {
-          "title": "Your team sends the first voice note",
-          "body": "And the first minutes land in the right inbox. We fine-tune whatever's needed on real documents."
+          "title": "You dictate the first inspection",
+          "body": "And the report reaches the right people. We fine-tune the template with real inspections, then keep it up to date."
         }
       },
       "panelLabel": "What you see in your panel",
       "panel": {
-        "templates": "Templates and fields",
-        "channels": "Channels and authorised senders",
-        "recipients": "Recipients per document type",
-        "history": "Report history",
-        "usage": "Monthly usage and cost"
+        "templates": "Templates and assistant",
+        "channels": "Who can send reports",
+        "recipients": "Recipients per report type",
+        "history": "History with audio and transcript",
+        "team": "Team and permissions"
       }
+    },
+    "pricing": {
+      "heading": "You pay for the service, not the software.",
+      "sub": "ReportAI's code is public and you can install it for free. If you'd rather not touch a server, we install and maintain it for you.",
+      "featured": "Recommended",
+      "plans": {
+        "selfHosted": {
+          "name": "You install it",
+          "price": "Free",
+          "for": "For companies with someone technical.",
+          "items": {
+            "install": "One-command install on your server",
+            "features": "Every feature and starter template",
+            "updates": "Published updates and security notices",
+            "support": "Questions and bugs on GitHub, no guaranteed response"
+          },
+          "cta": "Read the install guide"
+        },
+        "managed": {
+          "name": "We install and maintain it",
+          "price": "One-off fee + monthly fee",
+          "for": "To use it without touching a server.",
+          "items": {
+            "install": "Installed on your server or a VPS in your name",
+            "template": "Your template set up and tested with real inspections",
+            "accounts": "AI and Telegram bot set up with your accounts",
+            "support": "Updates and support by email or Telegram"
+          },
+          "cta": "Ask for a quote",
+          "mailSubject": "Quote for ReportAI installation and maintenance"
+        },
+        "pilot": {
+          "name": "Founding pilot",
+          "price": "Founder pricing",
+          "for": "For the first companies.",
+          "items": {
+            "same": "Installation and maintenance as in the plan before",
+            "feedback": "In exchange for your feedback every week of the pilot",
+            "case": "And for telling your story if it works for you"
+          },
+          "mailSubject": "I want to be a ReportAI pilot",
+          "spotsLeft": "{left} of {total} places left",
+          "spotsFull": "All pilot places are taken",
+          "cta": "I want to be a pilot"
+        }
+      },
+      "extraHeading": "What you pay separately, straight to each provider",
+      "extras": {
+        "server": "Server: about €9 a month plus VAT if you don't have one.",
+        "ai": "AI: cents per report, on your account with the provider you choose.",
+        "telegram": "Telegram: free."
+      },
+      "note": "You get a fixed price once we've seen your template."
     },
     "faq": {
       "heading": "Questions we get before starting.",
       "items": {
         "install": {
-          "q": "Do we have to install anything?",
-          "a": "No. Your team sends the voice note from the chat they already have open. You only authorise their numbers or accounts in the panel."
+          "q": "Do I need to know about servers?",
+          "a": "No. If we install it, we leave it running on a server of yours or a VPS in your name. If someone at your company is technical, it installs with a single command following the guide."
         },
         "channels": {
-          "q": "Which channels does it work on?",
-          "a": "Telegram by default. WhatsApp Business and inbound email are available too. Slack or Microsoft Teams are set up when a client needs them."
+          "q": "Does my team have to install anything?",
+          "a": "Telegram, once. You send each person an invite link from the panel; opening it is all they need to start dictating. WhatsApp is in testing."
         },
         "errors": {
           "q": "What if it gets something wrong?",
-          "a": "The draft reaches the chat before it's sent. You reply with the correction and it's generated again. On top of that, every field is validated against your document's schema: a date has to be a date, a list has to be a list."
+          "a": "The draft reaches the chat before it's sent, and nothing goes out without your approval. If something required is missing, the bot asks; if something's wrong, you correct it with a reply. Every field is validated: a date has to be a date."
         },
         "data": {
-          "q": "Where are my documents?",
-          "a": "Templates and generated documents are stored on a private server, not in a third-party service. Audio transcription and field extraction use AI APIs (Groq and Anthropic). Each company has its own isolated space."
+          "q": "Where is the data?",
+          "a": "On your server: recordings, photos, reports and templates. To transcribe and fill in, the text goes through the AI provider you choose, with your own keys, and the messages through Telegram. Keys are stored encrypted."
+        },
+        "ai": {
+          "q": "Who writes the report?",
+          "a": "An AI model drafts it from what you dictate and doesn't fill in what you didn't say: it asks for what's missing. The content remains the responsibility of whoever approves it."
         },
         "languages": {
           "q": "Which languages does it work in?",
-          "a": "English and Spanish out of the box. The real example on this page exists in both."
+          "a": "English and Spanish. The example on this page exists in both."
         },
         "documents": {
-          "q": "Is it only for meeting minutes?",
-          "a": "No. Any document with fixed sections: visit reports, service call reports, call summaries. Each document type is defined from the panel with its template and its fields."
+          "q": "Does it work for other documents?",
+          "a": "Yes. It comes with starter templates for safety inspections, work orders, site visit reports and incident reports, and you can upload any Word file with fixed sections."
         },
         "price": {
           "q": "How much does it cost?",
-          "a": "It depends on volume and on what needs to be set up. Write to us with your template and we'll tell you what it would take, no strings attached."
+          "a": "Installing it yourself is free. If we install and maintain it, it's a one-off fee plus a monthly fee, fixed once we've seen your template. Separately, you pay for your server (about €9 a month) and the AI (cents per report)."
         }
       }
     },
     "finalCta": {
-      "placeholderTag": "your_next_report",
-      "headline": "Send a voice note. Get the minutes back.",
-      "sub": "The example above is real. The next one could come from your template.",
+      "placeholderTag": "your_next_inspection",
+      "headline": "Dictate the inspection. Get the report.",
+      "sub": "Send us the template you use today and we'll show you your own report, filled in from a voice note.",
       "or": "or write to"
     },
     "footer": {
-      "tagline": "From audio to report, without touching a template.",
+      "tagline": "Inspection reports, dictated by voice.",
       "madeBy": "A product by",
-      "legal": "Legal notice"
+      "legal": "Legal notice",
+      "code": "Source code"
     },
     "legal": {
       "title": "Legal notice",

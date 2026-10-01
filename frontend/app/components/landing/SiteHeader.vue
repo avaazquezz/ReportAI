@@ -5,7 +5,7 @@ const contactHref = useContactHref()
 const NAV = [
   { hash: '#ejemplo-real', key: 'realExample' },
   { hash: '#como-funciona', key: 'howItWorks' },
-  { hash: '#diferencia', key: 'difference' },
+  { hash: '#precios', key: 'pricing' },
   { hash: '#preguntas', key: 'faq' }
 ] as const
 
