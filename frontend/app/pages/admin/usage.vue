@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
+definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app', titleKey: 'admin.layout.nav.usage' })
 
 const { t } = useI18n()
 </script>

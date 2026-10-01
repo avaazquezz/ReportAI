@@ -1,6 +1,12 @@
 <script setup lang="ts">
 const { t } = useI18n()
+const route = useRoute()
 const authStore = useAuthStore()
+
+// Every panel tab used to carry the landing's title; now each says which page it is (FE-11).
+useHead({
+  title: () => (route.meta.titleKey ? `${t(route.meta.titleKey)} · ReportAI` : 'ReportAI')
+})
 const { state: snackbar } = useSnackbar()
 
 const navItems = computed(() => {
@@ -37,7 +43,7 @@ const drawer = ref(true)
     </v-navigation-drawer>
 
     <v-app-bar color="surface" flat border>
-      <v-app-bar-nav-icon @click="drawer = !drawer" />
+      <v-app-bar-nav-icon :aria-label="t('admin.layout.toggleMenu')" @click="drawer = !drawer" />
       <v-app-bar-title>{{ authStore.user?.full_name }}</v-app-bar-title>
       <v-spacer />
       <v-chip class="mr-4" size="small" variant="tonal">{{ authStore.user?.role }}</v-chip>

@@ -27,7 +27,7 @@ async function onSubmit() {
       <p class="font-body text-sm text-ink-900">
         {{ t('auth.forgotPassword.confirmation') }}
       </p>
-      <NuxtLink to="/login" class="mt-4 inline-block font-body text-sm font-medium text-capture-500">
+      <NuxtLink to="/login" class="mt-4 inline-block font-body text-sm font-medium text-capture-600">
         {{ t('auth.forgotPassword.backToLogin') }}
       </NuxtLink>
     </div>
@@ -47,7 +47,7 @@ async function onSubmit() {
       <button
         type="submit"
         :disabled="loading"
-        class="w-full rounded-md bg-capture-500 px-4 py-2.5 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
+        class="w-full rounded-md bg-capture-600 px-4 py-2.5 font-body text-sm font-semibold text-white transition-transform hover:scale-[1.01] disabled:opacity-60"
       >
         {{ loading ? t('auth.forgotPassword.submitting') : t('auth.forgotPassword.submit') }}
       </button>

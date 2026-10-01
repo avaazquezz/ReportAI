@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -33,6 +34,18 @@ class AgentState(BaseModel):
     media_local_path: str | None = None
     transcript: str | None = None
 
+    # Who is talking and when: the language to answer in and the clock "tomorrow" resolves
+    # against (a message's own timestamp when the channel has one).
+    language: str = "es"
+    timezone: str = "Europe/Madrid"
+    received_at: datetime | None = None
+    sender_label: str | None = None
+    # The original text plus everything the person added later; the evidence quotes the
+    # extraction returns are checked against this.
+    source_text: str | None = None
+    corrections: list[str] = []
+    evidence: dict[str, Any] = {}
+
     document_type_id: uuid.UUID | None = None
     document_type_name: str | None = None
     field_schema: dict[str, Any] | None = None
@@ -44,9 +57,17 @@ class AgentState(BaseModel):
     extracted_fields: dict[str, Any] | None = None
     extraction_attempts: int = 0
     last_validation_error: str | None = None
+    validation_retries: int = 0  # consecutive failed validations, reset by a valid extraction
     correction_text: str | None = None
     correction_attempts: int = 0
-    pending_user_reply: str | None = None
+    # A reply is free text, or a dict when it came from a button or the panel
+    # ({"action": "confirm" | "cancel" | "doctype", "arg": ..., "fields": {...}}).
+    pending_user_reply: str | dict[str, Any] | None = None
+    intent: str | None = None  # what the last reply meant: confirm | correct | cancel | new_report | ask
+    missing_fields: list[str] = []
+    missing_attempts: int = 0
+    # Where to answer: the email thread a reply should stay in.
+    channel_meta: dict[str, Any] = {}
 
     rendered_docx_path: str | None = None
     rendered_pdf_path: str | None = None

@@ -5,7 +5,6 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import BackgroundTasks
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -14,7 +13,7 @@ from app.models.channel_connection import ChannelConnection
 from app.models.execution_log import ExecutionLog
 from app.models.report import Report
 from app.models.tenant import Tenant
-from app.services.agent import invoke
+from app.services.agent import ingestion
 from app.services.agent.nodes import media
 from app.services.agent.state import AgentState
 from app.services.observability import execution_log
@@ -63,7 +62,7 @@ def _report(connection: ChannelConnection, *, status: str = "delivered") -> Repo
 @pytest.fixture
 def _adapter_mock(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     mock = AsyncMock()
-    monkeypatch.setattr(invoke, "get_channel_adapter", lambda _connection: mock)
+    monkeypatch.setattr(ingestion, "get_channel_adapter", lambda _connection: mock)
     return mock
 
 
@@ -75,11 +74,9 @@ async def test_rate_limited_sender_gets_no_new_report(
     db.add_all([_report(connection), _report(connection)])
     await db.commit()
 
-    result = await invoke.start_or_resume_pipeline(
-        db=db, connection=connection, incoming=_incoming(connection), background_tasks=BackgroundTasks()
-    )
+    result = await ingestion.ingest_message(db=db, connection=connection, incoming=_incoming(connection))
 
-    assert result is None
+    assert result.outcome == "rejected"
     _adapter_mock.send_message.assert_awaited_once()
     count = len((await db.execute(select(Report))).scalars().all())
     assert count == 2  # nothing new created
@@ -95,11 +92,9 @@ async def test_reply_to_paused_report_is_never_rate_limited(
     await db.commit()
     await db.refresh(paused)
 
-    result = await invoke.start_or_resume_pipeline(
-        db=db, connection=connection, incoming=_incoming(connection), background_tasks=BackgroundTasks()
-    )
+    result = await ingestion.ingest_message(db=db, connection=connection, incoming=_incoming(connection))
 
-    assert result == paused.id
+    assert (result.outcome, result.report_id) == ("resumed", paused.id)
 
 
 async def test_daily_spend_cap_blocks_everything(
@@ -118,11 +113,9 @@ async def test_daily_spend_cap_blocks_everything(
     )
     await db.commit()
 
-    result = await invoke.start_or_resume_pipeline(
-        db=db, connection=connection, incoming=_incoming(connection), background_tasks=BackgroundTasks()
-    )
+    result = await ingestion.ingest_message(db=db, connection=connection, incoming=_incoming(connection))
 
-    assert result is None
+    assert result.outcome == "rejected"
     _adapter_mock.send_message.assert_awaited_once()
 
 

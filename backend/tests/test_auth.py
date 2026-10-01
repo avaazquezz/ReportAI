@@ -1,4 +1,5 @@
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
@@ -122,3 +123,55 @@ async def test_demo_login_returns_working_readonly_session(
         },
     )
     assert write.status_code == 403
+
+
+async def _login(client: AsyncClient) -> dict[str, str]:
+    response = await client.post("/auth/login", json={"email": "user@acme.test", "password": "correct-password"})
+    return response.json()
+
+
+async def test_a_refresh_token_buys_a_new_pair_once(client: AsyncClient, db: AsyncSession) -> None:
+    await _create_user(db)
+    tokens = await _login(client)
+
+    refreshed = await client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+
+    assert refreshed.status_code == 200
+    new = refreshed.json()
+    assert new["refresh_token"] != tokens["refresh_token"]
+    me = await client.get("/auth/me", headers={"Authorization": f"Bearer {new['access_token']}"})
+    assert me.status_code == 200
+    # Spent: a stolen copy of the old token is useless now.
+    reused = await client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+    assert reused.status_code == 401
+
+
+async def test_an_access_token_cannot_be_used_to_refresh(client: AsyncClient, db: AsyncSession) -> None:
+    await _create_user(db)
+    tokens = await _login(client)
+
+    response = await client.post("/auth/refresh", json={"refresh_token": tokens["access_token"]})
+
+    assert response.status_code == 401
+
+
+async def test_signing_out_spends_the_refresh_token(client: AsyncClient, db: AsyncSession) -> None:
+    await _create_user(db)
+    tokens = await _login(client)
+
+    assert (await client.post("/auth/logout", json={"refresh_token": tokens["refresh_token"]})).status_code == 200
+
+    response = await client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+    assert response.status_code == 401
+
+
+async def test_a_deactivated_user_cannot_refresh(client: AsyncClient, db: AsyncSession) -> None:
+    await _create_user(db)
+    tokens = await _login(client)
+    user = (await db.execute(select(TenantUser))).scalar_one()
+    user.is_active = False
+    await db.commit()
+
+    response = await client.post("/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
+
+    assert response.status_code == 401

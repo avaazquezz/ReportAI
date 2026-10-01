@@ -1,7 +1,10 @@
 import logging
+import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import rate_limit
@@ -16,13 +19,16 @@ from app.core.exceptions import (
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    decode_token,
     hash_password,
     verify_password,
 )
 from app.models.tenant_user import TenantUser
+from app.models.used_refresh_token import UsedRefreshToken
 from app.schemas.auth import (
     ForgotPasswordRequest,
     LoginRequest,
+    RefreshRequest,
     ResetPasswordRequest,
     TokenResponse,
     UserResponse,
@@ -41,6 +47,36 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _tokens_for(user: TenantUser) -> TokenResponse:
+    token_payload = {
+        "sub": str(user.id),
+        "role": user.role,
+        "tenant_id": str(user.tenant_id) if user.tenant_id else None,
+    }
+    return TokenResponse(
+        access_token=create_access_token(token_payload),
+        refresh_token=create_refresh_token({"sub": str(user.id)}),
+    )
+
+
+async def _use_refresh_token(db: AsyncSession, token: str) -> str | None:
+    """Marks a refresh token as spent and returns its user id; None when it is invalid, expired,
+    not a refresh token, or was already spent (atomic: two tabs refreshing at once get one winner)."""
+    try:
+        claims = decode_token(token)
+    except ValueError:
+        return None
+    if claims.get("type") != "refresh" or not claims.get("jti") or not claims.get("sub"):
+        return None
+    spent = await db.execute(
+        pg_insert(UsedRefreshToken)
+        .values(jti=claims["jti"], expires_at=datetime.fromtimestamp(claims["exp"], UTC))
+        .on_conflict_do_nothing()
+        .returning(UsedRefreshToken.jti)
+    )
+    return str(claims["sub"]) if spent.scalar_one_or_none() else None
+
+
 @router.post("/auth/login")
 async def login(
     payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
@@ -57,16 +93,7 @@ async def login(
         rate_limit.login_by_ip.record(ip_key)
         raise AuthenticationException("Incorrect email or password")
     rate_limit.login_by_email.reset(email_key)
-
-    token_payload = {
-        "sub": str(user.id),
-        "role": user.role,
-        "tenant_id": str(user.tenant_id) if user.tenant_id else None,
-    }
-    return TokenResponse(
-        access_token=create_access_token(token_payload),
-        refresh_token=create_refresh_token({"sub": str(user.id)}),
-    )
+    return _tokens_for(user)
 
 
 @router.post("/auth/demo-login")
@@ -81,16 +108,25 @@ async def demo_login(db: AsyncSession = Depends(get_db)) -> TokenResponse:
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise ResourceNotFoundException()
+    return _tokens_for(user)
 
-    token_payload = {
-        "sub": str(user.id),
-        "role": user.role,
-        "tenant_id": str(user.tenant_id) if user.tenant_id else None,
-    }
-    return TokenResponse(
-        access_token=create_access_token(token_payload),
-        refresh_token=create_refresh_token({"sub": str(user.id)}),
-    )
+
+@router.post("/auth/refresh")
+async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+    """A new pair for an unspent refresh token: the session outlives the one-hour access token
+    without asking for the password again, and the old refresh token stops working."""
+    user_id = await _use_refresh_token(db, payload.refresh_token)
+    user = await db.get(TenantUser, uuid.UUID(user_id)) if user_id else None
+    if user is None or not user.is_active:
+        raise AuthenticationException("Session expired, please sign in again")
+    return _tokens_for(user)
+
+
+@router.post("/auth/logout")
+async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+    """Spends the refresh token, so signing out also ends the session on the server side."""
+    await _use_refresh_token(db, payload.refresh_token)
+    return MessageResponse(message="Signed out.")
 
 
 @router.get("/auth/me")

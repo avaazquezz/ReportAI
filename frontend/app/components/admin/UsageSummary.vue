@@ -2,26 +2,30 @@
 const { t } = useI18n()
 const props = withDefaults(defineProps<{ tenantId?: string }>(), { tenantId: undefined })
 
+const DAYS = 30
 const { summary, loading, error, fetchSummary } = useUsageSummary(props.tenantId)
+const { statusLabel, statusColor } = useReportStatus()
 
-const STATUS_LABEL = computed<Record<string, string>>(() => ({
-  pending: t('admin.reports.status.pending'),
-  delivered: t('admin.reports.status.delivered'),
-  failed: t('admin.reports.status.failed')
-}))
-
-const STATUS_COLOR: Record<string, string> = {
-  pending: 'pending',
-  delivered: 'approved',
-  failed: 'failed'
+function dayKey(day: Date) {
+  return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
 }
 
-const sparklineValues = computed(() => summary.value?.daily_cost.map((p) => p.cost_usd) ?? [])
-const sparklineLabels = computed(
-  () => summary.value?.daily_cost.map((p) => new Date(p.date).getDate().toString()) ?? []
-)
+// Every day of the period, quiet ones at zero: the API only returns days with activity, and a line
+// joining 3 Sep straight to 20 Sep drew a trend that never happened (FE-9).
+const dailySeries = computed(() => {
+  const costs = new Map((summary.value?.daily_cost ?? []).map((point) => [point.date, point.cost_usd]))
+  const today = new Date()
+  return Array.from({ length: DAYS }, (_, index) => {
+    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (DAYS - 1 - index))
+    return { label: String(day.getDate()), cost: costs.get(dayKey(day)) ?? 0 }
+  })
+})
 
-onMounted(() => fetchSummary(30))
+const sparklineValues = computed(() => dailySeries.value.map((point) => point.cost))
+const sparklineLabels = computed(() => dailySeries.value.map((point, index) => (index % 5 === 4 ? point.label : ' ')))
+const hasActivity = computed(() => sparklineValues.value.some((cost) => cost > 0))
+
+onMounted(() => fetchSummary(DAYS))
 </script>
 
 <template>
@@ -59,10 +63,10 @@ onMounted(() => fetchSummary(30))
         <v-card-title>{{ t('admin.usageSummary.dailyCostTitle') }}</v-card-title>
         <v-card-text>
           <v-sparkline
-            v-if="sparklineValues.length"
+            v-if="hasActivity"
             :model-value="sparklineValues"
             :labels="sparklineLabels"
-            color="#FF6A45"
+            color="#C0432A"
             line-width="2"
             padding="8"
             smooth
@@ -78,10 +82,10 @@ onMounted(() => fetchSummary(30))
             <v-chip
               v-for="(count, status) in summary.reports_by_status"
               :key="status"
-              :color="STATUS_COLOR[status] ?? 'default'"
+              :color="statusColor(String(status))"
               variant="tonal"
             >
-              {{ STATUS_LABEL[status] ?? status }}: {{ count }}
+              {{ statusLabel(String(status)) }}: {{ count }}
             </v-chip>
           </template>
           <p v-else class="text-sm text-ink-900/60">{{ t('admin.usageSummary.noReports') }}</p>

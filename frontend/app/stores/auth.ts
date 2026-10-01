@@ -26,8 +26,10 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async applySession(tokens: TokenResponse) {
-      useCookie('reportai_token', { sameSite: 'strict', secure: !import.meta.dev }).value =
-        tokens.access_token
+      const { access, refresh } = useSessionCookies()
+      access.value = tokens.access_token
+      // Kept so the session outlives the one-hour access token (FE-1).
+      refresh.value = tokens.refresh_token
       // useCookie() writes document.cookie via an async watcher (not synchronously on
       // assignment) — without this, fetchMe() below can read the cookie before that
       // write lands and send /auth/me with no Authorization header.
@@ -40,10 +42,18 @@ export const useAuthStore = defineStore('auth', {
       this.user = await api<User>('/auth/me')
     },
 
-    logout() {
+    async logout() {
+      const api = useApi()
+      const { access, refresh } = useSessionCookies()
+      const refreshToken = refresh.value
       this.user = null
-      useCookie('reportai_token').value = null
-      navigateTo('/')
+      access.value = null
+      refresh.value = null
+      if (refreshToken) {
+        // Ends the session on the server too; signing out must not wait on (or fail with) it.
+        api('/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }).catch(() => {})
+      }
+      await navigateTo('/')
     }
   }
 })

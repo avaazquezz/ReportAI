@@ -1,5 +1,3 @@
-import asyncio
-import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -16,9 +14,7 @@ from app.api.webhooks import email as email_webhook
 from app.api.webhooks import telegram as telegram_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
 from app.core.config import settings
-from app.core.langgraph_checkpointer import close_checkpointer, init_checkpointer
 from app.core.logging import configure_logging
-from app.services.agent.sweeper import sweep_forever
 from app.services.agent.tools.pricing import require_priced_model_for_spend_cap
 
 configure_logging()
@@ -27,13 +23,7 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     require_priced_model_for_spend_cap(settings.EXTRACTION_MODEL, settings.DAILY_SPEND_CAP_USD)
-    await init_checkpointer()
-    sweeper = asyncio.create_task(sweep_forever())
     yield
-    sweeper.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await sweeper
-    await close_checkpointer()
 
 
 # The interactive docs and the OpenAPI schema document every endpoint for whoever asks:

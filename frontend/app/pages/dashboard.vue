@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth', layout: 'app' })
+definePageMeta({ middleware: 'auth', layout: 'app', titleKey: 'admin.dashboard.title' })
 
 const { t } = useI18n()
 const authStore = useAuthStore()

@@ -9,7 +9,8 @@
         "reports": "Informes",
         "usage": "Uso y coste"
       },
-      "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí."
+      "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
+      "toggleMenu": "Mostrar u ocultar el menú"
     },
     "common": {
       "nameLabel": "Nombre",
@@ -35,11 +36,20 @@
       "confirmToggle": {
         "deactivate": "¿Desactivar {name}?",
         "reactivate": "¿Reactivar {name}?"
+      },
+      "validation": {
+        "required": "Obligatorio",
+        "email": "Escribe un email válido",
+        "emails": "Alguno de los emails no es válido"
+      },
+      "errors": {
+        "statusUpdate": "No se pudo cambiar el estado."
       }
     },
     "dashboard": {
       "greeting": "Hola, {name}",
-      "hint": "Usa el menú de la izquierda para gestionar tu cuenta."
+      "hint": "Usa el menú de la izquierda para gestionar tu cuenta.",
+      "title": "Inicio"
     },
     "channels": {
       "new": "Nuevo canal",
@@ -56,7 +66,7 @@
         "accessTokenLabel": "Access token",
         "inboundSlugLabel": "Inbound slug",
         "leaveBlank": "Dejar en blanco para no cambiar",
-        "allowedSendersHint": "Ids de los remitentes autorizados. Si queda vacío, el canal rechaza a todos"
+        "allowedSendersHint": "Ids de quienes pueden enviar informes. Si alguien no está en la lista, el bot le responde con su id para que te lo pase. Vacío: el canal rechaza a todos."
       },
       "errors": {
         "list": "No se pudieron cargar los canales.",
@@ -79,11 +89,26 @@
       },
       "fields": {
         "title": "Campos a extraer",
-        "add": "+ Añadir campo",
+        "add": "Añadir campo",
         "empty": "Sin campos todavía. Añade al menos uno para poder generar informes.",
         "nameLabel": "Nombre del campo",
         "typeLabel": "Tipo",
-        "requiredLabel": "Obligatorio"
+        "requiredLabel": "Obligatorio",
+        "hint": "El nombre es la variable de la plantilla ({example}); la etiqueta es lo que lee la gente. Los campos se piden y se muestran en este orden.",
+        "nameHint": "Variable de la plantilla",
+        "labelLabel": "Etiqueta (opcional)",
+        "multipleLabel": "Varias fotos",
+        "moveUp": "Subir campo",
+        "moveDown": "Bajar campo",
+        "remove": "Quitar campo",
+        "descriptionLabel": "Qué debe buscar la IA",
+        "descriptionHint": "P. ej. «la fecha en que se hizo la visita»",
+        "optionsLabel": "Opciones",
+        "columnsLabel": "Columnas de la tabla",
+        "columnTitle": "Título de la columna",
+        "removeColumn": "Quitar columna",
+        "addColumn": "Añadir columna",
+        "exampleName": "fecha_visita"
       },
       "saveChanges": "Guardar cambios",
       "templates": {
@@ -105,12 +130,35 @@
         "create": "No se pudo crear. Revisa que el nombre no esté en uso.",
         "load": "No se pudo cargar el tipo de documento.",
         "saveForm": "No se pudo guardar. Revisa los datos del formulario.",
-        "uploadTemplate": "No se pudo subir la plantilla."
+        "uploadTemplate": "No se pudo subir la plantilla.",
+        "templates": "No se pudieron cargar las plantillas.",
+        "invalidForm": "Revisa los campos marcados en rojo."
       },
       "toast": {
         "created": "Tipo de documento creado.",
         "saved": "Cambios guardados.",
         "templateUploaded": "Plantilla subida."
+      },
+      "fieldTypes": {
+        "str": "Texto",
+        "int": "Número entero",
+        "float": "Número decimal",
+        "bool": "Sí / No",
+        "date": "Fecha",
+        "time": "Hora",
+        "email": "Email",
+        "phone": "Teléfono",
+        "list_str": "Lista de textos",
+        "list_int": "Lista de números",
+        "enum": "Una opción de una lista",
+        "list_object": "Tabla",
+        "image": "Foto"
+      },
+      "validation": {
+        "identifier": "Solo letras sin tildes, números y _, sin espacios (p. ej. fecha_visita)",
+        "duplicate": "Ya hay otro con este nombre",
+        "options": "Añade al menos dos opciones distintas",
+        "columns": "Una tabla necesita al menos una columna"
       }
     },
     "tenants": {
@@ -145,35 +193,126 @@
     },
     "reports": {
       "status": {
-        "all": "Todos",
-        "pending": "Pendiente",
-        "awaitingApproval": "Esperando aprobación",
-        "awaitingDoctypeSelection": "Esperando selección",
+        "pending": "Procesando",
+        "awaiting_doctype_selection": "Esperando tipo",
+        "awaiting_details": "Esperando datos",
+        "awaiting_approval": "Esperando aprobación",
         "delivered": "Entregado",
-        "failed": "Fallido"
+        "failed": "Fallido",
+        "cancelled": "Cancelado"
       },
+      "noType": "Sin tipo",
       "headers": {
-        "documentType": "Tipo de documento"
+        "documentType": "Tipo de documento",
+        "requester": "Remitente"
       },
-      "dialog": {
+      "filters": {
+        "search": "Buscar (cliente, remitente, texto…)",
+        "from": "Desde",
+        "to": "Hasta",
+        "clear": "Quitar filtros",
+        "exportCsv": "Exportar CSV"
+      },
+      "detail": {
         "title": "Informe",
-        "type": "Tipo: {type}",
-        "channel": "Canal: {channel} ({identifier})"
+        "from": "De {who} por {channel}",
+        "processing": "El informe se está procesando. Esta página se actualiza sola.",
+        "awaitingDetails": "Esperando a que la persona envíe: {fields}",
+        "rejectedBecause": "Rechazado: {reason}",
+        "fillRequired": "Rellena los obligatorios para continuar: {fields}",
+        "fields": "Datos del informe",
+        "evidenceHint": "Bajo cada dato, la frase del mensaje de la que sale.",
+        "noFields": "Todavía no se ha extraído nada.",
+        "source": "Lo que dijo",
+        "audio": "Nota de voz",
+        "noSource": "Sin texto todavía.",
+        "photos": "Fotos",
+        "photo": "Foto del informe",
+        "deliveries": "Entregas",
+        "noDeliveries": "Aún no se ha enviado nada.",
+        "timeline": "Historial",
+        "cost": "Coste IA: {cost} USD"
       },
       "actions": {
-        "approve": "Aprobar",
+        "approve": "Aprobar y generar",
+        "approveWithChanges": "Aprobar con cambios",
         "reject": "Rechazar",
-        "downloadPdf": "Descargar PDF"
+        "preview": "Vista previa",
+        "downloadPdf": "Descargar PDF",
+        "saveAndRegenerate": "Guardar y regenerar PDF",
+        "regenerate": "Regenerar PDF",
+        "discard": "Descartar cambios",
+        "resendFailed": "Reenviar fallidos",
+        "resend": "Reenviar",
+        "sendTo": "Enviar a otro email",
+        "send": "Enviar"
+      },
+      "deliveryStatus": {
+        "pending": "Enviando",
+        "sent": "Enviado",
+        "failed": "Fallido"
+      },
+      "revisions": {
+        "approve": "{name} aprobó",
+        "reject": "{name} rechazó",
+        "edit": "{name} corrigió",
+        "rerender": "{name} regeneró el PDF",
+        "resend": "{name} reenvió",
+        "someone": "Alguien"
+      },
+      "dialog": {
+        "rejectTitle": "Rechazar informe",
+        "rejectHelp": "El informe no se generará y avisaremos a quien lo envió.",
+        "rejectReason": "Motivo (se le envía a la persona)",
+        "sendToTitle": "Enviar el PDF a otro email",
+        "email": "Email",
+        "previewTitle": "Vista previa del PDF"
       },
       "errors": {
         "list": "No se pudieron cargar los informes.",
+        "load": "No se pudo cargar el informe.",
         "download": "No se pudo descargar el informe.",
         "approve": "No se pudo aprobar el informe.",
-        "reject": "No se pudo rechazar el informe."
+        "reject": "No se pudo rechazar el informe.",
+        "save": "No se pudo guardar ni regenerar el PDF.",
+        "preview": "No se pudo generar la vista previa.",
+        "resend": "No se pudo reenviar.",
+        "export": "No se pudo exportar el CSV.",
+        "email": "Escribe un email válido."
       },
       "toast": {
         "approved": "Informe aprobado — generando el documento.",
-        "rejected": "Informe rechazado."
+        "rejected": "Informe rechazado.",
+        "saved": "Cambios guardados y PDF regenerado.",
+        "regenerated": "PDF regenerado.",
+        "resent": "Reenvío en marcha."
+      },
+      "steps": {
+        "ingest": "Mensaje recibido",
+        "download_media": "Audio descargado",
+        "transcribe": "Audio transcrito",
+        "resolve_tenant_doctype": "Tipo de documento elegido",
+        "send_document_type_prompt": "Preguntado el tipo de documento",
+        "await_document_type_reply": "Esperando el tipo de documento",
+        "parse_document_type_selection": "Tipo de documento recibido",
+        "extract": "Datos extraídos",
+        "validate": "Datos validados",
+        "check_completeness": "Comprobados los obligatorios",
+        "ask_missing_fields": "Pedidos los datos que faltan",
+        "await_missing_fields": "Esperando los datos que faltan",
+        "notify_missing_fields_limit": "Faltan datos: pasa a revisión",
+        "human_approval_prompt": "Resumen enviado para confirmar",
+        "await_human_approval": "Esperando confirmación",
+        "classify_approval_reply": "Respuesta interpretada",
+        "ask_what_to_correct": "Preguntado qué corregir",
+        "correction_limit": "Límite de correcciones por chat",
+        "cancel_report": "Cancelado por la persona",
+        "supersede_report": "Sustituido por un informe nuevo",
+        "render": "Documento rellenado",
+        "convert_pdf": "PDF generado",
+        "deliver": "Entregado",
+        "finalize_report": "Informe cerrado",
+        "fail": "Fallido"
       }
     },
     "usageSummary": {
@@ -187,6 +326,16 @@
       "errors": {
         "load": "No se pudo cargar el resumen de uso."
       }
+    },
+    "reportFields": {
+      "yes": "Sí",
+      "no": "No",
+      "requiredMissing": "Obligatorio",
+      "addRow": "Añadir fila",
+      "removeRow": "Quitar fila",
+      "emptyTable": "Sin filas.",
+      "evidence": "«{quote}»",
+      "unverified": "(no aparece tal cual en el mensaje: compruébalo)"
     }
   }
 }

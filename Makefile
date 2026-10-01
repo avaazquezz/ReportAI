@@ -1,7 +1,7 @@
 COMPOSE = docker compose --project-directory . -f infra/docker-compose.yml
 PROD = docker compose --project-directory . -f infra/docker-compose.prod.yml
 
-.PHONY: help up down logs ps shell-db migrate migrate-down migrate-create test lint deploy
+.PHONY: help up down logs ps shell-db migrate migrate-down migrate-create test lint deploy restart-worker
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -24,6 +24,9 @@ shell-db: ## Open a psql shell against the dev database
 migrate: ## Apply all pending Alembic migrations and LangGraph's checkpoint tables
 	$(COMPOSE) exec backend sh -c "alembic upgrade head && python scripts/setup_checkpointer.py"
 
+restart-worker: ## Restart the dev worker after changing backend code
+	$(COMPOSE) restart worker
+
 migrate-down: ## Revert the last Alembic migration
 	$(COMPOSE) exec backend alembic downgrade -1
 
@@ -34,7 +37,7 @@ test: ## Run the backend test suite (fast, free, deterministic)
 	$(COMPOSE) exec backend pytest -v -m "not eval"
 
 eval: ## Run the golden-set eval suite (costs real AI provider API calls)
-	$(COMPOSE) exec backend pytest -v -m eval
+	$(COMPOSE) exec backend pytest -v -s -m eval
 
 lint: ## Run ruff and mypy against the backend
 	$(COMPOSE) exec backend sh -c "ruff check . && mypy app"

@@ -6,7 +6,7 @@ interface TableHeader {
   width?: string
 }
 
-defineProps<{
+const props = defineProps<{
   headers: TableHeader[]
   items: T[]
   totalItems: number
@@ -26,8 +26,13 @@ const { t } = useI18n()
 const slots = useSlots()
 const forwardedSlotNames = computed(() => Object.keys(slots).filter((name) => name !== 'no-data'))
 
-const page = ref(1)
+// Owned by the caller when it needs to jump back to page 1 (after a create, or a new filter);
+// otherwise the table kept showing the old page number for the first page's rows (FE-4).
+const page = defineModel<number>('page', { default: 1 })
 const itemsPerPage = ref(10)
+
+// The API pages but does not sort: a sort arrow that reorders only the visible page is a lie (FE-8).
+const unsortedHeaders = computed(() => props.headers.map((header) => ({ ...header, sortable: false })))
 
 function onUpdateOptions(options: { page: number; itemsPerPage: number }) {
   page.value = options.page
@@ -42,7 +47,7 @@ function onUpdateOptions(options: { page: number; itemsPerPage: number }) {
     <v-data-table-server
       v-model:page="page"
       v-model:items-per-page="itemsPerPage"
-      :headers="headers"
+      :headers="unsortedHeaders"
       :items="items"
       :items-length="totalItems"
       :loading="loading"

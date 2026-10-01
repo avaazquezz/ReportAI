@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { ChannelConnection, ChannelType } from '~/types'
 
-definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
+definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app', titleKey: 'admin.layout.nav.channels' })
 
 const { t } = useI18n()
 const { items, total, loading, error, fetchList, create, update } = useChannelConnections()
+const { page, load, reload } = useTablePaging(fetchList)
 const { show } = useSnackbar()
 const authStore = useAuthStore()
 const isDemo = computed(() => authStore.user?.is_demo ?? false)
@@ -24,6 +25,7 @@ const headers = computed(() => [
 ])
 
 const dialog = ref(false)
+const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const editingId = ref<string | null>(null)
 const saving = ref(false)
 const saveError = ref('')
@@ -78,7 +80,12 @@ function buildCredentials(): Record<string, string> {
   return inboundSlug.value ? { inbound_slug: inboundSlug.value } : {}
 }
 
+const required = (value: string) => Boolean(value?.trim()) || t('admin.common.validation.required')
+// A new channel needs its credentials; editing one may leave them blank to keep the stored ones.
+const credentialRules = computed(() => (editingId.value ? [] : [required]))
+
 async function onSave() {
+  if (!(await form.value?.validate())?.valid) return
   saving.value = true
   saveError.value = ''
   try {
@@ -99,7 +106,7 @@ async function onSave() {
     }
     dialog.value = false
     show(t('admin.channels.toast.saved'), 'success')
-    await fetchList({ page: 1, itemsPerPage: 10 })
+    await reload()
   } catch (err) {
     // Saving a Telegram bot registers its webhook, so the API can explain why Telegram said no
     // (e.g. a wrong token); validation errors arrive as a list and keep the generic text.
@@ -120,13 +127,18 @@ function askToggle(connection: ChannelConnection) {
 
 async function confirmToggle() {
   if (!pendingConnection.value) return
-  await update(pendingConnection.value.id, {
-    display_name: pendingConnection.value.display_name,
-    allowed_senders: pendingConnection.value.allowed_senders,
-    is_active: !pendingConnection.value.is_active
-  })
-  show(t('admin.common.toastStatusUpdated'), 'success')
-  await fetchList({ page: 1, itemsPerPage: 10 })
+  try {
+    await update(pendingConnection.value.id, {
+      display_name: pendingConnection.value.display_name,
+      allowed_senders: pendingConnection.value.allowed_senders,
+      is_active: !pendingConnection.value.is_active
+    })
+    show(t('admin.common.toastStatusUpdated'), 'success')
+    await reload()
+  } catch {
+    // An unhandled rejection here used to fail silently (FE-6).
+    show(t('admin.common.errors.statusUpdate'), 'error')
+  }
 }
 </script>
 
@@ -138,19 +150,23 @@ async function confirmToggle() {
     </div>
 
     <AdminResourceTable
+      v-model:page="page"
       :headers="headers"
       :items="items"
       :total-items="total"
       :loading="loading"
       :error="error"
-      @update:options="fetchList"
+      @update:options="load"
     >
       <template #item.channel_type="{ item }">
         {{ CHANNEL_TYPES.find((c) => c.value === item.channel_type)?.title ?? item.channel_type }}
       </template>
       <template #item.allowed_senders="{ item }">
-        <span v-if="!item.allowed_senders.length" class="text-ink-900/60">{{ t('admin.channels.allSenders') }}</span>
-        <span v-else>{{ item.allowed_senders.length }}</span>
+        <span v-if="!item.allowed_senders.length" class="text-ink-900/70">{{ t('admin.channels.allSenders') }}</span>
+        <div v-else class="flex flex-wrap gap-1 py-1">
+          <v-chip v-for="sender in item.allowed_senders.slice(0, 3)" :key="sender" size="x-small" label>{{ sender }}</v-chip>
+          <v-chip v-if="item.allowed_senders.length > 3" size="x-small" label>+{{ item.allowed_senders.length - 3 }}</v-chip>
+        </div>
       </template>
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'approved' : 'failed'" size="small" variant="tonal">
@@ -158,12 +174,12 @@ async function confirmToggle() {
         </v-chip>
       </template>
       <template #item.actions="{ item }">
-        <template v-if="!isDemo">
+        <div v-if="!isDemo" class="flex justify-end whitespace-nowrap">
           <v-btn size="small" variant="text" @click="openEdit(item)">{{ t('admin.common.edit') }}</v-btn>
           <v-btn size="small" variant="text" @click="askToggle(item)">
             {{ item.is_active ? t('admin.common.deactivate') : t('admin.common.reactivate') }}
           </v-btn>
-        </template>
+        </div>
       </template>
     </AdminResourceTable>
 
@@ -171,7 +187,7 @@ async function confirmToggle() {
       <v-card>
         <v-card-title>{{ editingId ? t('admin.channels.dialog.editTitle') : t('admin.channels.new') }}</v-card-title>
         <v-card-text>
-          <v-form @submit.prevent="onSave">
+          <v-form ref="form" @submit.prevent="onSave">
             <v-select
               v-model="channelType"
               :items="CHANNEL_TYPES"
@@ -181,13 +197,16 @@ async function confirmToggle() {
               :disabled="!!editingId"
               class="mb-2"
             />
-            <v-text-field v-model="displayName" :label="t('admin.common.nameLabel')" required class="mb-2" />
+            <v-text-field v-model="displayName" :label="t('admin.common.nameLabel')" :rules="[required]" class="mb-2" />
 
             <template v-if="channelType === 'telegram'">
               <v-text-field
                 v-model="botToken"
                 :label="t('admin.channels.dialog.botTokenLabel')"
                 :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
+                :rules="credentialRules"
+                type="password"
+                autocomplete="off"
                 class="mb-2"
               />
             </template>
@@ -196,12 +215,16 @@ async function confirmToggle() {
                 v-model="phoneNumberId"
                 :label="t('admin.channels.dialog.phoneNumberIdLabel')"
                 :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
+                :rules="credentialRules"
                 class="mb-2"
               />
               <v-text-field
                 v-model="accessToken"
                 :label="t('admin.channels.dialog.accessTokenLabel')"
                 :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
+                :rules="credentialRules"
+                type="password"
+                autocomplete="off"
                 class="mb-2"
               />
             </template>
@@ -210,6 +233,7 @@ async function confirmToggle() {
                 v-model="inboundSlug"
                 :label="t('admin.channels.dialog.inboundSlugLabel')"
                 :placeholder="editingId ? t('admin.channels.dialog.leaveBlank') : ''"
+                :rules="credentialRules"
                 class="mb-2"
               />
             </template>
@@ -226,13 +250,12 @@ async function confirmToggle() {
             />
             <v-switch v-if="editingId" v-model="isActive" :label="t('admin.common.status.active')" color="primary" />
             <v-alert v-if="saveError" type="error" variant="tonal" class="mt-2">{{ saveError }}</v-alert>
+            <div class="mt-4 flex justify-end gap-2">
+              <v-btn variant="text" @click="dialog = false">{{ t('admin.common.cancel') }}</v-btn>
+              <v-btn type="submit" color="primary" :loading="saving">{{ t('admin.common.save') }}</v-btn>
+            </div>
           </v-form>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="dialog = false">{{ t('admin.common.cancel') }}</v-btn>
-          <v-btn color="primary" :loading="saving" @click="onSave">{{ t('admin.common.save') }}</v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
 
