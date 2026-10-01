@@ -63,6 +63,8 @@ async def test_the_wizard_creates_the_company_its_admin_and_its_settings_in_one_
     assert done.status_code == 200
     me = await client.get("/auth/me", headers={"Authorization": f"Bearer {done.json()['access_token']}"})
     assert me.json()["email"] == "lucia@garcia.test" and me.json()["role"] == "tenant_admin"
+    renewed = await client.post("/auth/refresh", json={"refresh_token": done.json()["refresh_token"]})
+    assert renewed.status_code == 200  # the session outlives its first hour
     tenant = (await db.scalars(select(Tenant))).one()
     assert (tenant.name, tenant.slug, tenant.language) == ("Reformas García & Hijos", "reformas-garcia-hijos", "es")
     assert (await instance_settings.ai_config(db)).api_key == "sk-ant-api03-wizard-1234"

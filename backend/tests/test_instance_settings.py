@@ -5,6 +5,8 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import httpx
+import openai
 import pytest
 from httpx import AsyncClient
 from pydantic import BaseModel
@@ -155,13 +157,14 @@ async def test_a_test_email_tries_the_settings_as_typed_and_reports_the_failure(
 
     ok = await client.post("/instance/email/check", json={"to": "ana@acme.test", "settings": EMAIL}, headers=headers)
 
-    assert ok.json() == {"ok": True, "detail": None}
+    assert ok.json() == {"ok": True, "reason": None, "detail": None}
     assert send.await_args.kwargs["hostname"] == "smtp.acme.test" and send.await_args.kwargs["password"] == "mail-pass-9999"
     assert (await client.get("/instance/email", headers=headers)).json()["configured"] is False  # nothing saved
 
     send.side_effect = ConnectionRefusedError("connection refused")
     failed = await client.post("/instance/email/check", json={"to": "ana@acme.test", "settings": EMAIL}, headers=headers)
-    assert failed.json()["ok"] is False and "connection refused" in failed.json()["detail"]
+    assert failed.json()["ok"] is False and failed.json()["reason"] == "unreachable"
+    assert "connection refused" in failed.json()["detail"]
 
 
 async def test_the_ai_check_calls_the_model_as_typed_without_saving(
@@ -172,7 +175,12 @@ async def test_the_ai_check_calls_the_model_as_typed_without_saving(
 
     def client_for(api_key: str, base_url: str) -> SimpleNamespace:
         calls.append((api_key, base_url))
-        create = AsyncMock(side_effect=RuntimeError("Error code: 401 - invalid api key"))
+        refused = openai.AuthenticationError(
+            "Error code: 401",
+            response=httpx.Response(401, request=httpx.Request("POST", "https://api.deepseek.com/chat/completions")),
+            body={"error": {"message": "Incorrect API key provided"}},
+        )
+        create = AsyncMock(side_effect=refused)
         return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
 
     monkeypatch.setattr(llm, "_openai_client", client_for)
@@ -181,6 +189,6 @@ async def test_the_ai_check_calls_the_model_as_typed_without_saving(
 
     result = await client.post("/instance/ai/check", json={"extraction": typed}, headers=headers)
 
-    assert result.json() == {"ok": False, "detail": "RuntimeError: Error code: 401 - invalid api key"}
+    assert result.json() == {"ok": False, "reason": "auth", "detail": "Incorrect API key provided"}
     assert calls == [("sk-typo", "https://api.deepseek.com")]
     assert (await instance_settings.load(db)) == {}

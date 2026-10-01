@@ -118,7 +118,7 @@ async def check_ai_settings(
                 merged_transcription(stored, payload.transcription), await _language(db, current_user)
             )
     except CheckFailed as exc:
-        return CheckResponse(ok=False, detail=str(exc))
+        return CheckResponse(ok=False, reason=exc.reason, detail=str(exc))
     return CheckResponse(ok=True)
 
 
@@ -151,7 +151,7 @@ async def check_email_settings(
     try:
         await check_smtp(config, payload.to)
     except CheckFailed as exc:
-        return CheckResponse(ok=False, detail=str(exc))
+        return CheckResponse(ok=False, reason=exc.reason, detail=str(exc))
     return CheckResponse(ok=True)
 
 
