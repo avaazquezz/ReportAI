@@ -104,13 +104,31 @@ function removeRow(name: string, index: number) {
             </thead>
             <tbody>
               <tr v-for="(row, index) in rows(name)" :key="index">
-                <td v-for="(column, key) in spec.columns ?? {}" :key="key" class="px-1 py-1">
+                <td
+                  v-for="(column, key) in spec.columns ?? {}"
+                  :key="key"
+                  class="px-1 py-1 align-top"
+                  :class="{ 'min-w-[8rem]': !NARROW_COLUMNS.includes(column.type) }"
+                >
                   <v-checkbox
                     v-if="column.type === 'bool'"
                     :model-value="Boolean(row[key])"
                     :readonly="readonly"
                     :aria-label="column.description || String(key)"
                     density="compact"
+                    hide-details
+                    @update:model-value="setCell(name, index, String(key), column.type, $event)"
+                  />
+                  <!-- Free text wraps: a deficiency or an action is a sentence, not a word. -->
+                  <v-textarea
+                    v-else-if="column.type === 'str'"
+                    :model-value="row[key] ?? ''"
+                    :readonly="readonly"
+                    :aria-label="column.description || String(key)"
+                    auto-grow
+                    rows="1"
+                    density="compact"
+                    variant="outlined"
                     hide-details
                     @update:model-value="setCell(name, index, String(key), column.type, $event)"
                   />

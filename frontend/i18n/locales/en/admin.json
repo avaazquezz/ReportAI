@@ -155,7 +155,8 @@
         "title": "Templates",
         "uploadLabel": "Upload new template (.docx)",
         "uploadButton": "Upload",
-        "manualHelp": "Already have a template with tags ({tag})? Upload it directly:"
+        "manualHelp": "Edited the template in Word, or already have one with tags ({tag})? Upload it here:",
+        "download": "Download"
       },
       "templateHeaders": {
         "file": "File",
@@ -173,7 +174,8 @@
         "saveForm": "Couldn't save. Check the form data.",
         "uploadTemplate": "Couldn't upload the template.",
         "templates": "Couldn't load the templates.",
-        "invalidForm": "Check the fields marked in red."
+        "invalidForm": "Check the fields marked in red.",
+        "downloadTemplate": "Couldn't download the template."
       },
       "toast": {
         "created": "Document type created.",
@@ -288,7 +290,8 @@
         "resendFailed": "Resend failed",
         "resend": "Resend",
         "sendTo": "Send to another email",
-        "send": "Send"
+        "send": "Send",
+        "retry": "Try again"
       },
       "deliveryStatus": {
         "pending": "Sending",
@@ -301,7 +304,8 @@
         "edit": "{name} corrected",
         "rerender": "{name} regenerated the PDF",
         "resend": "{name} resent",
-        "someone": "Someone"
+        "someone": "Someone",
+        "retry": "{name} tried it again"
       },
       "dialog": {
         "rejectTitle": "Reject report",
@@ -321,14 +325,17 @@
         "preview": "Couldn't generate the preview.",
         "resend": "Couldn't resend.",
         "export": "Couldn't export the CSV.",
-        "email": "Enter a valid email."
+        "email": "Enter a valid email.",
+        "retry": "Couldn't try the report again.",
+        "retryBusy": "Its sender has another report in progress: finish or cancel that one before trying this again."
       },
       "toast": {
         "approved": "Report approved — generating the document.",
         "rejected": "Report rejected.",
         "saved": "Changes saved and PDF regenerated.",
         "regenerated": "PDF regenerated.",
-        "resent": "Resending."
+        "resent": "Resending.",
+        "retried": "The report is running again."
       },
       "steps": {
         "ingest": "Message received",

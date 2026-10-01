@@ -285,11 +285,10 @@ _SAFETY_VISIT_FIELDS = (
         ("Issues", "Each issue found, one per row"),
         required=False,
         columns={
-            "deficiencia": ("str", {"es": "Qué se ha visto", "en": "What was found"}),
+            "deficiencia": ("str", {"es": "Deficiencia", "en": "Issue"}),
             "empresa": ("str", {"es": "Empresa responsable", "en": "Contractor responsible"}),
             "medida": ("str", {"es": "Medida correctora", "en": "Corrective action"}),
-            "plazo": ("str", {"es": "Plazo: 'Inmediato', 'Corregido en el momento' o una fecha escrita como 09/10/2026 (no 2026-10-09)",
-                              "en": "Deadline: 'Immediate', 'Fixed on the spot' or a date written like Oct 9, 2026 (not 2026-10-09)"}),
+            "plazo": ("str", {"es": "Plazo", "en": "Deadline"}),
         },
     ),
     _f("paralizacion", "bool", ("Paralización de trabajos", "Si se han paralizado trabajos"), ("Work stopped", "Whether any work was stopped"), required=False),
@@ -348,12 +347,12 @@ STARTERS: dict[str, Starter] = {
             {"es": "Una visita de coordinación a una obra: empresas presentes, deficiencias con su responsable y plazo, paralizaciones.",
              "en": "A safety inspection of a site: contractors on site, issues with who fixes them and by when, work stopped."},
             {"es": "Un coordinador de seguridad y salud dicta la visita al salir de la obra. Cada deficiencia es una fila con "
-                   "su empresa responsable, la medida correctora y el plazo ('Inmediato' si debe corregirse ya, 'Corregido en "
-                   "el momento' si ya se corrigió). Los nombres de obras, empresas y personas van con sus mayúsculas aunque "
+                   "su empresa responsable, la medida correctora y el plazo: 'Inmediato' si debe corregirse ya, 'Corregido en "
+                   "el momento' si ya se corrigió, o una fecha escrita como 09/10/2026 (no 2026-10-09). Los nombres de obras, empresas y personas van con sus mayúsculas aunque "
                    "la transcripción los traiga en minúscula.",
              "en": "A safety inspector dictates the visit when leaving the site. Each issue is a row with the contractor "
-                   "responsible, the corrective action and the deadline ('Immediate' if it must be fixed now, 'Fixed on the "
-                   "spot' if it already was). Names of sites, companies and people keep their capitals even when the "
+                   "responsible, the corrective action and the deadline: 'Immediate' if it must be fixed now, 'Fixed on the "
+                   "spot' if it already was, or a date written like Oct 9, 2026 (not 2026-10-09). Names of sites, companies and people keep their capitals even when the "
                    "transcript has them in lowercase."},
             _SAFETY_VISIT_FIELDS,
             _safety_visit,
