@@ -24,17 +24,21 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.models.used_refresh_token import UsedRefreshToken
 from app.schemas.auth import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    ProfileUpdateRequest,
     RefreshRequest,
     ResetPasswordRequest,
     TokenResponse,
     UserResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services.i18n import t
 from app.services.notifications.email import send_plain_email
 from app.services.notifications.tokens import consume_reset_token, issue_reset_token
 
@@ -139,6 +143,32 @@ async def me(current_user: TenantUser = Depends(get_current_user)) -> UserRespon
     return response
 
 
+@router.patch("/auth/me")
+async def update_profile(
+    payload: ProfileUpdateRequest,
+    current_user: TenantUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    current_user.full_name = payload.full_name
+    await db.flush()
+    return await me(current_user)
+
+
+@router.post("/auth/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: TenantUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """A new password signs the account out everywhere else; this session gets fresh tokens."""
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise ValidationException("The current password is not right")
+    current_user.hashed_password = hash_password(payload.new_password)
+    current_user.token_version += 1
+    await db.flush()
+    return tokens_for(current_user)
+
+
 @router.post("/auth/forgot-password")
 async def forgot_password(
     payload: ForgotPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)
@@ -156,11 +186,13 @@ async def forgot_password(
     if user is not None and user.is_active:
         token = await issue_reset_token(db, user.id)
         reset_link = f"{settings.FRONTEND_ORIGIN}/reset-password?token={token}"
+        tenant = await db.get(Tenant, user.tenant_id) if user.tenant_id else None
+        language = tenant.language if tenant else None
         try:
             await send_plain_email(
                 to=[user.email],
-                subject="Reset your ReportAI password",
-                body=f"Use this link to set a new password (expires in 1 hour):\n\n{reset_link}",
+                subject=t(language, "reset_subject"),
+                body=t(language, "reset_body", link=reset_link),
             )
         except Exception:
             logger.exception("Failed to send password reset email to %s", user.email)

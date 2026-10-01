@@ -54,6 +54,27 @@ async def get_current_user(
     return user
 
 
+# What a company's people can be: its admin runs everything; an approver reviews, corrects and
+# sends reports; a viewer only reads them.
+TENANT_ROLES = ("tenant_admin", "approver", "viewer")
+
+
+async def require_tenant_member(
+    current_user: TenantUser = Depends(get_current_user),
+) -> TenantUser:
+    if current_user.role not in {*TENANT_ROLES, "super_admin"}:
+        raise AuthorizationException("Not a member of a company")
+    return current_user
+
+
+async def require_approver(
+    current_user: TenantUser = Depends(get_current_user),
+) -> TenantUser:
+    if current_user.role not in {"tenant_admin", "approver", "super_admin"}:
+        raise AuthorizationException("Approver role required")
+    return current_user
+
+
 async def require_tenant_admin(
     current_user: TenantUser = Depends(get_current_user),
 ) -> TenantUser:

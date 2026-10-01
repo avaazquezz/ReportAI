@@ -52,6 +52,11 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "email_body": "Adjunto encontrarás el informe «{doc_type}».",
         "email_reply_subject": "Re: {subject}",
         "report": "Informe",
+        # emails from the panel
+        "invite_subject": "{company}: tu acceso a ReportAI",
+        "invite_body": "Hola, {name}:\n\nTienes acceso al panel de ReportAI de {company}. Elige tu contraseña aquí (el enlace caduca en 7 días):\n\n{link}",
+        "reset_subject": "Restablece tu contraseña de ReportAI",
+        "reset_body": "Para elegir una contraseña nueva, abre este enlace (caduca en 1 hora):\n\n{link}\n\nSi no lo has pedido tú, ignora este mensaje.",
         # values in summaries
         "yes": "Sí",
         "no": "No",
@@ -91,6 +96,10 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "email_body": "Attached is the report «{doc_type}».",
         "email_reply_subject": "Re: {subject}",
         "report": "Report",
+        "invite_subject": "{company}: your access to ReportAI",
+        "invite_body": "Hi {name},\n\nYou have access to {company}'s ReportAI panel. Choose your password here (the link expires in 7 days):\n\n{link}",
+        "reset_subject": "Reset your ReportAI password",
+        "reset_body": "To choose a new password, open this link (it expires in 1 hour):\n\n{link}\n\nIf you didn't ask for it, ignore this message.",
         "yes": "Yes",
         "no": "No",
         "none": "—",

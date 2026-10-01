@@ -7,7 +7,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.admin.usage import build_usage_summary
-from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import require_super_admin
 from app.core.exceptions import ConflictException, ResourceNotFoundException
@@ -23,33 +22,12 @@ from app.schemas.tenant import (
     TenantUpdateRequest,
 )
 from app.schemas.usage import UsageSummaryResponse
-from app.services.notifications.email import send_plain_email
-from app.services.notifications.tokens import issue_reset_token
+from app.services.notifications.invites import send_invite
 
 router = APIRouter(
     prefix="/admin/tenants", tags=["admin:tenants"], dependencies=[Depends(require_super_admin)]
 )
 logger = logging.getLogger(__name__)
-
-
-async def _send_invite(user: TenantUser, db: AsyncSession) -> bool:
-    """Issue a reset token and email it as a "set your password" link — the same
-    mechanism as forgot-password, so a super-admin never sees/sets a tenant admin's
-    real password. Returns whether the email actually sent; a failure here doesn't
-    roll back tenant/user creation, it just leaves invite_email_sent=false for the
-    caller to retry via /resend-invite."""
-    token = await issue_reset_token(db, user.id)
-    link = f"{settings.FRONTEND_ORIGIN}/reset-password?token={token}"
-    try:
-        await send_plain_email(
-            to=[user.email],
-            subject="You've been invited to ReportAI",
-            body=f"An account was created for you. Set your password here (expires in 1 hour):\n\n{link}",
-        )
-        return True
-    except Exception:
-        logger.exception("Failed to send tenant invite email to %s", user.email)
-        return False
 
 
 @router.post("", status_code=201)
@@ -74,7 +52,8 @@ async def create_tenant(
         is_active=True,
     )
 
-    invite_sent = await _send_invite(admin_user, db)
+    # A failed email doesn't roll back the tenant: invite_email_sent=false, retry with /resend-invite.
+    invite_sent, _ = await send_invite(db, admin_user)
     return TenantCreateResponse(
         id=tenant.id,
         name=tenant.name,
@@ -130,7 +109,7 @@ async def resend_invite(tenant_id: uuid.UUID, db: AsyncSession = Depends(get_db)
     if not admins:
         raise ResourceNotFoundException("This tenant has no admin user to invite")
 
-    sent = await _send_invite(admins[0], db)
+    sent, _ = await send_invite(db, admins[0])
     return MessageResponse(message="Invite sent" if sent else "Failed to send invite email")
 
 

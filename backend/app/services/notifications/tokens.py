@@ -10,6 +10,8 @@ from app.models.password_reset_token import PasswordResetToken
 from app.models.tenant_user import TenantUser
 
 _TOKEN_TTL = timedelta(hours=1)
+# An invitation is often read the next day: a password reset is asked for and used at once.
+INVITE_TTL = timedelta(days=7)
 
 
 def _hash_token(raw_token: str) -> str:
@@ -27,7 +29,7 @@ async def _invalidate_outstanding_tokens(db: AsyncSession, tenant_user_id: uuid.
     )
 
 
-async def issue_reset_token(db: AsyncSession, tenant_user_id: uuid.UUID) -> str:
+async def issue_reset_token(db: AsyncSession, tenant_user_id: uuid.UUID, ttl: timedelta = _TOKEN_TTL) -> str:
     """Mint a single-use reset/invite token. Returns the raw token (goes in the emailed
     link, never stored) — only its hash is persisted. Invalidates any still-outstanding
     tokens for this user first, so re-requesting a reset kills older, possibly-leaked links."""
@@ -37,7 +39,7 @@ async def issue_reset_token(db: AsyncSession, tenant_user_id: uuid.UUID) -> str:
         PasswordResetToken(
             tenant_user_id=tenant_user_id,
             token_hash=_hash_token(raw_token),
-            expires_at=datetime.now(UTC) + _TOKEN_TTL,
+            expires_at=datetime.now(UTC) + ttl,
         )
     )
     await db.flush()
