@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ layout: 'auth', titleKey: 'auth.forgotPassword.title' })
+
 const { t } = useI18n()
 
 const email = ref('')
