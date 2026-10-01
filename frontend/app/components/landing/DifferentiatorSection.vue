@@ -1,9 +1,8 @@
 <script setup lang="ts">
 const { t } = useI18n()
 
-// Every row is a "yes" for ReportAI and a "no" for call-based meeting bots: the table
-// exists to make the category difference legible, not to score features.
-const ROWS = ['noCall', 'afterVisit', 'ownTemplate', 'chat', 'approval'] as const
+// Each row is one chore of today's inspection report, next to what replaces it.
+const ROWS = ['notes', 'word', 'missing', 'send', 'find'] as const
 
 const root = ref<HTMLElement | null>(null)
 useSectionMotion(root, (tl) => {
@@ -36,34 +35,31 @@ useSectionMotion(root, (tl) => {
           <caption class="sr-only">{{ t('landing.differentiator.table.caption') }}</caption>
           <thead>
             <tr class="border-b border-white/10">
-              <th scope="col" class="px-5 py-4 text-left text-xs font-medium text-white/50">
-                {{ t('landing.differentiator.table.feature') }}
+              <th scope="col" class="w-1/2 px-5 py-4 text-left text-xs font-medium text-white/50">
+                {{ t('landing.differentiator.table.before') }}
               </th>
-              <th scope="col" class="w-[22%] px-3 py-4 text-center text-xs font-medium text-white/60">
-                {{ t('landing.differentiator.table.bots') }}
-                <span class="mt-0.5 block font-normal text-white/35">{{ t('landing.differentiator.table.botsSub') }}</span>
-              </th>
-              <th scope="col" class="w-[22%] bg-capture-500/10 px-3 py-4 text-center font-display text-sm font-bold text-capture-500">
-                {{ t('landing.differentiator.table.reportai') }}
+              <th scope="col" class="w-1/2 bg-capture-500/10 px-5 py-4 text-left font-display text-sm font-bold text-capture-500">
+                {{ t('landing.differentiator.table.after') }}
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="key in ROWS" :key="key" class="row m-hide border-b border-white/10 last:border-b-0">
-              <th scope="row" class="px-5 py-4 text-left font-medium text-white/90">
-                {{ t(`landing.differentiator.table.rows.${key}`) }}
-              </th>
-              <td class="px-3 py-4 text-center text-white/35">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mx-auto h-4 w-4" aria-hidden="true">
-                  <path d="M5 5l10 10M15 5L5 15" />
-                </svg>
-                <span class="sr-only">{{ t('landing.differentiator.table.no') }}</span>
+            <tr v-for="key in ROWS" :key="key" class="row m-hide border-b border-white/10 align-top last:border-b-0">
+              <td class="px-5 py-4 text-white/55">
+                <span class="flex gap-2.5">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mt-0.5 h-4 w-4 shrink-0 text-white/30" aria-hidden="true">
+                    <path d="M5 5l10 10M15 5L5 15" />
+                  </svg>
+                  {{ t(`landing.differentiator.table.rows.${key}.before`) }}
+                </span>
               </td>
-              <td class="bg-capture-500/10 px-3 py-4 text-center text-capture-500">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto h-4 w-4" aria-hidden="true">
-                  <path d="M4 10.5l4 4 8-9" />
-                </svg>
-                <span class="sr-only">{{ t('landing.differentiator.table.yes') }}</span>
+              <td class="bg-capture-500/10 px-5 py-4 font-medium text-white/90">
+                <span class="flex gap-2.5">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-capture-500" aria-hidden="true">
+                    <path d="M4 10.5l4 4 8-9" />
+                  </svg>
+                  {{ t(`landing.differentiator.table.rows.${key}.after`) }}
+                </span>
               </td>
             </tr>
           </tbody>

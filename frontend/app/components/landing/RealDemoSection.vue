@@ -1,62 +1,67 @@
 <script setup lang="ts">
 const { t, locale } = useI18n()
 
-// Real pipeline output, generated once via backend/scripts/generate_landing_demo_audio.py
-// (real OpenAI TTS) + generate_landing_demo_asset.py (real Groq Whisper transcription,
-// real Claude extraction, real docxtpl+Gotenberg render). Not a live call — see
-// PROJECT_ROADMAP.md decisions log, 2026-08-15. Two independent real runs (one per
-// locale), not a translation of one into the other. The page images are the PDFs
-// rendered with pdftoppm at 120 dpi.
+// Real pipeline output, generated once with backend/scripts/generate_landing_demo_audio.py
+// (OpenAI TTS: the voice is synthetic, and the page says so) and generate_landing_demo_asset.py
+// (real transcription, real extraction with the "safety_visit" starter, real docxtpl +
+// Gotenberg render). Not a live call. One run per language, not a translation of one into the
+// other; the transcripts keep their errors. The page images are the PDFs rendered with pdftoppm
+// at 120 dpi. Fields are shown by their label, with the value as the report prints it.
 const TRANSCRIPT_ES =
-  'Hola, buenas tardes. Soy Javier Molina. Hoy, 18 de agosto, acabo de terminar la ' +
-  'reunión con Construcciones Marítimas del Levante, en sus oficinas de Alicante. Han ' +
-  'asistido Marta Delgado, la directora de compras, Oscar Ferreira, del departamento ' +
-  'técnico, y Laura Sanz, responsable de logística. Hemos repasado tres puntos. Primero, ' +
-  'el pedido trimestral, que sube un 15% a partir de octubre. Segundo, la ampliación del ' +
-  'contrato de mantenimiento a dos años. Y tercero, el cambio de proveedor de transporte ' +
-  'para las entregas del sur. Se ha decidido aceptar el incremento de volumen, reduciendo ' +
-  'el plazo de entrega a dos semanas, y renovar el contrato de mantenimiento con las ' +
-  'condiciones actuales. Como acciones, yo, Javier Molina, debo enviar la propuesta ' +
-  'actualizada a Marta antes del viernes 21 de agosto. Oscar confirmará la disponibilidad ' +
-  'de almacén el lunes 24 de agosto. Y Laura tiene que contactar con el nuevo ' +
-  'transportista antes de fin de mes. Quedamos en vernos otra vez el 15 de septiembre ' +
-  'para cerrar el tema del transporte. En general, muy buena reunión.'
+  'Hola, soy Lucía Ferrer. Acabo de salir de la visita de coordinación en la obra ' +
+  'residencial Las Acacias, en la calle Mayor 14 de Paterna. El promotor es ' +
+  'Inmobiliaria Mediterránea. Hoy es jueves 1 de octubre. La obra está en estructura, ' +
+  'con el forjado de la planta tercera. Estaban trabajando construcciones albufera, que' +
+  ' es la contrata principal, estructuras Levante con el encofrado, montajes Soler con ' +
+  'el andamio y grúas Martínez con la grúa Torre. He visto tres cosas. Primero, en el ' +
+  'forjado de Tercera falta la barandilla del borde norte, unos 10 metros. Es de ' +
+  'estructuras Levante y la tienen que poner antes de seguir trabajando en esa zona. O ' +
+  'sea, inmediato. Segundo, dos operarios de montajes Soler estaban sin casco debajo de' +
+  ' la brúa. Se ha corregido en el momento, pero lo dejo anotado. Y tercero, el cuadro ' +
+  'eléctrico de obra tiene la puerta rota y no cierra. Eso es de construcciones al ' +
+  'bufera y hay que cambiarlo antes del viernes 9. He paralizado los trabajos en el ' +
+  'borde norte hasta que pongan la barandilla y lo he anotado en el libro de ' +
+  'incidencias. Por lo demás, orden y limpieza bien y los accesos señalizados. La ' +
+  'próxima visita, el jueves 8 de octubre.'
 
 const TRANSCRIPT_EN =
-  'Hi, good afternoon. This is James Whitfield. Today, August 18th, I just wrapped up ' +
-  'the meeting with Harbor Point Industrial Supply at their offices in Savannah, ' +
-  'Georgia. In attendance were Sarah Mitchell, VP of Procurement, Marcus Reed from the ' +
-  'Technical Department, and Emily Chen, who handles logistics. We went over three ' +
-  'items. First, the quarterly order, which is going up 15% starting in October. ' +
-  'Second, extending the maintenance contract to two years. And third, changing the ' +
-  'freight carrier for deliveries to the southern region. We agreed to accept the ' +
-  'volume increase by cutting the delivery window down to two weeks and to renew the ' +
-  'maintenance contract on the current terms. As for next steps, I, James Whitfield, ' +
-  'need to send the updated proposal to Sarah by Friday, August 21. Marcus will ' +
-  'confirm warehouse availability on Monday, August 24, and Emily has to reach out to ' +
-  'the new carrier before the end of the month. We\'re set to meet again on ' +
-  'September 15th to close out the transport piece.'
+  'Hi, this is Dana Brooks. I just finished the safety inspection at Maple Ridge ' +
+  'Apartments, Phase 2, 140 Oak Street in Riverside. The client is Northgate ' +
+  'Developments. Today is Thursday, October 1st. The job is at the structure stage, ' +
+  'they\'re forming the third floor deck. On-site were Harbor Build, the General ' +
+  'Contractor, Summit Concrete doing the formwork, Iron Line Rebar on the rebar, and ' +
+  'Apex Crane running the Tower Crane. I found three issues. First, the edge protection' +
+  ' is missing on the north side of the third floor deck, about 30 feet. That\'s summit' +
+  ' concrete, and it has to go up before anyone works in that area, so immediately. ' +
+  'Second, two iron line workers had no hard hats under the crane. That was fixed on ' +
+  'the spot, but I\'m logging it. Third, the site electrical panel has a broken door ' +
+  'that won\'t close. That\'s on harbor build, and it needs replacing by Friday the ' +
+  '9th. I stopped work on the north edge until the guardrail is in, and I recorded it ' +
+  'in the site log. Otherwise, housekeeping is good and access routes are signed. Next ' +
+  'inspection is Thursday, October 8th.'
 
 const FIELDS_ES = [
-  { label: 'company_name', value: 'Construcciones Marítimas del Levante' },
-  { label: 'meeting_date', value: '2025-08-18' },
-  { label: 'attendees', value: 'Javier Molina, Marta Delgado, Óscar Ferreira, Laura Sanz' },
-  { label: 'decisions', value: 'Aceptar el incremento de volumen (15%), reduciendo el plazo de entrega a dos semanas' },
-  { label: 'action_items', value: 'Enviar la propuesta a Marta — Javier Molina, 21/08' }
+  { label: 'Obra', value: 'Residencial Las Acacias, Calle Mayor 14, Paterna' },
+  { label: 'Fecha', value: '01/10/2026' },
+  { label: 'Empresas presentes', value: 'Construcciones Albufera (contrata principal) +3' },
+  { label: 'Deficiencias', value: '3 · Falta la barandilla del borde norte… — Estructuras Levante — Inmediato' },
+  { label: 'Paralización de trabajos', value: 'Sí' },
+  { label: 'Próxima visita', value: '08/10/2026' }
 ]
 
 const FIELDS_EN = [
-  { label: 'company_name', value: 'Harbor Point Industrial Supply' },
-  { label: 'meeting_date', value: '2024-08-18' },
-  { label: 'attendees', value: 'James Whitfield, Sarah Mitchell, Marcus Reed, Emily Chen' },
-  { label: 'decisions', value: 'Accept the volume increase (15%), reducing the delivery window to two weeks' },
-  { label: 'action_items', value: 'Send the updated proposal to Sarah — James Whitfield, 08/21' }
+  { label: 'Site', value: 'Maple Ridge Apartments, Phase 2, 140 Oak Street, Riverside' },
+  { label: 'Date', value: '2026-10-01' },
+  { label: 'Contractors on site', value: 'Harbor Build (General Contractor) +3' },
+  { label: 'Issues', value: '3 · Edge protection missing on the north side… — Summit Concrete — Immediate' },
+  { label: 'Work stopped', value: 'Yes' },
+  { label: 'Next visit', value: '2026-10-08' }
 ]
 
 const content = computed(() =>
   locale.value === 'es'
-    ? { transcript: TRANSCRIPT_ES, fields: FIELDS_ES, audioSrc: '/demo/audio-es.mp3', pdfSrc: '/demo/informe-es.pdf', pageSrc: '/demo/informe-es.png' }
-    : { transcript: TRANSCRIPT_EN, fields: FIELDS_EN, audioSrc: '/demo/audio-en.mp3', pdfSrc: '/demo/informe-en.pdf', pageSrc: '/demo/informe-en.png' }
+    ? { transcript: TRANSCRIPT_ES, fields: FIELDS_ES, audioSrc: '/demo/audio-es.mp3', pdfSrc: '/demo/informe-es.pdf', pageSrc: '/demo/informe-es.png', pageWidth: 993, pageHeight: 1404 }
+    : { transcript: TRANSCRIPT_EN, fields: FIELDS_EN, audioSrc: '/demo/audio-en.mp3', pdfSrc: '/demo/informe-en.pdf', pageSrc: '/demo/informe-en.png', pageWidth: 1020, pageHeight: 1320 }
 )
 
 // One caption per sentence, shown in step with the audio. The narration has no word
@@ -73,7 +78,7 @@ const sentenceStarts = computed(() => {
   })
 })
 // Extraction is shown catching up behind the transcript, one field at a time.
-const FIELD_STARTS = [0.3, 0.44, 0.58, 0.72, 0.86]
+const fieldStarts = computed(() => content.value.fields.map((_, i, all) => 0.25 + (0.62 * i) / (all.length - 1)))
 
 const audioEl = ref<HTMLAudioElement | null>(null)
 const playing = ref(false)
@@ -83,7 +88,7 @@ const duration = ref(0)
 
 const progress = computed(() => (duration.value ? currentTime.value / duration.value : 0))
 const visibleSentences = computed(() => (played.value ? sentenceStarts.value.filter((s) => s <= progress.value + 0.02).length : 0))
-const visibleFields = computed(() => (played.value ? FIELD_STARTS.filter((s) => s <= progress.value).length : 0))
+const visibleFields = computed(() => (played.value ? fieldStarts.value.filter((s) => s <= progress.value).length : 0))
 
 function formatTime(seconds: number): string {
   const s = Math.floor(seconds % 60)
@@ -237,8 +242,8 @@ useSectionMotion(root, (tl) => {
             <img
               :src="content.pageSrc"
               :alt="t('landing.realDemo.pageAlt')"
-              width="1020"
-              height="1320"
+              :width="content.pageWidth"
+              :height="content.pageHeight"
               loading="lazy"
               decoding="async"
               class="block h-auto w-full"

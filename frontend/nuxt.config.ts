@@ -22,7 +22,10 @@ export default defineNuxtConfig({
       // NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS; the page flags whatever is missing.
       legalName: '',
       legalId: '',
-      legalAddress: ''
+      legalAddress: '',
+      // Pilot places on the landing's pricing (NUXT_PUBLIC_PILOT_SPOTS / NUXT_PUBLIC_PILOTS_TAKEN).
+      pilotSpots: 5,
+      pilotsTaken: 3
     }
   },
   i18n: {

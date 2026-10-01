@@ -1,5 +1,5 @@
 """Ready-made document types to start from, for a company that has no template of its own yet:
-a work order, a site visit report and an incident report. Each is generated as a Word file with
+a site safety inspection, a work order, a site visit report and an incident report. Each is generated as a Word file with
 the company's logo and name (through {{ branding }}), so it is theirs from the first report, and
 in the company's language. A company with its own document uses the template assistant instead."""
 
@@ -12,7 +12,7 @@ from docx.document import Document as DocxDocument
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Inches, Mm, Pt, RGBColor
 from docx.table import _Cell
 
 from app.services.i18n import normalize_language
@@ -66,12 +66,14 @@ class Starter:
 class _Writer:
     """Small helpers for a clean, neutral document the company can restyle in Word."""
 
-    def __init__(self, title: str) -> None:
+    def __init__(self, title: str, a4: bool) -> None:
         self.document: DocxDocument = Document()
         styles = self.document.styles
         styles["Normal"].font.name = "Calibri"
         styles["Normal"].font.size = Pt(10.5)
         section = self.document.sections[0]
+        if a4:  # python-docx starts on US Letter; Spain prints on A4
+            section.page_width, section.page_height = Mm(210), Mm(297)
         section.top_margin = section.bottom_margin = Inches(0.7)
         section.left_margin = section.right_margin = Inches(0.8)
         header = section.header.paragraphs[0]
@@ -266,9 +268,96 @@ def _incident(w: _Writer, language: str) -> None:
     w.done()
 
 
+_SAFETY_VISIT_FIELDS = (
+    _f("obra", "str", ("Obra", "Nombre y dirección de la obra"), ("Site", "Site name and address")),
+    _f("promotor", "str", ("Promotor", "Promotor de la obra"), ("Client", "Client or developer of the project"), required=False),
+    _f("fecha", "date", ("Fecha", "Día de la visita"), ("Date", "Day of the visit")),
+    _f("coordinador", "str", ("Coordinador/a", "Quién hace la visita"), ("Inspector", "Who made the visit")),
+    _f("fase", "str", ("Fase de obra", "En qué fase está la obra"), ("Stage", "Which stage the works are at"), required=False),
+    _f(
+        "empresas_presentes", "list[str]",
+        ("Empresas presentes", "Contratas y subcontratas trabajando, con su actividad si se dice"),
+        ("Contractors on site", "Contractors and subcontractors working, with their trade if said"),
+    ),
+    _f(
+        "deficiencias", "list[object]",
+        ("Deficiencias", "Cada deficiencia detectada, una por fila"),
+        ("Issues", "Each issue found, one per row"),
+        required=False,
+        columns={
+            "deficiencia": ("str", {"es": "Qué se ha visto", "en": "What was found"}),
+            "empresa": ("str", {"es": "Empresa responsable", "en": "Contractor responsible"}),
+            "medida": ("str", {"es": "Medida correctora", "en": "Corrective action"}),
+            "plazo": ("str", {"es": "Plazo: 'Inmediato', 'Corregido en el momento' o una fecha escrita como 09/10/2026 (no 2026-10-09)",
+                              "en": "Deadline: 'Immediate', 'Fixed on the spot' or a date written like Oct 9, 2026 (not 2026-10-09)"}),
+        },
+    ),
+    _f("paralizacion", "bool", ("Paralización de trabajos", "Si se han paralizado trabajos"), ("Work stopped", "Whether any work was stopped"), required=False),
+    _f(
+        "libro_incidencias", "bool",
+        ("Anotado en el libro de incidencias", "Si se ha anotado en el libro de incidencias"),
+        ("Recorded in the site log", "Whether it was recorded in the site safety log"),
+        required=False,
+    ),
+    _f("observaciones", "str", ("Observaciones", "Lo demás que se ha visto, bien o mal"), ("Notes", "Anything else seen, good or bad"), required=False),
+    _f("proxima_visita", "date", ("Próxima visita", "Fecha de la próxima visita"), ("Next visit", "Date of the next visit"), required=False),
+    _PHOTOS,
+)
+
+
+def _safety_visit(w: _Writer, language: str) -> None:
+    es = language == "es"
+    w.line(("Obra" if es else "Site", "obra"))
+    w.line(("Promotor" if es else "Client", "promotor"))
+    w.line(("Fecha" if es else "Date", "fecha"), ("Coordinador/a" if es else "Inspector", "coordinador"))
+    w.line(("Fase de obra" if es else "Stage", "fase"))
+    w.section("Empresas presentes" if es else "Contractors on site")
+    w.bullets("empresas_presentes")
+    w.only_if("deficiencias")
+    w.section("Deficiencias detectadas" if es else "Issues found")
+    w.table("deficiencias", [
+        ("Deficiencia" if es else "Issue", "deficiencia"),
+        ("Empresa" if es else "Contractor", "empresa"),
+        ("Medida correctora" if es else "Corrective action", "medida"),
+        ("Plazo" if es else "Deadline", "plazo"),
+    ])
+    w.done()
+    w.section("Actuaciones" if es else "Actions")
+    w.line(("Paralización de trabajos" if es else "Work stopped", "paralizacion"))
+    w.line(("Anotado en el libro de incidencias" if es else "Recorded in the site log", "libro_incidencias"))
+    w.only_if("observaciones")
+    w.section("Observaciones" if es else "Notes")
+    w.text("observaciones")
+    w.done()
+    w.only_if("proxima_visita")
+    w.line(("Próxima visita" if es else "Next visit", "proxima_visita"))
+    w.done()
+    w.signatures("Coordinador/a de seguridad y salud" if es else "Inspector", "Recibí: jefe/a de obra" if es else "Received: site manager")
+    w.only_if("fotos")
+    w.section("Fotos" if es else "Photos")
+    w.photos("fotos")
+    w.done()
+
+
 STARTERS: dict[str, Starter] = {
     s.key: s
     for s in (
+        Starter(
+            "safety_visit",
+            {"es": "Visita de seguridad y salud", "en": "Site safety inspection"},
+            {"es": "Una visita de coordinación a una obra: empresas presentes, deficiencias con su responsable y plazo, paralizaciones.",
+             "en": "A safety inspection of a site: contractors on site, issues with who fixes them and by when, work stopped."},
+            {"es": "Un coordinador de seguridad y salud dicta la visita al salir de la obra. Cada deficiencia es una fila con "
+                   "su empresa responsable, la medida correctora y el plazo ('Inmediato' si debe corregirse ya, 'Corregido en "
+                   "el momento' si ya se corrigió). Los nombres de obras, empresas y personas van con sus mayúsculas aunque "
+                   "la transcripción los traiga en minúscula.",
+             "en": "A safety inspector dictates the visit when leaving the site. Each issue is a row with the contractor "
+                   "responsible, the corrective action and the deadline ('Immediate' if it must be fixed now, 'Fixed on the "
+                   "spot' if it already was). Names of sites, companies and people keep their capitals even when the "
+                   "transcript has them in lowercase."},
+            _SAFETY_VISIT_FIELDS,
+            _safety_visit,
+        ),
         Starter(
             "work_order",
             {"es": "Parte de trabajo", "en": "Work order"},
@@ -318,7 +407,7 @@ def build(key: str, language: str, path: str) -> dict[str, Any]:
     """Writes the starter's template to `path`; returns its field schema."""
     language = normalize_language(language)
     starter = STARTERS[key]
-    writer = _Writer(starter.name[language])
+    writer = _Writer(starter.name[language], a4=language == "es")
     starter.layout(writer, language)
     writer.document.save(path)
     return starter.field_schema(language)

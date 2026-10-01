@@ -20,6 +20,7 @@ useSeoMeta({
     <LandingTemplateFidelitySection />
     <LandingApprovalSection />
     <LandingOnboardingSection />
+    <LandingPricingSection />
     <LandingFaqSection />
     <LandingFinalCtaSection />
   </div>
