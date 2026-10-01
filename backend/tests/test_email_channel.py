@@ -20,7 +20,6 @@ def smtp(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     monkeypatch.setattr(settings, "SMTP_HOST", "smtp.test")
     monkeypatch.setattr(settings, "SMTP_FROM_ADDRESS", "informes@acme.test")
     monkeypatch.setattr(delivery.aiosmtplib, "send", send)
-    monkeypatch.setattr(notifications.aiosmtplib, "send", send)
     return send
 
 
@@ -77,3 +76,18 @@ async def test_the_inbound_message_id_is_the_dedupe_key_and_the_thread(smtp: Asy
 
     assert incoming.external_id == "<abc@mail.test>" and incoming.sender_label == "Ana Ruiz"
     assert incoming.meta == {"message_id": "<abc@mail.test>", "subject": "Visita de obra"}
+
+
+@pytest.mark.parametrize(
+    ("security", "use_tls", "start_tls"),
+    [("starttls", False, True), ("ssl", True, False), ("none", False, False)],
+)
+async def test_the_connection_is_secured_as_configured(
+    smtp: AsyncMock, monkeypatch: pytest.MonkeyPatch, security: str, use_tls: bool, start_tls: bool
+) -> None:
+    monkeypatch.setattr(settings, "SMTP_SECURITY", security)
+
+    await notifications.send_plain_email(to=["ana@acme.test"], subject="Hola", body="Prueba")
+
+    kwargs = smtp.await_args.kwargs
+    assert (kwargs["use_tls"], kwargs["start_tls"]) == (use_tls, start_tls)
