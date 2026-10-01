@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ReportFilters } from '~/types'
 
-definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app', titleKey: 'admin.layout.nav.reports' })
+definePageMeta({ middleware: ['auth', 'require-tenant-member'], layout: 'app', titleKey: 'admin.layout.nav.reports' })
 
 const { t } = useI18n()
 const route = useRoute()
