@@ -64,5 +64,10 @@ export function useDocumentTypes() {
     })
   }
 
-  return { items, total, loading, error, fetchList, create, update, getById, listTemplates, uploadTemplate }
+  async function downloadTemplate(documentTypeId: string, template: DocumentTemplate): Promise<void> {
+    const blob = await useApi()<Blob>(`/document-types/${documentTypeId}/templates/${template.id}/download`, { responseType: 'blob' })
+    saveBlob(blob, template.original_filename || 'template.docx')
+  }
+
+  return { items, total, loading, error, fetchList, create, update, getById, listTemplates, uploadTemplate, downloadTemplate }
 }

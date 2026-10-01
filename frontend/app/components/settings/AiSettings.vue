@@ -58,7 +58,7 @@ async function check(what: 'ai' | 'voice') {
       body: what === 'ai' ? { extraction: body.extraction } : { transcription: body.transcription }
     })
   } catch (err) {
-    target.value = { ok: false, reason: null, detail: errorText(err, t('admin.settings.checkFailed')) }
+    target.value = failedCheck(err, t('admin.settings.checkFailed'))
   } finally {
     checking.value = null
   }

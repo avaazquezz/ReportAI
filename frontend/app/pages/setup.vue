@@ -33,6 +33,12 @@ const company = reactive({
   language: (locale.value === 'en' ? 'en' : 'es') as 'es' | 'en',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Madrid'
 })
+// The bot speaks the panel's language unless chosen here: switching the panel to Spanish on
+// step 1 must not leave the company in English.
+const languageChosen = ref(false)
+watch(locale, (value) => {
+  if (!languageChosen.value) company.language = value === 'en' ? 'en' : 'es'
+})
 const admin = reactive({ full_name: '', email: '', password: '', confirm: '' })
 const minLength = (v: string) => (v ?? '').length >= 8 || t('setup.validation.password')
 const sameAsPassword = (v: string) => v === admin.password || t('setup.validation.confirm')
@@ -77,7 +83,7 @@ async function check(what: 'ai' | 'voice') {
       }
     })
   } catch (err) {
-    target.value = { ok: false, reason: null, detail: apiError(err, t('setup.errors.check')) }
+    target.value = failedCheck(err, t('setup.errors.check'))
   } finally {
     checking.value = null
   }
@@ -102,7 +108,7 @@ async function checkEmail() {
       body: { code: code.value, to: admin.email, settings: smtp }
     })
   } catch (err) {
-    emailCheck.value = { ok: false, reason: null, detail: apiError(err, t('setup.errors.check')) }
+    emailCheck.value = failedCheck(err, t('setup.errors.check'))
   } finally {
     checking.value = null
   }
@@ -223,6 +229,7 @@ async function finish() {
             :label="t('setup.company.language')"
             :hint="t('setup.company.languageHint')"
             persistent-hint
+            @update:model-value="languageChosen = true"
           />
           <v-autocomplete v-model="company.timezone" :items="timezones" :label="t('setup.company.timezone')" :rules="[required]" />
         </div>

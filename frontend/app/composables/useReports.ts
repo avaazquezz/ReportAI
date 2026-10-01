@@ -52,6 +52,8 @@ export function useReports() {
   const reject = (id: string, reason: string | null) =>
     api<ReportDetail>(`/reports/${id}/reject`, { method: 'POST', body: { reason } })
 
+  const retry = (id: string) => api<ReportDetail>(`/reports/${id}/retry`, { method: 'POST' })
+
   const editFields = (id: string, fields: Record<string, unknown>) =>
     api<ReportDetail>(`/reports/${id}/fields`, { method: 'PATCH', body: { fields } })
 
@@ -64,5 +66,5 @@ export function useReports() {
   // Audio, photos and the PDF need the bearer token, so they are fetched, not linked.
   const fetchBlob = (url: string) => api<Blob>(url, { responseType: 'blob' })
 
-  return { items, total, loading, error, fetchList, exportCsv, getById, approve, reject, editFields, preview, resend, fetchBlob }
+  return { items, total, loading, error, fetchList, exportCsv, getById, approve, reject, retry, editFields, preview, resend, fetchBlob }
 }

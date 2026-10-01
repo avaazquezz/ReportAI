@@ -52,9 +52,22 @@ function reset() {
 }
 
 // ── The map: each value in its context, and where tables and lists go ────────────────────
-function context(blockId: string, text: string): [string, string, string] {
+// Where applying will put each value: they replace one after another, each the first match still
+// left in its paragraph — so two identical blanks ("____") on one line go to their own fields.
+const positions = computed(() => {
+  const left: Record<string, string> = {}
+  return (proposal.value?.values ?? []).map(({ block_id: blockId, text }) => {
+    const whole = left[blockId] ?? draft.value?.blocks[blockId] ?? ''
+    const at = text ? whole.indexOf(text) : -1
+    if (at >= 0) left[blockId] = whole.slice(0, at) + '\u0000'.repeat(text.length) + whole.slice(at + text.length)
+    return at
+  })
+})
+
+function context(index: number): [string, string, string] {
+  const { block_id: blockId, text } = proposal.value!.values[index]!
   const whole = draft.value?.blocks[blockId] ?? ''
-  const at = whole.indexOf(text)
+  const at = positions.value[index] ?? -1
   if (at < 0) return [whole, '', '']
   const before = whole.slice(Math.max(0, at - 40), at)
   return [(at > 40 ? '…' : '') + before, text, whole.slice(at + text.length, at + text.length + 40)]
@@ -216,9 +229,9 @@ onBeforeUnmount(forgetPreview)
           <tbody>
             <tr v-for="(value, i) in proposal.values" :key="`v${i}`">
               <td class="py-2">
-                <span class="text-ink-900/60">{{ context(value.block_id, value.text)[0] }}</span>
-                <mark class="rounded bg-capture-100 px-1">{{ context(value.block_id, value.text)[1] }}</mark>
-                <span class="text-ink-900/60">{{ context(value.block_id, value.text)[2] }}</span>
+                <span class="text-ink-900/60">{{ context(i)[0] }}</span>
+                <mark class="rounded bg-capture-100 px-1">{{ context(i)[1] }}</mark>
+                <span class="text-ink-900/60">{{ context(i)[2] }}</span>
               </td>
               <td class="w-56">
                 <v-select v-model="value.field" :items="fieldsOfKind('value')" density="compact" variant="plain" hide-details :aria-label="t('admin.assistant.field')" />
