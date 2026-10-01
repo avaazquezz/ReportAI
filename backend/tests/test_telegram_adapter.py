@@ -74,3 +74,31 @@ def test_buttons_become_one_row_when_short_and_a_column_when_long() -> None:
     assert keyboard is not None and len(keyboard["inline_keyboard"]) == 2
     assert keyboard["inline_keyboard"][0][0]["callback_data"] == "doctype:abc"
     assert TelegramAdapter._keyboard(OutgoingMessage(recipient_id="42", text="x")) is None
+
+
+async def test_a_failed_send_never_carries_the_bot_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    import traceback
+
+    import httpx
+
+    from app.services.agent.tools import retry
+    from app.services.channels import telegram
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"ok": False, "description": "Forbidden: bot was blocked by the user"})
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(telegram.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+
+    async def no_sleep(_seconds: float) -> None:
+        return None
+
+    monkeypatch.setattr(retry.asyncio, "sleep", no_sleep)
+    adapter = TelegramAdapter(bot_token="555:VERY-SECRET", channel_connection_id=uuid.uuid4())
+
+    with pytest.raises(ChannelAdapterError) as failed:
+        await adapter.send_message(OutgoingMessage(recipient_id="42", text="hola"))
+
+    logged = "".join(traceback.format_exception(failed.value))  # what logger.exception would write
+    assert "bot was blocked" in str(failed.value)
+    assert "555:VERY-SECRET" not in logged
