@@ -24,6 +24,7 @@ from app.schemas.document_type import (
     DocumentTypeUpdateRequest,
     FieldSchemaEntry,
 )
+from app.services.branding import TEMPLATE_VARIABLE
 
 router = APIRouter(prefix="/document-types", tags=["admin:document-types"])
 logger = logging.getLogger(__name__)
@@ -136,7 +137,7 @@ async def upload_template(
         dest.unlink(missing_ok=True)
         raise ValidationException("The uploaded file isn't a valid .docx template") from exc
 
-    unknown_tags = used_tags - set(doc_type.field_schema.keys())
+    unknown_tags = used_tags - set(doc_type.field_schema.keys()) - {TEMPLATE_VARIABLE}
     if unknown_tags:
         dest.unlink(missing_ok=True)
         raise ValidationException(
