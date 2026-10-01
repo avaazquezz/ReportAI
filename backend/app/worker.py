@@ -29,6 +29,7 @@ from app.services.channels.telegram_updates import (
 )
 from app.services.jobs.queue import claim_next, fail_abandoned
 from app.services.jobs.runner import give_up, process
+from app.services.templates.assistant import drop_expired_drafts
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ async def maintenance() -> None:
         logger.info("Cancelled %s reports that waited too long for an answer", cancelled)
     await drop_finished_checkpoints()
     await drop_expired_refresh_tokens()
+    await asyncio.to_thread(drop_expired_drafts)
 
 
 async def main() -> None:

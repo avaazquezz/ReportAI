@@ -12,6 +12,7 @@ from app.api.admin import document_types as admin_document_types
 from app.api.admin import instance_settings as admin_instance_settings
 from app.api.admin import reports as admin_reports
 from app.api.admin import team as admin_team
+from app.api.admin import template_assistant as admin_template_assistant
 from app.api.admin import tenants as admin_tenants
 from app.api.admin import usage as admin_usage
 from app.api.webhooks import email as email_webhook
@@ -71,6 +72,7 @@ app.include_router(admin_usage.router)
 app.include_router(admin_instance_settings.router)
 app.include_router(admin_team.router)
 app.include_router(admin_company.router)
+app.include_router(admin_template_assistant.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)
