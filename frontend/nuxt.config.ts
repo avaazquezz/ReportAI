@@ -14,6 +14,10 @@ export default defineNuxtConfig({
     apiBaseServer: process.env.NUXT_API_BASE_SERVER || '',
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000',
+      // Session cookies are Secure (HTTPS only). An installation reached over plain HTTP — by its
+      // IP on a private network, without a domain — sets NUXT_PUBLIC_SECURE_COOKIES=false, or the
+      // browser would drop them and nobody could sign in.
+      secureCookies: true,
       // Identity published on /aviso-legal (LSSI art. 10). Set per deployment through
       // NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS; the page flags whatever is missing.
       legalName: '',
