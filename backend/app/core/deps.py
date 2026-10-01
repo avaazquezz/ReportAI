@@ -42,6 +42,8 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise AuthenticationException("User not found or inactive")
+    if payload.get("ver", 0) != user.token_version:
+        raise AuthenticationException("Session ended, please sign in again")
 
     # One guard at the single auth entry point: the public demo account can look at
     # everything and change nothing (a writable demo tenant would let any visitor

@@ -131,3 +131,23 @@ async def test_issuing_new_token_invalidates_previous_outstanding_tokens(
         "/auth/reset-password", json={"token": second_token, "new_password": "new-password-123"}
     )
     assert fresh_response.status_code == 200
+
+
+async def test_resetting_the_password_ends_every_open_session(client: AsyncClient, db: AsyncSession) -> None:
+    user = await _create_user(db)
+    old = (await client.post("/auth/login", json={"email": user.email, "password": "original-password"})).json()
+    raw_token = await tokens_module.issue_reset_token(db, user.id)
+    await db.commit()
+
+    reset = await client.post("/auth/reset-password", json={"token": raw_token, "new_password": "new-password-123"})
+    assert reset.status_code == 200
+
+    me = await client.get("/auth/me", headers={"Authorization": f"Bearer {old['access_token']}"})
+    assert me.status_code == 401
+    refreshed = await client.post("/auth/refresh", json={"refresh_token": old["refresh_token"]})
+    assert refreshed.status_code == 401
+
+    new = (await client.post("/auth/login", json={"email": user.email, "password": "new-password-123"})).json()
+    me = await client.get("/auth/me", headers={"Authorization": f"Bearer {new['access_token']}"})
+    assert me.status_code == 200
+    assert (await client.post("/auth/refresh", json={"refresh_token": new["refresh_token"]})).status_code == 200
