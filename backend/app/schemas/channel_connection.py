@@ -18,6 +18,15 @@ REQUIRED_CREDENTIAL_KEYS: dict[str, set[str]] = {
 }
 
 
+# The credential a shared webhook routes on (channel_connections.routing_key).
+ROUTING_CREDENTIAL: dict[str, str] = {"whatsapp": "phone_number_id", "email": "inbound_slug"}
+
+
+def routing_key_for(channel_type: str, credentials: dict[str, str]) -> str | None:
+    key = ROUTING_CREDENTIAL.get(channel_type)
+    return credentials.get(key) if key else None
+
+
 class ChannelConnectionCreateRequest(BaseModel):
     channel_type: ChannelType
     display_name: str = Field(min_length=1, max_length=255)
