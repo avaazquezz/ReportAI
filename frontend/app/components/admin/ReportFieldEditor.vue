@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { ColumnType, FieldSchemaEntry, FieldValue } from '~/types'
+import type { ColumnType, FieldEvidence, FieldSchemaEntry, FieldValue } from '~/types'
 
 const props = defineProps<{
   schema: Record<string, FieldSchemaEntry>
-  evidence?: Record<string, string> | null
+  evidence?: Record<string, FieldEvidence> | null
   readonly?: boolean
 }>()
 const values = defineModel<Record<string, FieldValue>>({ required: true })
@@ -210,9 +210,12 @@ function removeRow(name: string, index: number) {
         @update:model-value="setField(name, scalar(spec.type as ColumnType, $event))"
       />
 
-      <p v-if="evidence?.[name]" class="mt-1 font-body text-xs text-ink-900/70">
+      <p v-if="evidence?.[name]?.quote" class="mt-1 font-body text-xs text-ink-900/70">
         <v-icon icon="mdi-format-quote-open" size="x-small" aria-hidden="true" />
-        {{ t('admin.reportFields.evidence', { quote: evidence[name] }) }}
+        {{ t('admin.reportFields.evidence', { quote: evidence[name].quote }) }}
+        <span v-if="!evidence[name].verified" class="ml-1 font-medium text-pending-700">
+          {{ t('admin.reportFields.unverified') }}
+        </span>
       </p>
     </div>
   </div>

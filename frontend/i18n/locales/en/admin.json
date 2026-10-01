@@ -334,7 +334,8 @@
       "addRow": "Add row",
       "removeRow": "Remove row",
       "emptyTable": "No rows.",
-      "evidence": "“{quote}”"
+      "evidence": "“{quote}”",
+      "unverified": "(not found word for word in the message: check it)"
     }
   }
 }
