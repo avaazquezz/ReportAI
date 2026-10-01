@@ -59,6 +59,7 @@ class ChannelConnectionResponse(BaseModel):
     channel_type: str
     display_name: str
     has_credentials: bool
+    bot_username: str | None = None  # Telegram: the bot people write to, @username
     allowed_senders: list[str]
     is_active: bool
     created_at: datetime
@@ -72,6 +73,7 @@ class ChannelConnectionResponse(BaseModel):
             channel_type=connection.channel_type,
             display_name=connection.display_name,
             has_credentials=bool(connection.credentials),
+            bot_username=connection.credentials.get("bot_username"),
             allowed_senders=connection.allowed_senders,
             is_active=connection.is_active,
             created_at=connection.created_at,
