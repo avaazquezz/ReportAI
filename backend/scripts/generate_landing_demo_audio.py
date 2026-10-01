@@ -1,6 +1,5 @@
-"""One-off generator for the landing demo's input voice note, via OpenAI TTS —
-replaces the earlier Higgsfield-generated audio (credit-constrained, out of scope
-for a recurring tool). NOT wired into the Makefile.
+"""One-off generator for the landing demo's input voice note — a site safety inspection
+dictated by a (synthetic, OpenAI TTS) voice; the landing says so. NOT wired into the Makefile.
 
 Reads OPENAI_API_KEY from the environment directly (not app.core.config.settings —
 this key belongs to this content-generation tool, not the production pipeline).
@@ -19,49 +18,50 @@ from pathlib import Path
 from openai import OpenAI
 
 ES_SCRIPT_TEXT = (
-    "Hola, buenas tardes, soy Javier Molina. Hoy dieciocho de agosto acabo de terminar "
-    "la reunión con Construcciones Marítimas del Levante, en sus oficinas de Alicante. "
-    "Han asistido Marta Delgado, la directora de compras, Óscar Ferreira, del "
-    "departamento técnico, y Laura Sanz, responsable de logística. Hemos repasado tres "
-    "puntos: primero, el pedido trimestral, que sube un quince por ciento a partir de "
-    "octubre; segundo, la ampliación del contrato de mantenimiento a dos años; y "
-    "tercero, el cambio de proveedor de transporte para las entregas del sur. Se ha "
-    "decidido aceptar el incremento de volumen reduciendo el plazo de entrega a dos "
-    "semanas, y renovar el contrato de mantenimiento con las condiciones actuales. Como "
-    "acciones: yo, Javier Molina, debo enviar la propuesta actualizada a Marta antes "
-    "del viernes veintiuno de agosto; Óscar confirmará la disponibilidad de almacén el "
-    "lunes veinticuatro de agosto; y Laura tiene que contactar con el nuevo "
-    "transportista antes de fin de mes. Quedamos en vernos otra vez el quince de "
-    "septiembre para cerrar el tema del transporte. En general, muy buena reunión."
+    "Hola, soy Lucía Ferrer. Acabo de salir de la visita de coordinación en la obra "
+    "Residencial Las Acacias, en la calle Mayor catorce de Paterna; el promotor es "
+    "Inmobiliaria Mediterránea. Hoy es jueves, uno de octubre. La obra está en estructura, "
+    "con el forjado de la planta tercera. Estaban trabajando Construcciones Albufera, "
+    "que es la contrata principal, Estructuras Levante con el encofrado, Montajes Soler "
+    "con el andamio y Grúas Martínez con la grúa torre. He visto tres cosas. Primero, en "
+    "el forjado de tercera falta la barandilla del borde norte, unos diez metros: es de "
+    "Estructuras Levante y la tienen que poner antes de seguir trabajando en esa zona, o "
+    "sea, inmediato. Segundo, dos operarios de Montajes Soler estaban sin casco debajo de "
+    "la grúa; se ha corregido en el momento, pero lo dejo anotado. Y tercero, el cuadro "
+    "eléctrico de obra tiene la puerta rota y no cierra; eso es de Construcciones "
+    "Albufera y hay que cambiarlo antes del viernes nueve. He paralizado los trabajos en "
+    "el borde norte hasta que pongan la barandilla, y lo he anotado en el libro de "
+    "incidencias. Por lo demás, orden y limpieza bien y los accesos señalizados. La "
+    "próxima visita, el jueves ocho de octubre."
 )
 
 ES_INSTRUCTIONS = (
-    "Warm, natural business voice, Spanish from Spain. Sounds like a real voice memo "
-    "dictated right after leaving a client meeting, not a script being read aloud — "
-    "conversational pace, slight informality, not overly polished."
+    "Natural female voice, Spanish from Spain. A construction health and safety coordinator "
+    "dictating a voice memo right after leaving a building site: conversational pace, "
+    "slight informality, confident, not a script being read aloud."
 )
 
 EN_SCRIPT_TEXT = (
-    "Hi, good afternoon, this is James Whitfield. Today, August eighteenth, I just "
-    "wrapped up the meeting with Harbor Point Industrial Supply, at their offices in "
-    "Savannah, Georgia. In attendance were Sarah Mitchell, VP of Procurement, Marcus "
-    "Reed from the technical department, and Emily Chen, who handles logistics. We "
-    "went over three items: first, the quarterly order, which is going up fifteen "
-    "percent starting in October; second, extending the maintenance contract to two "
-    "years; and third, changing the freight carrier for deliveries to the southern "
-    "region. We agreed to accept the volume increase by cutting the delivery window "
-    "down to two weeks, and to renew the maintenance contract on the current terms. "
-    "As for next steps: I, James Whitfield, need to send the updated proposal to "
-    "Sarah by Friday, August twenty-first; Marcus will confirm warehouse availability "
-    "on Monday, August twenty-fourth; and Emily has to reach out to the new carrier "
-    "before the end of the month. We're set to meet again on September fifteenth to "
-    "close out the transport piece. Overall, a really good meeting."
+    "Hi, this is Dana Brooks. I just finished the safety inspection at Maple Ridge "
+    "Apartments, phase two, 140 Oak Street in Riverside; the client is Northgate "
+    "Developments. Today is Thursday, October first. The job is at the structure stage, "
+    "they're forming the third-floor deck. On site were Harbor Build, the general "
+    "contractor, Summit Concrete doing the formwork, Iron Line Rebar on the rebar, and "
+    "Apex Crane running the tower crane. I found three issues. First, the edge protection "
+    "is missing on the north side of the third-floor deck, about thirty feet. That's "
+    "Summit Concrete, and it has to go up before anyone works in that area, so "
+    "immediately. Second, two Iron Line workers had no hard hats under the crane; that was "
+    "fixed on the spot, but I'm logging it. Third, the site electrical panel has a broken "
+    "door that won't close; that's on Harbor Build, and it needs replacing by Friday the "
+    "ninth. I stopped work on the north edge until the guardrail is in, and I recorded it "
+    "in the site log. Otherwise, housekeeping is good and access routes are signed. Next "
+    "inspection is Thursday, October eighth."
 )
 
 EN_INSTRUCTIONS = (
-    "Warm, natural business voice, American English. Sounds like a real voice memo "
-    "dictated right after leaving a client meeting, not a script being read aloud — "
-    "conversational pace, slight informality, not overly polished."
+    "Natural female voice, American English. A construction site safety inspector "
+    "dictating a voice memo right after leaving a building site: conversational pace, "
+    "slight informality, confident, not a script being read aloud."
 )
 
 
@@ -81,7 +81,7 @@ def main() -> None:
     client = OpenAI(api_key=api_key)
     with client.audio.speech.with_streaming_response.create(
         model="gpt-4o-mini-tts",
-        voice="alloy",
+        voice="coral",
         input=script_text,
         instructions=instructions,
         response_format="mp3",

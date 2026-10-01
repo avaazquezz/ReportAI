@@ -2,8 +2,8 @@
 const { t } = useI18n()
 
 const STEPS = ['tell', 'configure', 'first'] as const
-// Everything a tenant admin manages in the panel today — see PROJECT_ROADMAP.md Phase 2.
-const PANEL = ['templates', 'channels', 'recipients', 'history', 'usage'] as const
+// What a company's admin manages in its panel.
+const PANEL = ['templates', 'channels', 'recipients', 'history', 'team'] as const
 
 const root = ref<HTMLElement | null>(null)
 useSectionMotion(root, (tl) => {

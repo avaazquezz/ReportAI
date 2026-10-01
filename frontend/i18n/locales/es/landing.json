@@ -1,84 +1,86 @@
 {
   "landing": {
     "seo": {
-      "title": "ReportAI — Del audio al informe, sin tocar una plantilla",
-      "description": "Manda una nota de voz por Telegram, WhatsApp o email y recibe el acta o el informe de visita rellenado en la plantilla Word de tu empresa. Con revisión humana antes de enviar."
+      "title": "ReportAI — El informe de visita de obra, dictado por voz",
+      "description": "Para coordinadores de seguridad y salud y técnicos de PRL: dicta la visita al salir de la obra por Telegram y recibe el informe en tu plantilla Word, con deficiencias, responsables y plazos. En tu propio servidor."
     },
     "header": {
       "nav": {
-        "realExample": "Ejemplo real",
+        "realExample": "Ejemplo",
         "howItWorks": "Cómo funciona",
-        "difference": "La diferencia",
+        "pricing": "Precios",
         "faq": "Preguntas"
       },
       "openMenu": "Abrir menú",
       "closeMenu": "Cerrar menú"
     },
     "cta": {
-      "becomeClient": "Quiero ser cliente",
-      "mailSubject": "Quiero ser cliente de ReportAI",
-      "listenExample": "Escuchar el ejemplo real"
+      "becomeClient": "Quiero probarlo",
+      "mailSubject": "Quiero probar ReportAI con mi plantilla",
+      "listenExample": "Escuchar el ejemplo"
     },
     "hero": {
-      "placeholderTag": "tu_informe",
-      "headlineLine1": "Manda una nota de voz.",
-      "headlineLine2": "Recibe el acta.",
-      "subheadline": "ReportAI transcribe lo que cuentas, rellena la plantilla Word que tu empresa ya usa y entrega el documento a quien corresponde. Por Telegram, WhatsApp o email.",
-      "note": "Sin app nueva, sin videollamada, sin plantillas genéricas.",
+      "placeholderTag": "informe_de_visita",
+      "eyebrow": "Para coordinadores de seguridad y salud y técnicos de PRL",
+      "headlineLine1": "Dicta la visita de obra.",
+      "headlineLine2": "Recibe el informe.",
+      "subheadline": "Al salir de la obra mandas un audio por Telegram. ReportAI rellena tu plantilla Word con las empresas presentes, las deficiencias, quién las corrige y en qué plazo, y la envía a la contrata y al promotor cuando la apruebas.",
+      "note": "Se instala en tu servidor: los audios y los informes se quedan contigo.",
       "replay": "Ver otra vez",
       "stage": {
-        "voiceDuration": "0:47",
+        "voiceDuration": "1:19",
         "transcribing": "Transcribiendo…",
-        "extracting": "Extrayendo campos…",
+        "extracting": "Rellenando la plantilla…",
         "draftReady": "Borrador listo para revisar",
         "approve": "✓ Aprobar",
-        "sent": "Enviado a Marta Delgado",
-        "docTitle": "ACTA DE REUNIÓN",
-        "company": "Construcciones Marítimas del Levante",
+        "sent": "Enviado a contrata y promotor",
+        "filename": "visita_las_acacias.pdf",
+        "docTitle": "VISITA DE SEGURIDAD Y SALUD",
+        "company": "Residencial Las Acacias · Paterna",
         "dateLabel": "Fecha:",
-        "placeLabel": "Lugar:",
-        "attendeesLabel": "Asistentes",
-        "decisionsLabel": "Decisiones adoptadas",
+        "stageLabel": "Fase:",
+        "companiesLabel": "Empresas presentes",
+        "issueLabel": "Deficiencias detectadas",
         "tags": {
           "date": "fecha",
-          "place": "lugar",
-          "attendee1": "asistentes[0]",
-          "attendee2": "asistentes[1]",
-          "attendee3": "asistentes[2]",
-          "decision": "decisiones[0]"
+          "stage": "fase",
+          "company1": "empresas_presentes[0]",
+          "company2": "empresas_presentes[1]",
+          "company3": "empresas_presentes[2]",
+          "issue": "deficiencias[0]"
         },
         "values": {
-          "date": "18/08/2025",
-          "place": "Alicante",
-          "attendee1": "Marta Delgado — Directora de Compras",
-          "attendee2": "Oscar Ferreira — Departamento Técnico",
-          "attendee3": "Laura Sanz — Responsable de Logística",
-          "decision": "Aceptar el incremento del pedido trimestral (+15 %) reduciendo el plazo de entrega a dos semanas."
+          "date": "01/10/2026",
+          "stage": "Estructura",
+          "company1": "Construcciones Albufera (contrata principal)",
+          "company2": "Estructuras Levante (encofrado)",
+          "company3": "Montajes Soler (andamio)",
+          "issue": "Falta la barandilla del borde norte del forjado de tercera. Estructuras Levante · Inmediato."
         },
         "stamp": "APROBADO"
       }
     },
     "facts": {
-      "noApp": {
-        "title": "Sin app que instalar",
-        "body": "Funciona dentro de Telegram, WhatsApp o el correo que ya usa tu equipo."
+      "handsFree": {
+        "title": "Manos libres",
+        "body": "Dictas al salir de la obra. Ni formularios en el móvil ni Word por la noche."
       },
       "yourTemplate": {
         "title": "Tu plantilla, tal cual",
-        "body": "Subes tu .docx y se rellena con tu formato, tu logo y tus apartados."
+        "body": "Tu Word con tu logo y tus apartados. Si no tienes, empiezas con la nuestra."
       },
       "approval": {
         "title": "Nada sale sin tu visto bueno",
-        "body": "El borrador llega antes de enviarse. Apruebas o corriges con una respuesta."
+        "body": "El borrador llega al chat. Apruebas o corriges respondiendo."
       },
-      "realExample": {
-        "title": "Ejemplo real más abajo",
-        "body": "Audio, transcripción y documento generados por el sistema, sin editar."
+      "ownServer": {
+        "title": "En tu servidor",
+        "body": "Tus datos no pasan por un servicio compartido. La IA, la del proveedor que elijas."
       }
     },
     "realDemo": {
       "heading": "Esto no es una maqueta.",
-      "paragraph": "Una nota de voz real, transcrita, extraída y rellenada en la plantilla por el propio sistema. No se ha retocado nada después. Dale a play y mira cómo aparece.",
+      "paragraph": "Una visita de obra dictada y pasada por el sistema real: transcripción, extracción y relleno de la plantilla. No se ha retocado nada después, ni siquiera las erratas de la transcripción. Dale a play.",
       "play": "Reproducir",
       "pause": "Pausar",
       "seek": "Posición del audio",
@@ -86,192 +88,264 @@
       "playPlaceholder": "La transcripción aparece aquí, al ritmo del audio.",
       "fieldsLabel": "Campos extraídos",
       "documentLabel": "Documento generado",
-      "pageMeta": "1 página · PDF desde tu plantilla .docx",
+      "pageMeta": "1 página A4 · plantilla «Visita de seguridad y salud»",
       "downloadPdf": "Descargar el PDF",
-      "pageAlt": "Acta de reunión generada por ReportAI a partir de la nota de voz",
-      "note": ""
+      "pageAlt": "Informe de visita de seguridad y salud generado por ReportAI a partir de la nota de voz",
+      "note": "La voz es sintética y la obra, las empresas y las personas son ficticias. Lo demás es la salida real del sistema, que costó menos de 3 céntimos de IA."
     },
     "howItWorks": {
-      "heading": "De la nota de voz al acta entregada.",
-      "sub": "Cinco pasos. Tú haces dos: grabar y aprobar.",
+      "heading": "Del audio al informe entregado.",
+      "sub": "Cinco pasos. Tú haces dos: dictar y aprobar.",
       "you": "Tú",
       "system": "ReportAI",
       "steps": {
         "record": {
           "artifact": "nota_de_voz.ogg",
-          "title": "Grabas una nota de voz",
-          "body": "En el coche, en el pasillo, nada más colgar. En el chat que ya tienes abierto."
+          "title": "Dictas la visita",
+          "body": "Al salir de la obra, en el coche o en la caseta. En Telegram, como un audio más, con las fotos si quieres."
         },
         "transcribe": {
           "artifact": "transcripcion.txt",
           "title": "Se transcribe",
-          "body": "El audio se convierte en texto en segundos, en español o en inglés."
+          "body": "En segundos, en español o en inglés, con el servicio de voz que elijas."
         },
         "extract": {
           "artifact": "campos.json",
-          "title": "Se extraen los datos",
-          "body": "Fecha, asistentes, acuerdos, acciones: exactamente los campos de tu documento, validados contra su esquema."
+          "title": "Se rellenan los campos",
+          "body": "Obra, empresas, deficiencias con responsable y plazo: los apartados de tu plantilla. Si falta un dato obligatorio, te lo pregunta."
         },
         "approve": {
           "artifact": "aprobado ✓",
           "title": "Lo apruebas",
-          "body": "Revisas el borrador en el chat y confirmas, o pides una corrección puntual."
+          "body": "Revisas el borrador en el chat y confirmas, o corriges respondiendo con un audio o un texto."
         },
         "deliver": {
-          "artifact": "acta_reunion.pdf",
+          "artifact": "visita_las_acacias.pdf",
           "title": "Se entrega",
-          "body": "Tu plantilla .docx rellenada, convertida a PDF y enviada a quien corresponde."
+          "body": "Tu plantilla en PDF, por email a la contrata, al promotor o a quien hayas configurado, y guardada en el historial."
         }
       }
     },
     "useCases": {
-      "heading": "Para el equipo que está en la calle, no en la sala de reuniones.",
-      "sub": "Cualquier documento que tenga siempre los mismos apartados se puede dictar.",
-      "fieldsLabel": "campos típicos",
+      "heading": "Hecho para quien pisa la obra, no la oficina.",
+      "sub": "Empieza por la visita de seguridad y salud. Cualquier documento con apartados fijos se dicta igual.",
+      "fieldsLabel": "campos",
       "items": {
-        "minutes": {
-          "title": "Actas de reunión",
-          "body": "Reuniones con clientes, proveedores o el propio equipo. Asistentes, orden del día, decisiones y acciones con responsable, en tu formato.",
-          "fields": "fecha · asistentes · orden_del_día · decisiones · acciones"
+        "safetyVisit": {
+          "title": "Visitas de coordinación de seguridad y salud",
+          "body": "Empresas presentes, deficiencias con su empresa responsable, medida correctora y plazo, paralizaciones y anotación en el libro de incidencias. Viene como plantilla de inicio.",
+          "fields": "obra · empresas_presentes · deficiencias · paralizacion · proxima_visita"
         },
-        "visit": {
-          "title": "Informes de visita comercial",
-          "body": "El comercial dicta la visita desde el coche. El informe llega al responsable antes de que él llegue a la oficina.",
-          "fields": "cliente · contacto · situación · siguiente_paso · fecha_seguimiento"
+        "incident": {
+          "title": "Incidentes y accidentes",
+          "body": "Qué ha pasado, dónde, cómo de grave y qué se ha hecho ya. Dictado en caliente y revisado con calma. También viene como plantilla de inicio.",
+          "fields": "fecha · lugar · descripcion · gravedad · acciones"
         },
         "custom": {
-          "title": "Cualquier informe con campos fijos",
-          "body": "Partes de intervención, informes técnicos, resúmenes de llamada. Se configura como un tipo de documento más desde el panel, sin código.",
+          "title": "Lo que hoy rellenas a mano",
+          "body": "Actas de reunión de coordinación, listas de comprobación, partes de trabajo. Subes tu Word y el asistente propone los campos.",
           "fields": "los que tenga tu plantilla"
         }
       }
     },
     "differentiator": {
-      "heading": "No es un bot que se cuela en tu videollamada.",
-      "paragraph": "Otter, Fireflies o Fathom necesitan una videollamada programada con un enlace. La mayoría de tus visitas comerciales y llamadas no lo tienen. ReportAI funciona con una nota de voz grabada después y la convierte en el documento con el formato exacto que tu empresa ya usa.",
+      "heading": "El informe ya no se escribe por la noche.",
+      "paragraph": "Hoy la visita son notas en la libreta y fotos en el móvil, y el informe se pasa a Word al acabar el día. Con ReportAI queda listo antes de llegar al coche.",
       "table": {
-        "caption": "Bots de reunión frente a ReportAI",
-        "feature": "Qué necesitas",
-        "bots": "Bots de reunión",
-        "botsSub": "Otter, Fireflies, Fathom",
-        "reportai": "ReportAI",
-        "yes": "Sí",
-        "no": "No",
+        "caption": "Cómo se hace hoy frente a cómo se hace con ReportAI",
+        "before": "Hoy",
+        "after": "Con ReportAI",
         "rows": {
-          "noCall": "Funciona sin videollamada ni enlace",
-          "afterVisit": "Pensado para visitas presenciales y llamadas",
-          "ownTemplate": "Rellena tu propia plantilla Word",
-          "chat": "Se usa desde el chat que ya tienes",
-          "approval": "Nada se entrega sin aprobación humana"
+          "notes": {
+            "before": "Notas en la libreta y fotos sueltas",
+            "after": "Un audio al salir, con las fotos en el mismo chat"
+          },
+          "word": {
+            "before": "Pasarlo a Word por la noche",
+            "after": "El borrador llega al chat en un par de minutos"
+          },
+          "missing": {
+            "before": "Se olvida el plazo o el responsable de una medida",
+            "after": "Si falta un dato obligatorio, el bot lo pregunta"
+          },
+          "send": {
+            "before": "Reenviar el PDF a la contrata y al promotor",
+            "after": "Se envía solo a quien toca en cada tipo de informe"
+          },
+          "find": {
+            "before": "Buscar en el correo qué se vio hace un mes",
+            "after": "Historial con búsqueda, el audio y la transcripción"
+          }
         }
       },
-      "kicker": "Nada de esto hace falta. Solo una nota de voz."
+      "kicker": "Lo único nuevo en tu día: un audio de un minuto."
     },
     "templateFidelity": {
       "heading": "Tu plantilla, no la nuestra.",
-      "paragraph": "Subes el .docx que ya usáis en la empresa. ReportAI rellena esos mismos campos, con ese mismo formato. Nada de un PDF genérico con vuestro logo pegado encima.",
-      "check": "Antes de activar una plantilla, el panel comprueba que los campos que contiene coinciden con los del tipo de documento. Si falta uno, te lo dice.",
-      "filename": "acta_reunion.docx",
-      "docTitle": "ACTA DE REUNIÓN",
+      "paragraph": "Subes el Word que ya usas, con tu logo y tu formato. El asistente lo lee, propone qué campos tiene y dónde va cada uno; tú lo corriges, lo ves en PDF con datos de ejemplo y lo activas. Nada de un PDF genérico con tu logo pegado encima.",
+      "check": "¿No tienes plantilla? Empiezas con la de visita de seguridad y salud, ya con tu logo, y la ajustas en Word.",
+      "filename": "visita_obra.docx",
+      "docTitle": "VISITA DE SEGURIDAD Y SALUD",
       "labels": {
         "date": "Fecha:",
-        "place": "Lugar:",
-        "attendees": "Asistentes",
-        "summary": "Resumen"
+        "site": "Obra:",
+        "companies": "Empresas presentes",
+        "issue": "Deficiencias detectadas"
       },
       "values": {
-        "date": "18 de agosto de 2025",
-        "place": "Alicante",
-        "attendees": "Javier Molina, Marta Delgado, Óscar Ferreira, Laura Sanz",
-        "summary": "Pedido trimestral +15 % con entrega en dos semanas y renovación del contrato de mantenimiento."
+        "date": "1 de octubre de 2026",
+        "site": "Residencial Las Acacias, Paterna",
+        "companies": "Construcciones Albufera, Estructuras Levante, Montajes Soler, Grúas Martínez",
+        "issue": "Falta la barandilla del borde norte del forjado de tercera · Estructuras Levante · Inmediato"
       }
     },
     "approval": {
-      "heading": "Nada sale sin que lo apruebes.",
-      "paragraph1": "Cada informe pasa por una revisión humana obligatoria antes de entregarse. Si algo no cuadra, corriges con una simple respuesta y ReportAI vuelve a generarlo.",
-      "paragraph2": "Por defecto, todo pasa por Telegram. WhatsApp Business y el correo entrante también están disponibles; Slack o Microsoft Teams se montan bajo petición.",
-      "defaultChannelBadge": "Telegram · canal por defecto",
-      "otherChannelNote": "WhatsApp Business · Email",
+      "heading": "Pregunta lo que falta. Nada sale sin tu visto bueno.",
+      "paragraph1": "Cada informe llega primero al chat como borrador. Si falta un dato obligatorio, como el plazo de una medida, el bot te lo pregunta. Si algo no cuadra, lo corriges respondiendo y se vuelve a generar.",
+      "paragraph2": "Funciona en Telegram: tu equipo lo instala una vez y habla con el bot de tu empresa como con cualquier contacto. Quien aprueba también puede revisar, corregir y aprobar desde el panel.",
+      "defaultChannelBadge": "Telegram",
+      "otherChannelNote": "Revisión también desde el panel",
       "mockup": {
         "channel": "Telegram",
-        "draftReady": "Borrador del acta listo:",
+        "question": "¿Qué plazo tiene el cambio del cuadro eléctrico?",
+        "answer": "Antes del viernes 9",
+        "draftReady": "Borrador de la visita listo:",
         "approve": "✓ Aprobar",
         "correct": "Corregir",
-        "filename": "acta_reunion.pdf",
-        "sentTo": "Enviado a Marta Delgado ✓",
-        "company": "Construcciones Marítimas",
-        "date": "18/08/2025"
+        "filename": "visita_las_acacias.pdf",
+        "sentTo": "Enviado a la contrata y al promotor ✓",
+        "site": "Residencial Las Acacias",
+        "date": "01/10/2026",
+        "siteLabel": "Obra",
+        "dateLabel": "Fecha",
+        "issuesLabel": "Deficiencias"
       }
     },
     "onboarding": {
-      "heading": "Darte de alta es una conversación, no un proyecto.",
-      "sub": "Cada implementación se monta a medida con nosotros. Esto es lo que pasa:",
+      "heading": "Te lo dejamos funcionando en tu servidor.",
+      "sub": "Lo instalamos y lo mantenemos nosotros; los datos y las claves son tuyos. Así empezamos:",
       "steps": {
         "tell": {
-          "title": "Nos cuentas qué documentos generas",
-          "body": "Nos pasas tu plantilla .docx y quién debe recibir cada informe."
+          "title": "Nos pasas tu plantilla",
+          "body": "El Word de tu informe de visita y a quién hay que enviarlo. Si no tienes, partimos de la nuestra."
         },
         "configure": {
-          "title": "Lo configuramos contigo",
-          "body": "Tipos de documento, campos, canal y personas autorizadas a enviar. Todo queda visible en tu panel."
+          "title": "Lo instalamos en tu servidor",
+          "body": "Uno tuyo o un VPS a tu nombre. Configuramos la IA con tu cuenta, el bot de Telegram y tu plantilla."
         },
         "first": {
-          "title": "Tu equipo manda la primera nota de voz",
-          "body": "Y el primer acta llega a la bandeja correcta. Ajustamos lo que haga falta sobre documentos reales."
+          "title": "Dictas la primera visita",
+          "body": "Y el informe llega a quien toca. Ajustamos la plantilla con visitas reales y después lo mantenemos al día."
         }
       },
       "panelLabel": "Lo que ves en tu panel",
       "panel": {
-        "templates": "Plantillas y campos",
-        "channels": "Canales y remitentes autorizados",
-        "recipients": "Destinatarios por tipo de documento",
-        "history": "Historial de informes",
-        "usage": "Uso y coste por mes"
+        "templates": "Plantillas y asistente",
+        "channels": "Quién puede enviar informes",
+        "recipients": "Destinatarios por tipo de informe",
+        "history": "Historial con audio y transcripción",
+        "team": "Equipo y permisos"
       }
+    },
+    "pricing": {
+      "heading": "Pagas por el servicio, no por el software.",
+      "sub": "El código de ReportAI es público y puedes instalarlo gratis. Si prefieres no tocar un servidor, te lo instalamos y lo mantenemos.",
+      "featured": "Recomendado",
+      "plans": {
+        "selfHosted": {
+          "name": "Lo instalas tú",
+          "price": "Gratis",
+          "for": "Para empresas con alguien técnico.",
+          "items": {
+            "install": "Instalación con un comando en tu servidor",
+            "features": "Todas las funciones y plantillas de inicio",
+            "updates": "Actualizaciones publicadas y avisos de seguridad",
+            "support": "Dudas y fallos en GitHub, sin compromiso de respuesta"
+          },
+          "cta": "Ver la guía de instalación"
+        },
+        "managed": {
+          "name": "Te lo instalamos y mantenemos",
+          "price": "Pago único + cuota mensual",
+          "for": "Para usarlo sin tocar un servidor.",
+          "items": {
+            "install": "Instalación en tu servidor o en un VPS a tu nombre",
+            "template": "Tu plantilla configurada y probada con visitas reales",
+            "accounts": "IA y bot de Telegram configurados con tus cuentas",
+            "support": "Actualizaciones y soporte por email o Telegram"
+          },
+          "cta": "Pedir presupuesto",
+          "mailSubject": "Presupuesto de instalación y mantenimiento de ReportAI"
+        },
+        "pilot": {
+          "name": "Piloto fundador",
+          "price": "Precio de fundador",
+          "for": "Para las primeras empresas.",
+          "items": {
+            "same": "Instalación y mantenimiento como en el plan anterior",
+            "feedback": "A cambio de tu opinión cada semana durante el piloto",
+            "case": "Y de poder contar tu caso si te funciona"
+          },
+          "cta": "Quiero ser piloto",
+          "mailSubject": "Quiero ser piloto de ReportAI"
+        }
+      },
+      "extraHeading": "Lo que pagas aparte, directamente a cada proveedor",
+      "extras": {
+        "server": "Servidor: unos 9 € al mes más IVA si no tienes uno (un CX33 de Hetzner).",
+        "ai": "IA: céntimos por informe, en tu cuenta del proveedor que elijas.",
+        "telegram": "Telegram: gratis."
+      },
+      "note": "Te damos precio cerrado cuando hayamos visto tu plantilla."
     },
     "faq": {
       "heading": "Preguntas que nos hacen antes de empezar.",
       "items": {
         "install": {
-          "q": "¿Hay que instalar algo?",
-          "a": "No. Tu equipo manda la nota de voz desde el chat que ya tiene abierto. Solo hay que autorizar sus números o cuentas en el panel."
+          "q": "¿Tengo que saber de servidores?",
+          "a": "No. Si te lo instalamos nosotros, lo dejamos funcionando en un servidor tuyo o en un VPS a tu nombre. Si en tu empresa hay alguien técnico, se instala con un solo comando siguiendo la guía."
         },
         "channels": {
-          "q": "¿Por qué canales funciona?",
-          "a": "Telegram por defecto. WhatsApp Business y el correo entrante también están disponibles. Slack o Microsoft Teams se montan cuando un cliente lo necesita."
+          "q": "¿Mis técnicos tienen que instalar algo?",
+          "a": "Telegram, una vez. Desde el panel les mandas un enlace de invitación; con abrirlo ya pueden dictar. WhatsApp está en pruebas."
         },
         "errors": {
-          "q": "¿Y si se equivoca en algo?",
-          "a": "El borrador llega al chat antes de enviarse. Respondes con la corrección y se vuelve a generar. Además, cada campo se valida contra el esquema de tu documento: una fecha tiene que ser una fecha, una lista tiene que ser una lista."
+          "q": "¿Y si se equivoca?",
+          "a": "El borrador llega al chat antes de enviarse y nada sale sin tu aprobación. Si falta un dato obligatorio, el bot lo pregunta; si algo está mal, lo corriges respondiendo. Cada campo se valida: una fecha tiene que ser una fecha."
         },
         "data": {
-          "q": "¿Dónde están mis documentos?",
-          "a": "Plantillas y documentos generados se guardan en un servidor privado, no en un servicio de terceros. La transcripción del audio y la extracción de campos usan APIs de IA (Groq y Anthropic). Cada empresa tiene su propio espacio aislado."
+          "q": "¿Dónde están los datos?",
+          "a": "En tu servidor: audios, fotos, informes y plantillas. Para transcribir y rellenar, el texto pasa por el proveedor de IA que elijas, con tus propias claves, y los mensajes, por Telegram. Las claves se guardan cifradas."
+        },
+        "ai": {
+          "q": "¿Quién escribe el informe?",
+          "a": "Un modelo de IA prepara el borrador con lo que dictas y no rellena lo que no has dicho: lo que falta, lo pregunta. El contenido sigue siendo responsabilidad de quien lo aprueba."
         },
         "languages": {
           "q": "¿En qué idiomas funciona?",
-          "a": "Español e inglés de serie. El ejemplo real de esta página existe en los dos."
+          "a": "Español e inglés. El ejemplo de esta página está en los dos."
         },
         "documents": {
-          "q": "¿Sirve para algo más que actas?",
-          "a": "Sí. Cualquier documento con apartados fijos: informes de visita, partes de intervención, resúmenes de llamada. Cada tipo de documento se define desde el panel con su plantilla y sus campos."
+          "q": "¿Sirve para otros documentos?",
+          "a": "Sí. Trae plantillas de inicio de visita de seguridad y salud, parte de trabajo, informe de visita e informe de incidencia, y puedes subir cualquier Word con apartados fijos."
         },
         "price": {
           "q": "¿Cuánto cuesta?",
-          "a": "Depende del volumen y de lo que haya que montar. Escríbenos con tu plantilla y te decimos qué haría falta, sin compromiso."
+          "a": "Instalarlo tú es gratis. Si te lo instalamos y mantenemos, es un pago único más una cuota mensual, con precio cerrado cuando veamos tu plantilla. Aparte pagas tu servidor (unos 9 € al mes) y la IA (céntimos por informe)."
         }
       }
     },
     "finalCta": {
-      "placeholderTag": "tu_proximo_informe",
-      "headline": "Manda una nota de voz. Recibe el acta.",
-      "sub": "El ejemplo de arriba es real. El siguiente puede salir de tu plantilla.",
+      "placeholderTag": "tu_proxima_visita",
+      "headline": "Dicta la visita. Recibe el informe.",
+      "sub": "Mándanos la plantilla que usas hoy y te enseñamos tu propio informe relleno a partir de un audio.",
       "or": "o escribe a"
     },
     "footer": {
-      "tagline": "Del audio al informe, sin tocar una plantilla.",
+      "tagline": "El informe de visita de obra, dictado por voz.",
       "madeBy": "Un producto de",
-      "legal": "Aviso legal"
+      "legal": "Aviso legal",
+      "code": "Código fuente"
     },
     "legal": {
       "title": "Aviso legal",
