@@ -9,7 +9,6 @@ export type Api = <T = unknown>(url: string, options?: FetchOptions) => Promise<
 
 export const ACCESS_COOKIE = 'reportai_token'
 export const REFRESH_COOKIE = 'reportai_refresh'
-const COOKIE_OPTIONS = { sameSite: 'strict', secure: !import.meta.dev } as const
 // Matches the backend's REFRESH_TOKEN_EXPIRE_DAYS: the cookie lives as long as the token works.
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60
 
@@ -21,9 +20,11 @@ const NO_RENEW = ['/auth/login', '/auth/demo-login', '/auth/refresh', '/auth/log
 const renewals = new WeakMap<NuxtApp, Promise<boolean>>()
 
 function createSessionCookies() {
+  const secure = !import.meta.dev && useRuntimeConfig().public.secureCookies !== false
+  const options = { sameSite: 'strict', secure } as const
   return {
-    access: useCookie<string | null>(ACCESS_COOKIE, COOKIE_OPTIONS),
-    refresh: useCookie<string | null>(REFRESH_COOKIE, { ...COOKIE_OPTIONS, maxAge: REFRESH_MAX_AGE })
+    access: useCookie<string | null>(ACCESS_COOKIE, options),
+    refresh: useCookie<string | null>(REFRESH_COOKIE, { ...options, maxAge: REFRESH_MAX_AGE })
   }
 }
 
