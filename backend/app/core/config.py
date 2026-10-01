@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # companies under a super admin (the public demo).
     SINGLE_TENANT: bool = False
 
+    # ── Release this installation runs (baked into the image at build time; "dev" from a
+    #    checkout) and where newer releases and security advisories are published. ──────
+    REPORTAI_VERSION: str = "dev"
+    UPDATE_CHECK_ENABLED: bool = True
+    UPDATE_REPOSITORY: str = "avaazquezz/ReportAI"
+
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
 
