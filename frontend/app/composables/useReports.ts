@@ -1,21 +1,35 @@
-import type { PaginatedResponse, Report } from '~/types'
+import type { PaginatedResponse, Report, ReportDetail, ReportFilters } from '~/types'
+
+function compact(filters: ReportFilters): Record<string, string> {
+  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value)) as Record<string, string>
+}
+
+export function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 export function useReports() {
   const { t } = useI18n()
+  const api = useApi()
   const items = ref<Report[]>([])
   const total = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchList(options: { page: number; itemsPerPage: number; status?: string | null }) {
-    loading.value = true
+  async function fetchList(options: { page: number; itemsPerPage: number; filters?: ReportFilters; quiet?: boolean }) {
+    // A background refresh keeps the table as it is instead of flashing the loading state.
+    if (!options.quiet) loading.value = true
     error.value = null
     try {
-      const api = useApi()
       const skip = (options.page - 1) * options.itemsPerPage
-      const query: Record<string, unknown> = { skip, limit: options.itemsPerPage }
-      if (options.status) query.status = options.status
-      const response = await api<PaginatedResponse<Report>>('/reports', { query })
+      const response = await api<PaginatedResponse<Report>>('/reports', {
+        query: { skip, limit: options.itemsPerPage, ...compact(options.filters ?? {}) }
+      })
       items.value = response.items
       total.value = response.total
     } catch {
@@ -25,31 +39,30 @@ export function useReports() {
     }
   }
 
-  async function getById(id: string): Promise<Report> {
-    const api = useApi()
-    return await api<Report>(`/reports/${id}`)
+  async function exportCsv(filters: ReportFilters) {
+    const blob = await api<Blob>('/reports/export.csv', { query: compact(filters), responseType: 'blob' })
+    saveBlob(blob, 'reports.csv')
   }
 
-  async function approve(id: string): Promise<Report> {
-    const api = useApi()
-    return await api<Report>(`/reports/${id}/approve`, { method: 'POST' })
-  }
+  const getById = (id: string) => api<ReportDetail>(`/reports/${id}`)
 
-  async function reject(id: string): Promise<Report> {
-    const api = useApi()
-    return await api<Report>(`/reports/${id}/reject`, { method: 'POST' })
-  }
+  const approve = (id: string, fields: Record<string, unknown>) =>
+    api<ReportDetail>(`/reports/${id}/approve`, { method: 'POST', body: { fields } })
 
-  async function download(id: string, suggestedName: string) {
-    const api = useApi()
-    const blob = await api<Blob>(`/reports/${id}/download`, { responseType: 'blob' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = suggestedName
-    link.click()
-    URL.revokeObjectURL(url)
-  }
+  const reject = (id: string, reason: string | null) =>
+    api<ReportDetail>(`/reports/${id}/reject`, { method: 'POST', body: { reason } })
 
-  return { items, total, loading, error, fetchList, getById, approve, reject, download }
+  const editFields = (id: string, fields: Record<string, unknown>) =>
+    api<ReportDetail>(`/reports/${id}/fields`, { method: 'PATCH', body: { fields } })
+
+  const preview = (id: string, fields: Record<string, unknown>) =>
+    api<Blob>(`/reports/${id}/preview`, { method: 'POST', body: { fields }, responseType: 'blob' })
+
+  const resend = (id: string, target: { delivery_id?: string; email?: string } = {}) =>
+    api<ReportDetail>(`/reports/${id}/resend`, { method: 'POST', body: target })
+
+  // Audio, photos and the PDF need the bearer token, so they are fetched, not linked.
+  const fetchBlob = (url: string) => api<Blob>(url, { responseType: 'blob' })
+
+  return { items, total, loading, error, fetchList, exportCsv, getById, approve, reject, editFields, preview, resend, fetchBlob }
 }

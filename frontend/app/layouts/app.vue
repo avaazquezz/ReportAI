@@ -1,6 +1,12 @@
 <script setup lang="ts">
 const { t } = useI18n()
+const route = useRoute()
 const authStore = useAuthStore()
+
+// Every panel tab used to carry the landing's title; now each says which page it is (FE-11).
+useHead({
+  title: () => (route.meta.titleKey ? `${t(route.meta.titleKey)} · ReportAI` : 'ReportAI')
+})
 const { state: snackbar } = useSnackbar()
 
 const navItems = computed(() => {
