@@ -15,7 +15,8 @@ from app.services.channels.base import (
     OutgoingMessage,
 )
 
-_GRAPH_API_VERSION = "v21.0"
+# v21.0 is retired on 2027-01-21 (developers.facebook.com/docs/graph-api/changelog).
+_GRAPH_API_VERSION = "v26.0"
 _GRAPH_API = f"https://graph.facebook.com/{_GRAPH_API_VERSION}"
 
 

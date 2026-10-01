@@ -66,8 +66,8 @@ async def test_the_pdf_is_uploaded_once_and_sent_as_a_named_document(
         )
     )
 
-    uploads = [r for r in graph if r.url.path == "/v21.0/555/media"]
-    sends = [r for r in graph if r.url.path == "/v21.0/555/messages"]
+    uploads = [r for r in graph if r.url.path == "/v26.0/555/media"]
+    sends = [r for r in graph if r.url.path == "/v26.0/555/messages"]
     assert len(uploads) == 1  # the failed send was retried without uploading again
     assert b"%PDF-1.4 report" in uploads[0].content and b'name="messaging_product"' in uploads[0].content
     assert b"application/pdf" in uploads[0].content
