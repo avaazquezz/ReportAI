@@ -117,6 +117,8 @@ async function onSave() {
   }
 }
 
+const invitesFor = ref<ChannelConnection | null>(null)
+
 const confirmDialog = ref(false)
 const pendingConnection = ref<ChannelConnection | null>(null)
 
@@ -160,11 +162,14 @@ async function confirmToggle() {
     >
       <template #item.channel_type="{ item }">
         {{ CHANNEL_TYPES.find((c) => c.value === item.channel_type)?.title ?? item.channel_type }}
+        <span v-if="item.bot_username" class="block text-xs text-ink-900/70">@{{ item.bot_username }}</span>
       </template>
       <template #item.allowed_senders="{ item }">
         <span v-if="!item.allowed_senders.length" class="text-ink-900/70">{{ t('admin.channels.allSenders') }}</span>
         <div v-else class="flex flex-wrap gap-1 py-1">
-          <v-chip v-for="sender in item.allowed_senders.slice(0, 3)" :key="sender" size="x-small" label>{{ sender }}</v-chip>
+          <v-chip v-for="sender in item.allowed_senders.slice(0, 3)" :key="sender" size="x-small" label>
+            {{ item.sender_labels[sender] ?? sender }}
+          </v-chip>
           <v-chip v-if="item.allowed_senders.length > 3" size="x-small" label>+{{ item.allowed_senders.length - 3 }}</v-chip>
         </div>
       </template>
@@ -175,6 +180,9 @@ async function confirmToggle() {
       </template>
       <template #item.actions="{ item }">
         <div v-if="!isDemo" class="flex justify-end whitespace-nowrap">
+          <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-account-plus-outline" @click="invitesFor = item">
+            {{ t('admin.invites.open') }}
+          </v-btn>
           <v-btn size="small" variant="text" @click="openEdit(item)">{{ t('admin.common.edit') }}</v-btn>
           <v-btn size="small" variant="text" @click="askToggle(item)">
             {{ item.is_active ? t('admin.common.deactivate') : t('admin.common.reactivate') }}
@@ -258,6 +266,14 @@ async function confirmToggle() {
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <AdminSenderInvites
+      v-if="invitesFor"
+      :model-value="!!invitesFor"
+      :connection="invitesFor"
+      @update:model-value="(open: boolean) => !open && (invitesFor = null)"
+      @changed="reload"
+    />
 
     <AdminConfirmDialog
       v-model="confirmDialog"

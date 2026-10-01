@@ -56,6 +56,9 @@ const fileInput = ref<File[]>([])
 const fieldsHint = computed(() =>
   t('admin.documentTypes.fields.hint', { example: `{{ ${t('admin.documentTypes.fields.exampleName')} }}` })
 )
+const manualHelp = computed(() =>
+  t('admin.documentTypes.templates.manualHelp', { tag: `{{ ${t('admin.documentTypes.fields.exampleName')} }}` })
+)
 // 'list[str]' as an i18n path would read as list → str; the keys spell it list_str.
 const typeTitle = (value: FieldType) => t(`admin.documentTypes.fieldTypes.${value.replace(/\[(\w+)\]/, '_$1')}`)
 const typeItems = computed(() => FIELD_TYPES.map((value) => ({ value, title: typeTitle(value) })))
@@ -204,6 +207,12 @@ async function onUpload() {
   } finally {
     uploading.value = false
   }
+}
+
+// The assistant adds its fields to this type and activates the new template.
+async function onAssistantApplied(doc: DocumentType) {
+  applyDocumentType(doc)
+  await loadTemplates()
 }
 
 onMounted(() => Promise.all([load(), loadTemplates()]))
@@ -363,6 +372,15 @@ onMounted(() => Promise.all([load(), loadTemplates()]))
     <v-card v-if="!loading && !error">
       <v-card-title>{{ t('admin.documentTypes.templates.title') }}</v-card-title>
       <v-card-text>
+        <template v-if="!isDemo">
+          <h3 class="mb-2 font-display text-lg font-bold">{{ t('admin.assistant.title') }}</h3>
+          <AdminTemplateAssistant
+            :document-type-id="documentTypeId"
+            :existing-fields="Object.fromEntries(fieldRows.map((row) => [row.name, row.label || row.name]))"
+            @applied="onAssistantApplied"
+          />
+          <v-divider class="my-6" />
+        </template>
         <AdminResourceTable
           :headers="templateHeaders"
           :items="templates"
@@ -380,7 +398,8 @@ onMounted(() => Promise.all([load(), loadTemplates()]))
           </template>
         </AdminResourceTable>
 
-        <div v-if="!isDemo" class="mt-4 flex items-start gap-2">
+        <p v-if="!isDemo" class="mt-6 text-sm text-ink-900/70">{{ manualHelp }}</p>
+        <div v-if="!isDemo" class="mt-2 flex items-start gap-2">
           <v-file-input
             v-model="fileInput"
             :label="t('admin.documentTypes.templates.uploadLabel')"
