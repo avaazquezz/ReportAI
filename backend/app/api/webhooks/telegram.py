@@ -9,9 +9,7 @@ from app.core.database import get_db
 from app.core.exceptions import AuthenticationException, ResourceNotFoundException
 from app.models.channel_connection import ChannelConnection
 from app.repositories.base import BaseRepository
-from app.services.agent.ingestion import ingest_message
-from app.services.channels.base import ChannelAdapterError
-from app.services.channels.telegram import TelegramAdapter
+from app.services.channels.telegram_updates import ingest_update
 
 router = APIRouter(tags=["webhooks"])
 
@@ -37,12 +35,6 @@ async def telegram_webhook(
             raise AuthenticationException("Invalid webhook secret")
 
     payload: dict[str, Any] = await request.json()
-    adapter = TelegramAdapter(
-        bot_token=connection.credentials["bot_token"], channel_connection_id=connection.id
-    )
-    try:
-        incoming = await adapter.receive_message(payload)
-    except ChannelAdapterError:
+    if not await ingest_update(db, connection, payload):
         return {"status": "ignored"}  # an update type we don't read; a 5xx would make Telegram retry it
-    await ingest_message(db=db, connection=connection, incoming=incoming)
     return {"status": "ok"}

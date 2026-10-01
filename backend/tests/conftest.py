@@ -107,3 +107,15 @@ def _nothing_saved_in_the_panel(request: pytest.FixtureRequest, monkeypatch: pyt
 @pytest.fixture
 def stored_instance_settings(own_sessions: None) -> None:
     """Opt in to reading instance settings from the test database."""
+
+
+@pytest.fixture(autouse=True)
+def _telegram_tokens_accepted(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Saving a Telegram bot asks Telegram whether its token is real (getMe). Tests never reach
+    Telegram: every token is a bot called @acme_bot unless a test says otherwise."""
+    from app.api.admin import channel_connections
+
+    async def accepted(bot_token: str) -> str:
+        return "acme_bot"
+
+    monkeypatch.setattr(channel_connections, "verify_telegram_bot", accepted)
