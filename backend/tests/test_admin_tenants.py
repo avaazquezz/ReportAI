@@ -55,7 +55,7 @@ async def test_create_tenant_creates_admin_user_and_sends_invite(
     await _create_super_admin(db)
     token = await _login(client, "root@reportai.dev", "super-secret-password")
     mock_send = AsyncMock()
-    monkeypatch.setattr("app.api.admin.tenants.send_plain_email", mock_send)
+    monkeypatch.setattr("app.services.notifications.invites.send_plain_email", mock_send)
 
     response = await client.post(
         "/admin/tenants",
@@ -86,7 +86,7 @@ async def test_create_tenant_placeholder_password_cannot_authenticate(
 ) -> None:
     await _create_super_admin(db)
     token = await _login(client, "root@reportai.dev", "super-secret-password")
-    monkeypatch.setattr("app.api.admin.tenants.send_plain_email", AsyncMock())
+    monkeypatch.setattr("app.services.notifications.invites.send_plain_email", AsyncMock())
 
     await client.post(
         "/admin/tenants",
@@ -111,7 +111,7 @@ async def test_create_tenant_duplicate_slug_conflicts(
 ) -> None:
     await _create_super_admin(db)
     token = await _login(client, "root@reportai.dev", "super-secret-password")
-    monkeypatch.setattr("app.api.admin.tenants.send_plain_email", AsyncMock())
+    monkeypatch.setattr("app.services.notifications.invites.send_plain_email", AsyncMock())
     payload = {
         "name": "New Client",
         "slug": "new-client",

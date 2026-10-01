@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { DocumentType, StarterTemplate } from '~/types'
+
 definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app', titleKey: 'admin.layout.nav.documentTypes' })
 
 const { t } = useI18n()
@@ -44,14 +46,46 @@ async function onCreate() {
     creating.value = false
   }
 }
+
+// Ready-made types for a company with no template of its own yet.
+const startersDialog = ref(false)
+const starters = ref<StarterTemplate[]>([])
+const installing = ref<string | null>(null)
+
+async function openStarters() {
+  startersDialog.value = true
+  if (starters.value.length) return
+  try {
+    starters.value = await useApi()<StarterTemplate[]>('/starter-templates')
+  } catch {
+    show(t('admin.starters.errors.load'), 'error')
+  }
+}
+
+async function install(key: string) {
+  installing.value = key
+  try {
+    const created = await useApi()<DocumentType>(`/starter-templates/${key}/install`, { method: 'POST' })
+    show(t('admin.starters.installed', { name: created.name }), 'success')
+    await router.push(`/admin/document-types/${created.id}`)
+  } catch {
+    show(t('admin.starters.errors.install'), 'error')
+  } finally {
+    installing.value = null
+  }
+}
 </script>
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-2 flex items-center justify-between">
       <h1 class="font-display text-2xl font-bold text-ink-900">{{ t('admin.layout.nav.documentTypes') }}</h1>
-      <v-btn v-if="!isDemo" color="primary" @click="createDialog = true">{{ t('admin.documentTypes.new') }}</v-btn>
+      <div v-if="!isDemo" class="flex gap-2">
+        <v-btn variant="tonal" prepend-icon="mdi-file-star-outline" @click="openStarters">{{ t('admin.starters.open') }}</v-btn>
+        <v-btn color="primary" @click="createDialog = true">{{ t('admin.documentTypes.new') }}</v-btn>
+      </div>
     </div>
+    <p class="mb-6 text-ink-900/70">{{ t('admin.documentTypes.help') }}</p>
 
     <AdminResourceTable
       :headers="headers"
@@ -72,6 +106,30 @@ async function onCreate() {
         </v-btn>
       </template>
     </AdminResourceTable>
+
+    <v-dialog v-model="startersDialog" max-width="720">
+      <v-card>
+        <v-card-title>{{ t('admin.starters.title') }}</v-card-title>
+        <v-card-text>
+          <p class="mb-4 text-ink-900/80">{{ t('admin.starters.help') }}</p>
+          <v-progress-linear v-if="!starters.length" indeterminate color="primary" />
+          <div class="grid gap-4 md:grid-cols-3">
+            <v-card v-for="starter in starters" :key="starter.key" rounded="lg" elevation="0" border class="flex flex-col pa-4">
+              <h3 class="font-display font-bold">{{ starter.name }}</h3>
+              <p class="mt-1 flex-1 text-sm text-ink-900/80">{{ starter.description }}</p>
+              <p class="mt-3 text-xs text-ink-900/70">{{ starter.fields.join(' · ') }}</p>
+              <v-btn class="mt-4" color="primary" variant="tonal" :loading="installing === starter.key" @click="install(starter.key)">
+                {{ t('admin.starters.use') }}
+              </v-btn>
+            </v-card>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="startersDialog = false">{{ t('admin.common.close') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-dialog v-model="createDialog" max-width="480">
       <v-card>

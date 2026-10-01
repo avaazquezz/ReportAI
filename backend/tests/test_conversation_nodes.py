@@ -121,7 +121,7 @@ async def test_a_correction_is_counted_and_carried_to_the_next_extraction(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     report, connection = await _world(db)
-    monkeypatch.setattr(approval, "classify_reply", AsyncMock(return_value=("correct", LLMResult({}, 40, 3))))
+    monkeypatch.setattr(approval, "classify_reply", AsyncMock(return_value=("correct", LLMResult({}, 40, 3, "claude-sonnet-5"))))
 
     result = await approval.classify_approval_reply_node.__wrapped__(
         _state(report, connection, pending_user_reply="la fecha era el martes")
@@ -222,7 +222,7 @@ async def test_the_document_type_is_picked_when_the_model_is_confident(
     visita = DocumentType(tenant_id=report.tenant_id, name="Visita de obra", field_schema=SCHEMA, is_active=True)
     db.add_all([acta, visita])
     await db.commit()
-    monkeypatch.setattr(doctype, "structured_completion", AsyncMock(return_value=LLMResult({"type_number": 2, "confidence": 0.93}, 60, 4)))
+    monkeypatch.setattr(doctype, "structured_completion", AsyncMock(return_value=LLMResult({"type_number": 2, "confidence": 0.93}, 60, 4, "claude-sonnet-5")))
     state = _state(report, connection, document_type_id=None, document_type_name=None, field_schema=None, source_text="Visité la obra")
 
     result = await doctype.resolve_tenant_doctype_node.__wrapped__(state)
@@ -243,7 +243,7 @@ async def test_the_bot_asks_with_buttons_when_the_model_is_not_sure(
         DocumentType(tenant_id=report.tenant_id, name="Visita", field_schema=SCHEMA, is_active=True),
     ])
     await db.commit()
-    monkeypatch.setattr(doctype, "structured_completion", AsyncMock(return_value=LLMResult({"type_number": 1, "confidence": 0.4}, 60, 4)))
+    monkeypatch.setattr(doctype, "structured_completion", AsyncMock(return_value=LLMResult({"type_number": 1, "confidence": 0.4}, 60, 4, "claude-sonnet-5")))
     state = _state(report, connection, document_type_id=None, field_schema=None, source_text="algo")
 
     resolved = await doctype.resolve_tenant_doctype_node.__wrapped__(state)

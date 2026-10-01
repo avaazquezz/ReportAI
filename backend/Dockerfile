@@ -31,6 +31,11 @@ RUN --mount=from=uv,source=/uv,target=/bin/uv \
 # ── Runtime stage: lean, no dev tooling, non-root user ──────────────────────
 FROM python:3.11-slim@sha256:e41613d42d4891e4930f79523f93f81bbc7632584ec65e36ab055f41a800b41e AS runtime
 
+# The release this image is (set by the publish workflow): shown in the panel and compared with
+# the latest release to tell the installation's administrator an update is out.
+ARG REPORTAI_VERSION=dev
+ENV REPORTAI_VERSION=$REPORTAI_VERSION
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 curl \
     && rm -rf /var/lib/apt/lists/*

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.channel_connection import ChannelConnection
 
@@ -16,6 +16,15 @@ REQUIRED_CREDENTIAL_KEYS: dict[str, set[str]] = {
     "whatsapp": {"phone_number_id", "access_token"},
     "email": {"inbound_slug"},
 }
+
+
+# The credential a shared webhook routes on (channel_connections.routing_key).
+ROUTING_CREDENTIAL: dict[str, str] = {"whatsapp": "phone_number_id", "email": "inbound_slug"}
+
+
+def routing_key_for(channel_type: str, credentials: dict[str, str]) -> str | None:
+    key = ROUTING_CREDENTIAL.get(channel_type)
+    return credentials.get(key) if key else None
 
 
 class ChannelConnectionCreateRequest(BaseModel):
@@ -44,18 +53,43 @@ class ChannelConnectionUpdateRequest(BaseModel):
     is_active: bool = True
 
 
+class SenderInviteCreateRequest(BaseModel):
+    label: str = Field(min_length=1, max_length=255)
+
+
+class SenderInviteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    label: str
+    expires_at: datetime
+    used_at: datetime | None
+    sender_id: str | None
+    created_at: datetime
+
+
+class SenderInviteCreatedResponse(SenderInviteResponse):
+    code: str  # shown once: only its hash is kept
+    link: str | None  # Telegram: opening it is all the person has to do
+
+
 class ChannelConnectionResponse(BaseModel):
     id: uuid.UUID
     tenant_id: uuid.UUID
     channel_type: str
     display_name: str
     has_credentials: bool
+    bot_username: str | None = None  # Telegram: the bot people write to, @username
     allowed_senders: list[str]
+    # Who an allowed sender is, by the name their invitation was made for.
+    sender_labels: dict[str, str] = {}
     is_active: bool
     created_at: datetime
 
     @classmethod
-    def from_model(cls, connection: ChannelConnection) -> "ChannelConnectionResponse":
+    def from_model(
+        cls, connection: ChannelConnection, sender_labels: dict[str, str] | None = None
+    ) -> "ChannelConnectionResponse":
         """Never exposes raw credential values — only whether any are set."""
         return cls(
             id=connection.id,
@@ -63,7 +97,9 @@ class ChannelConnectionResponse(BaseModel):
             channel_type=connection.channel_type,
             display_name=connection.display_name,
             has_credentials=bool(connection.credentials),
+            bot_username=connection.credentials.get("bot_username"),
             allowed_senders=connection.allowed_senders,
+            sender_labels=sender_labels or {},
             is_active=connection.is_active,
             created_at=connection.created_at,
         )

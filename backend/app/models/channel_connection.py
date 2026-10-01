@@ -2,16 +2,20 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, func
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.crypto import EncryptedJSON
 from app.core.database import Base
 
 
 class ChannelConnection(Base):
     __tablename__ = "channel_connections"
-    __table_args__ = (Index("ix_channel_connections_tenant_id", "tenant_id"),)
+    __table_args__ = (
+        Index("ix_channel_connections_tenant_id", "tenant_id"),
+        UniqueConstraint("channel_type", "routing_key", name="uq_channel_connections_type_routing_key"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
@@ -23,9 +27,11 @@ class ChannelConnection(Base):
     # config, no migration required.
     channel_type: Mapped[str] = mapped_column(String(50), nullable=False)
     display_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Credential storage as-is for Phase 0; encryption-at-rest is a flagged
-    # future hardening item, not in scope now.
-    credentials: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # Tokens and keys, encrypted (app.core.crypto): never queried, only read by the adapters.
+    credentials: Mapped[dict[str, Any]] = mapped_column(EncryptedJSON, nullable=False, default=dict)
+    # What a shared webhook says to tell connections apart — WhatsApp's phone_number_id, the
+    # email inbound slug — kept in the clear because it is looked up, and it is not a secret.
+    routing_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Empty = allow all senders (unchanged behavior for existing connections).
     allowed_senders: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

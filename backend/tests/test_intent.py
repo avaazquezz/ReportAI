@@ -30,7 +30,7 @@ def test_anything_with_content_is_left_to_the_model(reply: str) -> None:
 
 
 async def test_the_model_decides_what_rules_cannot(monkeypatch: pytest.MonkeyPatch) -> None:
-    ask = AsyncMock(return_value=LLMResult({"intent": "correct"}, 50, 5))
+    ask = AsyncMock(return_value=LLMResult({"intent": "correct"}, 50, 5, "claude-sonnet-5"))
     monkeypatch.setattr(intent, "structured_completion", ask)
 
     result, usage = await intent.classify_reply("la fecha era el martes")

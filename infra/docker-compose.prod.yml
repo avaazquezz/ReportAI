@@ -110,6 +110,10 @@ services:
       - reportai_storage_data:/app/storage
     restart: always
     stop_grace_period: 5m
+    # The image's check calls the API on :8000, which the worker doesn't serve: it would read
+    # "unhealthy" forever while working fine.
+    healthcheck:
+      disable: true
     mem_limit: 1g
     logging: *logging
     depends_on:

@@ -1,6 +1,7 @@
 import logging
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
@@ -23,17 +24,22 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.models.used_refresh_token import UsedRefreshToken
 from app.schemas.auth import (
+    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    ProfileUpdateRequest,
     RefreshRequest,
     ResetPasswordRequest,
     TokenResponse,
     UserResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services.branding import Branding
+from app.services.i18n import t
 from app.services.notifications.email import send_plain_email
 from app.services.notifications.tokens import consume_reset_token, issue_reset_token
 
@@ -47,20 +53,21 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _tokens_for(user: TenantUser) -> TokenResponse:
+def tokens_for(user: TenantUser) -> TokenResponse:
     token_payload = {
         "sub": str(user.id),
         "role": user.role,
         "tenant_id": str(user.tenant_id) if user.tenant_id else None,
+        "ver": user.token_version,
     }
     return TokenResponse(
         access_token=create_access_token(token_payload),
-        refresh_token=create_refresh_token({"sub": str(user.id)}),
+        refresh_token=create_refresh_token({"sub": str(user.id), "ver": user.token_version}),
     )
 
 
-async def _use_refresh_token(db: AsyncSession, token: str) -> str | None:
-    """Marks a refresh token as spent and returns its user id; None when it is invalid, expired,
+async def _use_refresh_token(db: AsyncSession, token: str) -> dict[str, Any] | None:
+    """Marks a refresh token as spent and returns its claims; None when it is invalid, expired,
     not a refresh token, or was already spent (atomic: two tabs refreshing at once get one winner)."""
     try:
         claims = decode_token(token)
@@ -74,7 +81,7 @@ async def _use_refresh_token(db: AsyncSession, token: str) -> str | None:
         .on_conflict_do_nothing()
         .returning(UsedRefreshToken.jti)
     )
-    return str(claims["sub"]) if spent.scalar_one_or_none() else None
+    return claims if spent.scalar_one_or_none() else None
 
 
 @router.post("/auth/login")
@@ -93,7 +100,7 @@ async def login(
         rate_limit.login_by_ip.record(ip_key)
         raise AuthenticationException("Incorrect email or password")
     rate_limit.login_by_email.reset(email_key)
-    return _tokens_for(user)
+    return tokens_for(user)
 
 
 @router.post("/auth/demo-login")
@@ -108,18 +115,19 @@ async def demo_login(db: AsyncSession = Depends(get_db)) -> TokenResponse:
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise ResourceNotFoundException()
-    return _tokens_for(user)
+    return tokens_for(user)
 
 
 @router.post("/auth/refresh")
 async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
     """A new pair for an unspent refresh token: the session outlives the one-hour access token
     without asking for the password again, and the old refresh token stops working."""
-    user_id = await _use_refresh_token(db, payload.refresh_token)
-    user = await db.get(TenantUser, uuid.UUID(user_id)) if user_id else None
-    if user is None or not user.is_active:
+    claims = await _use_refresh_token(db, payload.refresh_token)
+    user = await db.get(TenantUser, uuid.UUID(claims["sub"])) if claims else None
+    # A token issued before the password was reset (or the account changed) ends with it.
+    if user is None or not user.is_active or claims is None or claims.get("ver", 0) != user.token_version:
         raise AuthenticationException("Session expired, please sign in again")
-    return _tokens_for(user)
+    return tokens_for(user)
 
 
 @router.post("/auth/logout")
@@ -134,6 +142,32 @@ async def me(current_user: TenantUser = Depends(get_current_user)) -> UserRespon
     response = UserResponse.model_validate(current_user)
     response.is_demo = is_demo_user(current_user)
     return response
+
+
+@router.patch("/auth/me")
+async def update_profile(
+    payload: ProfileUpdateRequest,
+    current_user: TenantUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    current_user.full_name = payload.full_name
+    await db.flush()
+    return await me(current_user)
+
+
+@router.post("/auth/change-password")
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: TenantUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """A new password signs the account out everywhere else; this session gets fresh tokens."""
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise ValidationException("The current password is not right")
+    current_user.hashed_password = hash_password(payload.new_password)
+    current_user.token_version += 1
+    await db.flush()
+    return tokens_for(current_user)
 
 
 @router.post("/auth/forgot-password")
@@ -153,11 +187,14 @@ async def forgot_password(
     if user is not None and user.is_active:
         token = await issue_reset_token(db, user.id)
         reset_link = f"{settings.FRONTEND_ORIGIN}/reset-password?token={token}"
+        tenant = await db.get(Tenant, user.tenant_id) if user.tenant_id else None
+        language = tenant.language if tenant else None
         try:
             await send_plain_email(
                 to=[user.email],
-                subject="Reset your ReportAI password",
-                body=f"Use this link to set a new password (expires in 1 hour):\n\n{reset_link}",
+                subject=t(language, "reset_subject"),
+                body=t(language, "reset_body", link=reset_link),
+                branding=Branding.of(tenant) if tenant else None,
             )
         except Exception:
             logger.exception("Failed to send password reset email to %s", user.email)
@@ -174,5 +211,7 @@ async def reset_password(
         raise ValidationException(str(exc)) from exc
 
     user.hashed_password = hash_password(payload.new_password)
+    # Whoever knew the old password may still hold a session: it ends here.
+    user.token_version += 1
     await db.flush()
     return MessageResponse(message="Password updated successfully.")

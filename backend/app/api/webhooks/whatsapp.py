@@ -65,7 +65,7 @@ async def whatsapp_webhook(
     result = await db.execute(
         select(ChannelConnection).where(
             ChannelConnection.channel_type == "whatsapp",
-            ChannelConnection.credentials["phone_number_id"].astext == phone_number_id,
+            ChannelConnection.routing_key == phone_number_id,
         )
     )
     connection = result.scalar_one_or_none()

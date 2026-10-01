@@ -77,10 +77,9 @@ can approve with corrections, preview the PDF, reject with a reason the
 requester receives, correct a delivered report and regenerate its PDF, or send
 a copy again or to another address.
 
-With dev placeholder credentials the report ends `delivered` but its email
-copies stay `failed` in the `deliveries` table (fake SMTP host) — expected;
-everything up to and including rendering the PDF via Gotenberg is still
-verified in the `execution_logs` trail.
+Every email the app sends in development (report copies, password resets,
+invitations) lands in Mailpit instead of a real inbox: open
+http://localhost:8025 to read them, attachments included.
 
 ## Common commands
 

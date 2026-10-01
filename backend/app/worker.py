@@ -6,6 +6,7 @@ stops taking new jobs and finishes the one in hand; anything it cannot finish is
 next worker once its lease runs out."""
 
 import asyncio
+import contextlib
 import logging
 import os
 import signal
@@ -21,8 +22,14 @@ from app.core.logging import configure_logging
 from app.models.report import Report
 from app.models.used_refresh_token import UsedRefreshToken
 from app.repositories.report_repository import PENDING_STATUSES
+from app.services.channels.telegram_updates import (
+    polling_enabled,
+    register_all_webhooks,
+    run_pollers,
+)
 from app.services.jobs.queue import claim_next, fail_abandoned
 from app.services.jobs.runner import give_up, process
+from app.services.templates.assistant import drop_expired_drafts
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +66,7 @@ async def drop_finished_checkpoints() -> int:
                     """
                     SELECT DISTINCT r.id FROM reports r
                     JOIN checkpoints c ON c.thread_id = r.id::text
-                    WHERE r.status IN ('delivered', 'failed', 'cancelled')
+                    WHERE r.status IN ('delivered', 'delivery_failed', 'failed', 'cancelled')
                     """
                 )
             )
@@ -84,6 +91,7 @@ async def maintenance() -> None:
         logger.info("Cancelled %s reports that waited too long for an answer", cancelled)
     await drop_finished_checkpoints()
     await drop_expired_refresh_tokens()
+    await asyncio.to_thread(drop_expired_drafts)
 
 
 async def main() -> None:
@@ -97,6 +105,10 @@ async def main() -> None:
         loop.add_signal_handler(sig, stopping.set)
 
     logger.info("Worker %s started", worker_id)
+    if polling_enabled():
+        telegram = asyncio.create_task(run_pollers(stopping))
+    else:
+        telegram = asyncio.create_task(register_all_webhooks())
     last_maintenance = datetime.min.replace(tzinfo=UTC)
     try:
         while not stopping.is_set():
@@ -116,6 +128,9 @@ async def main() -> None:
                 continue
             await process(job, worker_id)
     finally:
+        stopping.set()
+        with contextlib.suppress(Exception):
+            await telegram
         await close_checkpointer()
         logger.info("Worker %s stopped", worker_id)
 

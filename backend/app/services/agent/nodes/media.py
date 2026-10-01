@@ -49,7 +49,7 @@ async def transcribe_node(state: AgentState) -> AgentState:
     assert state.media_local_path is not None
 
     audio_bytes = await asyncio.to_thread(Path(state.media_local_path).read_bytes)
-    text = await transcription.transcribe(audio_bytes, Path(state.media_local_path).name)
+    text, model = await transcription.transcribe(audio_bytes, Path(state.media_local_path).name, state.language)
     await save_report(state.report_id, source_text=text)
 
     return state.model_copy(
@@ -57,6 +57,6 @@ async def transcribe_node(state: AgentState) -> AgentState:
             "transcript": text,
             "incoming_text": text,
             "source_text": text,
-            "last_tool_usage": ToolUsage(model_used=settings.TRANSCRIPTION_MODEL),
+            "last_tool_usage": ToolUsage(model_used=model),
         }
     )

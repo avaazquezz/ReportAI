@@ -1,15 +1,13 @@
 import logging
 import uuid
-from pathlib import Path
 
 from docxtpl import DocxTemplate
 from fastapi import APIRouter, Depends, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import require_tenant_admin
+from app.core.deps import require_tenant_admin, require_tenant_member
 from app.core.exceptions import ConflictException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.document_template import DocumentTemplate
@@ -24,6 +22,8 @@ from app.schemas.document_type import (
     DocumentTypeUpdateRequest,
     FieldSchemaEntry,
 )
+from app.services.branding import TEMPLATE_VARIABLE
+from app.services.templates.library import activate_template, new_template_path
 
 router = APIRouter(prefix="/document-types", tags=["admin:document-types"])
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ async def create_document_type(
 async def list_document_types(
     skip: int = 0,
     limit: int = 100,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[DocumentTypeResponse]:
     tenant_id = require_tenant_id(current_user)
@@ -79,7 +79,7 @@ async def list_document_types(
 @router.get("/{document_type_id}")
 async def get_document_type(
     document_type_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_admin),
+    current_user: TenantUser = Depends(require_tenant_member),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentTypeResponse:
     tenant_id = require_tenant_id(current_user)
@@ -124,9 +124,7 @@ async def upload_template(
     doc_type_repo = BaseRepository(DocumentType, db)
     doc_type = await get_scoped_or_404(doc_type_repo, document_type_id, tenant_id=tenant_id)
 
-    storage_dir = Path(settings.DOCUMENT_STORAGE_PATH) / "templates" / str(tenant_id)
-    storage_dir.mkdir(parents=True, exist_ok=True)
-    dest = storage_dir / f"{uuid.uuid4()}.docx"
+    dest = new_template_path(tenant_id)
     dest.write_bytes(await file.read())
 
     try:
@@ -136,31 +134,20 @@ async def upload_template(
         dest.unlink(missing_ok=True)
         raise ValidationException("The uploaded file isn't a valid .docx template") from exc
 
-    unknown_tags = used_tags - set(doc_type.field_schema.keys())
+    unknown_tags = used_tags - set(doc_type.field_schema.keys()) - {TEMPLATE_VARIABLE}
     if unknown_tags:
         dest.unlink(missing_ok=True)
         raise ValidationException(
             f"Template references fields not in this document type's schema: {sorted(unknown_tags)}"
         )
 
-    template_repo = BaseRepository(DocumentTemplate, db)
-    existing = await template_repo.list(
-        filters={"document_type_id": document_type_id, "is_active": True}, limit=1
-    )
-    next_version = 1
-    if existing:
-        prior = existing[0]
-        next_version = prior.version + 1
-        await template_repo.update(prior, is_active=False)
-
-    new_template = await template_repo.create(
+    new_template = await activate_template(
+        db,
         tenant_id=tenant_id,
-        document_type_id=document_type_id,
+        document_type_id=doc_type.id,
         file_path=str(dest),
         original_filename=file.filename or "template.docx",
         uploaded_by=current_user.id,
-        version=next_version,
-        is_active=True,
     )
     return DocumentTemplateResponse.model_validate(new_template)
 

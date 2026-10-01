@@ -8,9 +8,12 @@ from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.models.document_template import DocumentTemplate
+from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
+from app.models.tenant import Tenant
 from app.services.agent.summary import format_value
 from app.services.agent.tools.extraction_schema import TABLE, extractable_fields, image_fields
+from app.services.branding import Branding
 from app.services.jobs.errors import PermanentJobError
 from app.services.rendering.docx_render import fill_template
 from app.services.rendering.gotenberg_client import convert_docx_to_pdf
@@ -32,6 +35,12 @@ async def _active_template_path(document_type_id: object) -> str:
     return path
 
 
+async def _branding(report_id: object) -> Branding | None:
+    async with AsyncSessionLocal() as session:
+        tenant = await session.scalar(select(Tenant).join(Report, Report.tenant_id == Tenant.id).where(Report.id == report_id))
+    return Branding.of(tenant) if tenant else None
+
+
 async def _photo_paths(report_id: object) -> list[str]:
     async with AsyncSessionLocal() as session:
         rows = await session.scalars(
@@ -49,6 +58,8 @@ def _readable(language: str, spec: dict[str, Any], value: Any) -> Any:
     kind = spec.get("type")
     if kind in ("date", "bool"):
         return format_value(language, spec, value)
+    if kind == "float" and isinstance(value, float) and value.is_integer():
+        return int(value)  # "1", not "1.0" — still a number, so a template can add it up
     if kind == TABLE:
         columns = spec.get("columns") or {}
         return [
@@ -95,7 +106,12 @@ async def fill_report_docx(
     template_path = await _active_template_path(document_type_id)
     photos = assign_photos(field_schema, await _photo_paths(report_id)) if image_fields(field_schema) else {}
     return await asyncio.to_thread(
-        fill_template, template_path, template_values(field_schema, fields, language), output_path, photos
+        fill_template,
+        template_path,
+        template_values(field_schema, fields, language),
+        output_path,
+        photos,
+        await _branding(report_id),
     )
 
 

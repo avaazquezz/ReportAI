@@ -131,3 +131,12 @@ def test_dates_and_yes_no_read_as_a_person_writes_them() -> None:
     }
     assert template_values(schema, fields, "en")["urgent"] == "No"
     assert template_values(schema, fields, "en")["day"] == "2026-09-30"
+
+
+def test_a_whole_quantity_prints_without_a_decimal_point() -> None:
+    from app.services.rendering.report_document import template_values
+
+    schema = {"materiales": {"type": "list[object]", "columns": {"cantidad": {"type": "float"}}}, "horas": {"type": "float"}}
+    values = template_values(schema, {"materiales": [{"cantidad": 1.0}, {"cantidad": 2.5}], "horas": 3.0}, "es")
+
+    assert values["materiales"] == [{"cantidad": 1}, {"cantidad": 2.5}] and values["horas"] == 3

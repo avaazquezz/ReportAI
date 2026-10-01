@@ -31,6 +31,16 @@ services:
     networks:
       - reportai_net
 
+  # Catches every email the app sends in development: read them at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: reportai_mailpit
+    ports:
+      - "8025:8025"
+    restart: unless-stopped
+    networks:
+      - reportai_net
+
   backend:
     build:
       context: backend
@@ -41,6 +51,12 @@ services:
     command: sh -c "alembic upgrade head && python scripts/setup_checkpointer.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
     env_file:
       - .env
+    environment: &dev-mail
+      # Mail goes to Mailpit unless .env names a real SMTP server.
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURITY: ${SMTP_SECURITY:-none}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-reportai@localhost}
     volumes:
       - ./backend:/app
       - reportai_storage_data:/app/storage
@@ -64,6 +80,7 @@ services:
     command: python -m app.worker
     env_file:
       - .env
+    environment: *dev-mail
     volumes:
       - ./backend:/app
       - reportai_storage_data:/app/storage

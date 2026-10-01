@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from app.core.validators import EmailField
 
@@ -47,10 +47,20 @@ class FieldSchemaEntry(BaseModel):
         return self
 
 
+def _no_reserved_field_names(field_schema: dict[str, "FieldSchemaEntry"]) -> dict[str, "FieldSchemaEntry"]:
+    # Templates use {{ branding.* }} for the company's name, colour and logo.
+    if "branding" in field_schema:
+        raise ValueError("'branding' is reserved for the company's logo and name in templates; rename that field")
+    return field_schema
+
+
+FieldSchema = Annotated[dict[str, "FieldSchemaEntry"], AfterValidator(_no_reserved_field_names)]
+
+
 class DocumentTypeCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = None
-    field_schema: dict[str, FieldSchemaEntry] = Field(default_factory=dict)
+    field_schema: FieldSchema = Field(default_factory=dict)
     prompt_instructions: str | None = None
     notification_emails: list[EmailField] = Field(default_factory=list)
 
@@ -58,7 +68,7 @@ class DocumentTypeCreateRequest(BaseModel):
 class DocumentTypeUpdateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = None
-    field_schema: dict[str, FieldSchemaEntry] = Field(default_factory=dict)
+    field_schema: FieldSchema = Field(default_factory=dict)
     prompt_instructions: str | None = None
     notification_emails: list[EmailField] = Field(default_factory=list)
     is_active: bool = True

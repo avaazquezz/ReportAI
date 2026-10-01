@@ -18,7 +18,7 @@ from app.models.document_type import DocumentType
 from app.models.job import Job
 from app.models.report import Report
 from app.models.tenant import Tenant
-from app.services.agent.nodes.deliver import deliver_node
+from app.services.agent.nodes.deliver import deliver_node, finalize_report_node
 from app.services.agent.state import AgentState
 from app.services.delivery import deliveries
 from app.services.delivery import email as smtp_delivery
@@ -206,3 +206,28 @@ async def test_a_delivery_job_that_runs_out_of_attempts_leaves_the_report_delive
     assert stored.status == "failed" and "smtp down" in (stored.last_error or "")
     # The person got their PDF: no "we couldn't generate your report", and no second copy.
     assert channel.send_message.await_count == 1
+
+
+async def test_a_report_nobody_received_reads_delivery_failed_until_a_copy_arrives(
+    db: AsyncSession, own_sessions: None, tmp_path: Path, channel: AsyncMock, smtp: AsyncMock
+) -> None:
+    report = await _report(db, tmp_path)
+    await _plan(db, report, ["jefe@acme.test"])
+    channel.send_message.side_effect = RuntimeError("telegram is down")
+    smtp.side_effect = ConnectionRefusedError("smtp down")
+    await send_pending(report.id)
+    state = AgentState(
+        thread_id=str(report.id), tenant_id=report.tenant_id, channel_connection_id=report.channel_connection_id,
+        channel_type="telegram", sender_id="42", report_id=report.id, raw_payload={},
+    )
+
+    await finalize_report_node(state)
+
+    await db.refresh(report)
+    assert report.status == "delivery_failed" and report.completed_at is not None
+
+    smtp.side_effect = None
+    assert len(await send_pending(report.id)) == 1  # the channel is still down, the email goes
+
+    await db.refresh(report)
+    assert report.status == "delivered"

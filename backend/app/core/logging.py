@@ -58,3 +58,5 @@ def configure_logging() -> None:
         uvicorn_logger = logging.getLogger(name)
         uvicorn_logger.handlers.clear()
         uvicorn_logger.propagate = True
+    # httpx logs every request URL at INFO, and a Telegram Bot API URL contains the bot's token.
+    logging.getLogger("httpx").setLevel(logging.WARNING)

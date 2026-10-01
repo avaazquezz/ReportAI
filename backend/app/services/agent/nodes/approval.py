@@ -5,7 +5,6 @@ from langgraph.types import interrupt
 from pydantic import ValidationError
 from sqlalchemy import func, select
 
-from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.report_attachment import ReportAttachment
 from app.services.agent.nodes._shared import send_on_origin_channel
@@ -79,8 +78,8 @@ def _usage(result: LLMResult | None) -> ToolUsage | None:
     if result is None:
         return None
     return ToolUsage(
-        model_used=settings.EXTRACTION_MODEL,
-        cost_usd=estimate_cost_usd(settings.EXTRACTION_MODEL, result.input_tokens, result.output_tokens),
+        model_used=result.model,
+        cost_usd=estimate_cost_usd(result.model, result.input_tokens, result.output_tokens),
     )
 
 
