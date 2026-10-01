@@ -7,7 +7,7 @@ on:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     services:
       postgres:
@@ -80,7 +80,7 @@ jobs:
         run: uv run --frozen pytest -v -m "not eval"
 
   backend-image:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
         run: docker run --rm -v ci_storage:/app/storage reportai-backend:ci sh -c 'echo ok > /app/storage/probe'
 
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     defaults:
       run:
