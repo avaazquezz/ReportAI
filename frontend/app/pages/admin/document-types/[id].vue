@@ -7,7 +7,7 @@ const { t } = useI18n()
 const { formatDate } = useLocaleDate()
 const route = useRoute()
 const documentTypeId = String(route.params.id)
-const { getById, update, listTemplates, uploadTemplate } = useDocumentTypes()
+const { getById, update, listTemplates, uploadTemplate, downloadTemplate } = useDocumentTypes()
 const { show } = useSnackbar()
 const authStore = useAuthStore()
 const isDemo = computed(() => authStore.user?.is_demo ?? false)
@@ -68,8 +68,17 @@ const templateHeaders = computed(() => [
   { title: t('admin.documentTypes.templateHeaders.file'), key: 'original_filename' },
   { title: t('admin.documentTypes.templateHeaders.version'), key: 'version' },
   { title: t('admin.common.statusLabel'), key: 'is_active' },
-  { title: t('admin.documentTypes.templateHeaders.uploaded'), key: 'created_at' }
+  { title: t('admin.documentTypes.templateHeaders.uploaded'), key: 'created_at' },
+  { title: '', key: 'actions', width: '1%' }
 ])
+
+async function onDownloadTemplate(template: DocumentTemplate) {
+  try {
+    await downloadTemplate(documentTypeId, template)
+  } catch {
+    show(t('admin.documentTypes.errors.downloadTemplate'), 'error')
+  }
+}
 
 const required = (value: string) => Boolean(value?.trim()) || t('admin.common.validation.required')
 const identifier = (value: string) => IDENTIFIER.test(value.trim()) || t('admin.documentTypes.validation.identifier')
@@ -395,6 +404,11 @@ onMounted(() => Promise.all([load(), loadTemplates()]))
           </template>
           <template #item.created_at="{ item }">
             {{ formatDate(item.created_at) }}
+          </template>
+          <template #item.actions="{ item }">
+            <v-btn size="small" variant="text" prepend-icon="mdi-download" @click="onDownloadTemplate(item)">
+              {{ t('admin.documentTypes.templates.download') }}
+            </v-btn>
           </template>
         </AdminResourceTable>
 

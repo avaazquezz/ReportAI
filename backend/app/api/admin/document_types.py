@@ -1,14 +1,16 @@
 import logging
 import uuid
+from pathlib import Path
 
 from docxtpl import DocxTemplate
 from fastapi import APIRouter, Depends, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_tenant_admin, require_tenant_member
-from app.core.exceptions import ConflictException, ValidationException
+from app.core.exceptions import ConflictException, ResourceNotFoundException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
@@ -173,4 +175,23 @@ async def list_templates(
         total=total,
         skip=skip,
         limit=limit,
+    )
+
+
+@router.get("/{document_type_id}/templates/{template_id}/download")
+async def download_template(
+    document_type_id: uuid.UUID,
+    template_id: uuid.UUID,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    """The Word file as it is, to adjust it in Word and upload it again as a new version."""
+    tenant_id = require_tenant_id(current_user)
+    template = await get_scoped_or_404(BaseRepository(DocumentTemplate, db), template_id, tenant_id=tenant_id)
+    if template.document_type_id != document_type_id or not Path(template.file_path).is_file():
+        raise ResourceNotFoundException("Template not found")
+    return FileResponse(
+        template.file_path,
+        filename=template.original_filename or "template.docx",
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )

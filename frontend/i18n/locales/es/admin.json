@@ -155,7 +155,8 @@
         "title": "Plantillas",
         "uploadLabel": "Subir nueva plantilla (.docx)",
         "uploadButton": "Subir",
-        "manualHelp": "¿Ya tienes una plantilla con etiquetas ({tag})? Súbela directamente:"
+        "manualHelp": "¿Has retocado la plantilla en Word, o ya tienes una con etiquetas ({tag})? Súbela aquí:",
+        "download": "Descargar"
       },
       "templateHeaders": {
         "file": "Archivo",
@@ -173,7 +174,8 @@
         "saveForm": "No se pudo guardar. Revisa los datos del formulario.",
         "uploadTemplate": "No se pudo subir la plantilla.",
         "templates": "No se pudieron cargar las plantillas.",
-        "invalidForm": "Revisa los campos marcados en rojo."
+        "invalidForm": "Revisa los campos marcados en rojo.",
+        "downloadTemplate": "No se pudo descargar la plantilla."
       },
       "toast": {
         "created": "Tipo de documento creado.",

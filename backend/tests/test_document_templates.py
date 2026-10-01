@@ -166,3 +166,23 @@ async def test_upload_template_cross_tenant_returns_404(client: AsyncClient, db:
     )
 
     assert response.status_code == 404
+
+
+async def test_a_template_downloads_as_uploaded_to_edit_it_in_word(client: AsyncClient, db: AsyncSession) -> None:
+    user = await _create_tenant_admin(db)
+    headers = {"Authorization": f"Bearer {await _login(client, user.email)}"}
+    doc_type_id = await _create_document_type(client, headers)
+    content = _build_docx(["meeting_date", "summary"])
+    uploaded = await client.post(
+        f"/document-types/{doc_type_id}/templates", headers=headers,
+        files={"file": ("acta.docx", content, "application/octet-stream")},
+    )
+    template_id = uploaded.json()["id"]
+
+    response = await client.get(f"/document-types/{doc_type_id}/templates/{template_id}/download", headers=headers)
+    other_type = await client.post("/document-types", json={"name": "Otro", "field_schema": _FIELD_SCHEMA}, headers=headers)
+    wrong = await client.get(f"/document-types/{other_type.json()['id']}/templates/{template_id}/download", headers=headers)
+
+    assert response.status_code == 200 and response.content == content
+    assert 'filename="acta.docx"' in response.headers["content-disposition"]
+    assert wrong.status_code == 404
