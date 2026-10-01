@@ -15,7 +15,7 @@ LANGUAGE_NAMES: Final = {"es": "Spanish", "en": "English"}
 _MESSAGES: Final[dict[str, dict[str, str]]] = {
     "es": {
         # channel guards
-        "rejected_sender": "Lo siento, no tienes permiso para usar este canal. Contacta con tu administrador.",
+        "rejected_sender": "Lo siento, no tienes permiso para usar este canal. Pásale este identificador a tu administrador para que te dé acceso: {sender}",
         "rate_limited": "Has alcanzado el límite de informes por hora. Inténtalo de nuevo más tarde.",
         "spend_capped": "El servicio ha alcanzado su límite de uso diario. Inténtalo de nuevo mañana.",
         "busy": "Sigo procesando tu informe anterior. En cuanto termine te escribo.",
@@ -56,7 +56,7 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "none": "—",
     },
     "en": {
-        "rejected_sender": "Sorry, you're not authorized to use this channel. Contact your administrator.",
+        "rejected_sender": "Sorry, you're not authorized to use this channel. Give this id to your administrator so they can let you in: {sender}",
         "rate_limited": "You've reached the hourly report limit. Please try again later.",
         "spend_capped": "The service has reached its daily usage cap. Please try again tomorrow.",
         "busy": "I'm still processing your previous report. I'll message you as soon as it's done.",

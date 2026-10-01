@@ -208,7 +208,8 @@ async def ingest_message(
             incoming.sender_id,
             connection.id,
         )
-        await say(connection, incoming.sender_id, t(language, "rejected_sender"))
+        # The id the administrator must add to the allow-list: they cannot read the server logs.
+        await say(connection, incoming.sender_id, t(language, "rejected_sender", sender=incoming.sender_id))
         return IngestResult("rejected")
 
     # Global wallet guard, checked before both paths (a correction reply extracts again).
