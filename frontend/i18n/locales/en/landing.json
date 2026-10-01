@@ -1,8 +1,8 @@
 {
   "landing": {
     "seo": {
-      "title": "ReportAI — Site safety inspection reports, dictated by voice",
-      "description": "For site safety inspectors and H&S consultants: dictate the inspection on Telegram as you leave the site and get the report in your own Word template, with issues, who fixes them and by when. On your own server."
+      "title": "ReportAI — Inspection reports, dictated by voice",
+      "description": "Dictate the visit on Telegram when you finish and get the report in your own Word template, with the issues, who fixes them and by when. For safety, inspection and maintenance teams. On your own server."
     },
     "header": {
       "nav": {
@@ -21,10 +21,10 @@
     },
     "hero": {
       "placeholderTag": "inspection_report",
-      "eyebrow": "For site safety inspectors and H&S consultants",
+      "eyebrow": "For safety, inspection and maintenance teams",
       "headlineLine1": "Dictate the site inspection.",
       "headlineLine2": "Get the report.",
-      "subheadline": "Leaving the site, you send a voice note on Telegram. ReportAI fills in your Word template with the contractors on site, the issues, who fixes them and by when, and sends it to the contractor and the client once you approve it.",
+      "subheadline": "When the visit's done, you send a voice note on Telegram. ReportAI fills in your Word template with it: what you saw, the issues, who fixes them and by when. Once you approve it, it goes to the right people.",
       "note": "Installed on your own server: the recordings and reports stay with you.",
       "replay": "Play again",
       "stage": {
@@ -344,7 +344,7 @@
       "or": "or write to"
     },
     "footer": {
-      "tagline": "Site inspection reports, dictated by voice.",
+      "tagline": "Inspection reports, dictated by voice.",
       "madeBy": "A product by",
       "legal": "Legal notice",
       "code": "Source code"
