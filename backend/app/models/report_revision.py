@@ -25,7 +25,7 @@ class ReportRevision(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenant_users.id", ondelete="SET NULL"), nullable=True
     )
-    action: Mapped[str] = mapped_column(String(20), nullable=False)  # approve | reject | edit | rerender | resend
+    action: Mapped[str] = mapped_column(String(20), nullable=False)  # approve | reject | edit | rerender | resend | retry
     # {"field": {"from": old, "to": new}} for the fields a person changed.
     changes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)

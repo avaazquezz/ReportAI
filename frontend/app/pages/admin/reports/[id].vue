@@ -8,7 +8,7 @@ const route = useRoute()
 const reportId = String(route.params.id)
 const { formatDateTime } = useLocaleDate()
 const { statusLabel, statusColor } = useReportStatus()
-const { getById, approve, reject, editFields, preview, resend, fetchBlob } = useReports()
+const { getById, approve, reject, retry, editFields, preview, resend, fetchBlob } = useReports()
 const { show } = useSnackbar()
 const authStore = useAuthStore()
 const { canApprove } = useRole()
@@ -41,6 +41,9 @@ const awaitingApproval = computed(() => status.value === 'awaiting_approval')
 const delivered = computed(() => FINISHED_STATUSES.includes(status.value))
 const editable = computed(() => !readOnly.value && (awaitingApproval.value || delivered.value))
 const rejectable = computed(() => !readOnly.value && PAUSED_STATUSES.includes(status.value))
+// A report that failed (not one an admin rejected) can run again once the cause is fixed.
+const retryable = computed(() => !readOnly.value && status.value === 'failed' && report.value?.error_detail !== 'Rejected by admin')
+const sender = computed(() => report.value?.requester_name ?? report.value?.requester_identifier ?? '')
 const failedDeliveries = computed(() => report.value?.deliveries.filter((d) => d.status === 'failed') ?? [])
 
 const missing = computed(() =>
@@ -144,6 +147,19 @@ async function run(action: string, work: () => Promise<ReportDetail>, success: s
 const onApprove = () => run('approve', () => approve(reportId, edits.value), 'admin.reports.toast.approved')
 const onSave = () =>
   run('save', () => editFields(reportId, edits.value), dirty.value ? 'admin.reports.toast.saved' : 'admin.reports.toast.regenerated')
+async function onRetry() {
+  busy.value = 'retry'
+  try {
+    applyReport(await retry(reportId))
+    show(t('admin.reports.toast.retried'), 'success')
+    schedulePoll()
+  } catch (err) {
+    const detail = String((err as { data?: { detail?: unknown } })?.data?.detail ?? '')
+    show(t(detail.includes('another report') ? 'admin.reports.errors.retryBusy' : 'admin.reports.errors.retry'), 'error')
+  } finally {
+    busy.value = null
+  }
+}
 const onResendFailed = () => run('resend', () => resend(reportId), 'admin.reports.toast.resent')
 const onResendOne = (delivery: ReportDelivery) =>
   run('resend', () => resend(reportId, { delivery_id: delivery.id }), 'admin.reports.toast.resent')
@@ -230,7 +246,7 @@ onBeforeUnmount(() => {
             {{ report.document_type_name ?? t('admin.reports.noType') }}
           </h1>
           <p class="mt-1 font-body text-sm text-ink-900/70">
-            {{ t('admin.reports.detail.from', { who: report.requester_identifier, channel: report.requester_channel }) }}
+            {{ t('admin.reports.detail.from', { who: sender, channel: channelName(report.requester_channel) }) }}
             · {{ formatDateTime(report.received_at ?? report.created_at) }}
           </p>
         </div>
@@ -262,6 +278,9 @@ onBeforeUnmount(() => {
         </template>
         <v-btn v-if="editable && report.extracted_fields" variant="tonal" :loading="busy === 'preview'" prepend-icon="mdi-eye-outline" @click="onPreview">
           {{ t('admin.reports.actions.preview') }}
+        </v-btn>
+        <v-btn v-if="retryable" color="primary" :loading="busy === 'retry'" prepend-icon="mdi-refresh" @click="onRetry">
+          {{ t('admin.reports.actions.retry') }}
         </v-btn>
         <v-btn v-if="report.download_url" variant="tonal" prepend-icon="mdi-download" @click="onDownload">
           {{ t('admin.reports.actions.downloadPdf') }}
@@ -348,7 +367,7 @@ onBeforeUnmount(() => {
               <tr v-for="delivery in report.deliveries" :key="delivery.id">
                 <td>
                   <v-icon :icon="delivery.kind === 'email' ? 'mdi-email-outline' : 'mdi-message-outline'" size="small" class="mr-1" aria-hidden="true" />
-                  {{ delivery.destination }}
+                  {{ delivery.kind === 'channel' && delivery.destination === report.requester_identifier ? sender : delivery.destination }}
                 </td>
                 <td>
                   <v-chip size="small" variant="tonal" :color="delivery.status === 'sent' ? 'approved' : delivery.status === 'failed' ? 'failed' : 'pending'">

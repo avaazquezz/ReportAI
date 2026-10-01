@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -22,6 +23,7 @@ from app.models.channel_connection import ChannelConnection
 from app.models.delivery import Delivery
 from app.models.document_type import DocumentType
 from app.models.execution_log import ExecutionLog
+from app.models.job import Job
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
 from app.models.report_revision import ReportRevision
@@ -56,17 +58,27 @@ from app.services.agent.tools.extraction_schema import (
 )
 from app.services.delivery.deliveries import attachment_name, local_day, request_resend
 from app.services.i18n import t
+from app.services.jobs.queue import RUN, enqueue
 from app.services.rendering.report_document import MissingTemplateError, render_report_pdf
+from app.services.sender_invites import sender_labels
 
 router = APIRouter(prefix="/reports", tags=["admin:reports"])
 
 _EXPORT_LIMIT = 10_000
+_REJECTED = "Rejected by admin"
 # A cell that starts like a formula runs as one when the CSV is opened in a spreadsheet, and
 # these values come from whatever someone said in a voice note.
 _FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 
 
-def _to_response(report: Report, document_type_name: str | None) -> ReportResponse:
+async def _requester_names(db: AsyncSession, reports: list[Report]) -> dict[uuid.UUID, str]:
+    """The name each report's sender joined with, by report id (only those who joined by invitation)."""
+    labels = await sender_labels(db, list({r.channel_connection_id for r in reports if r.channel_connection_id}))
+    names = {r.id: labels.get(r.channel_connection_id, {}).get(r.requester_identifier) for r in reports if r.channel_connection_id}
+    return {report_id: name for report_id, name in names.items() if name}
+
+
+def _to_response(report: Report, document_type_name: str | None, requester_name: str | None = None) -> ReportResponse:
     return ReportResponse(
         id=report.id,
         tenant_id=report.tenant_id,
@@ -75,6 +87,7 @@ def _to_response(report: Report, document_type_name: str | None) -> ReportRespon
         status=report.status,
         requester_channel=report.requester_channel,
         requester_identifier=report.requester_identifier,
+        requester_name=requester_name,
         error_detail=report.error_detail,
         download_url=f"/reports/{report.id}/download" if report.file_path else None,
         created_at=report.created_at,
@@ -158,8 +171,9 @@ async def _detail(db: AsyncSession, report: Report) -> ReportDetailResponse:
     photos = await db.scalars(
         select(ReportAttachment).where(ReportAttachment.report_id == report.id).order_by(ReportAttachment.created_at)
     )
+    names = await _requester_names(db, [report])
     return ReportDetailResponse(
-        **_to_response(report, document_type.name if document_type else None).model_dump(),
+        **_to_response(report, document_type.name if document_type else None, names.get(report.id)).model_dump(),
         received_at=report.received_at,
         updated_at=report.updated_at,
         source_text=report.source_text,
@@ -205,8 +219,9 @@ async def list_reports(
     repo = ReportRepository(db)
     rows = await repo.list_with_document_type_name(tenant_id=tenant_id, filters=filters, skip=skip, limit=limit)
     total = await repo.count_scoped(tenant_id=tenant_id, filters=filters)
+    names = await _requester_names(db, [report for report, _ in rows])
     return PaginatedResponse(
-        items=[_to_response(report, name) for report, name in rows],
+        items=[_to_response(report, name, names.get(report.id)) for report, name in rows],
         total=total,
         skip=skip,
         limit=limit,
@@ -242,7 +257,8 @@ async def export_reports(
 
     out = io.StringIO()
     writer = csv.writer(out)
-    header = ["id", "created_at", "status", "document_type", "channel", "requester", "completed_at", "error"]
+    names = await _requester_names(db, [report for report, _ in rows])
+    header = ["id", "created_at", "status", "document_type", "channel", "requester", "requester_name", "completed_at", "error"]
     writer.writerow(header + ([field_label(name, spec) for name, spec in columns.items()] if columns else ["fields"]))
     for report, document_type_name in rows:
         fields = report.extracted_fields or {}
@@ -253,6 +269,7 @@ async def export_reports(
             document_type_name,
             report.requester_channel,
             report.requester_identifier,
+            names.get(report.id),
             report.completed_at.astimezone(zone).strftime("%Y-%m-%d %H:%M") if report.completed_at else None,
             report.error_detail,
         ]
@@ -324,7 +341,7 @@ async def reject_report(
         .where(Report.id == report.id, Report.status.in_(PENDING_STATUSES))
         .values(
             status="failed",
-            error_detail="Rejected by admin",
+            error_detail=_REJECTED,
             reject_reason=reason,
             completed_at=datetime.now(UTC),
         )
@@ -340,6 +357,40 @@ async def reject_report(
     if connection is not None and tenant is not None:
         text = t(tenant.language, "rejected_reason", reason=reason) if reason else t(tenant.language, "rejected")
         await say(connection, report.requester_identifier, text, meta=report.channel_meta)
+    return await _refreshed_detail(db, report)
+
+
+@router.post("/{report_id}/retry", status_code=202)
+async def retry_report(
+    report_id: uuid.UUID,
+    current_user: TenantUser = Depends(require_approver),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """Run a failed report again from the message that started it, once whatever made it fail is
+    fixed (an AI key, a provider that was down). A report an admin rejected stays rejected."""
+    report = await _load(db, report_id, current_user)
+    if report.status != "failed" or report.error_detail == _REJECTED:
+        raise ConflictException("Only a report that failed can be tried again")
+    first_run = await db.scalar(
+        select(Job).where(Job.report_id == report.id, Job.kind == RUN).order_by(Job.created_at).limit(1)
+    )
+    if first_run is None:
+        raise ConflictException("This report has no message to start from")
+    try:
+        async with db.begin_nested():  # a savepoint: the conflict below must not spoil the transaction
+            retried = await db.execute(
+                update(Report)
+                .where(Report.id == report.id, Report.status == "failed")
+                .values(status="pending", error_detail=None, completed_at=None)
+                .returning(Report.id)
+            )
+    except IntegrityError:
+        # The partial unique index: one report in flight per sender.
+        raise ConflictException("This sender has another report in progress: finish or cancel it first") from None
+    if retried.first() is None:
+        raise ConflictException("Only a report that failed can be tried again")
+    await enqueue(db, report_id=report.id, kind=RUN, payload=first_run.payload)
+    db.add(ReportRevision(report_id=report.id, user_id=current_user.id, action="retry"))
     return await _refreshed_detail(db, report)
 
 
