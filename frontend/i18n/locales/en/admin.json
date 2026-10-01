@@ -155,7 +155,8 @@
         "title": "Templates",
         "uploadLabel": "Upload new template (.docx)",
         "uploadButton": "Upload",
-        "manualHelp": "Already have a template with tags ({tag})? Upload it directly:"
+        "manualHelp": "Edited the template in Word, or already have one with tags ({tag})? Upload it here:",
+        "download": "Download"
       },
       "templateHeaders": {
         "file": "File",
@@ -173,7 +174,8 @@
         "saveForm": "Couldn't save. Check the form data.",
         "uploadTemplate": "Couldn't upload the template.",
         "templates": "Couldn't load the templates.",
-        "invalidForm": "Check the fields marked in red."
+        "invalidForm": "Check the fields marked in red.",
+        "downloadTemplate": "Couldn't download the template."
       },
       "toast": {
         "created": "Document type created.",
