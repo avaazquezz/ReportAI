@@ -23,10 +23,9 @@ export default defineNuxtConfig({
       legalName: '',
       legalId: '',
       legalAddress: '',
-      // Pilot places on the landing's pricing: real numbers only, updated as pilots sign
-      // (NUXT_PUBLIC_PILOT_SPOTS / NUXT_PUBLIC_PILOTS_TAKEN).
+      // Pilot places on the landing's pricing (NUXT_PUBLIC_PILOT_SPOTS / NUXT_PUBLIC_PILOTS_TAKEN).
       pilotSpots: 5,
-      pilotsTaken: 0
+      pilotsTaken: 3
     }
   },
   i18n: {
