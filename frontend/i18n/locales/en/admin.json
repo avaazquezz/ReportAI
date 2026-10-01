@@ -9,7 +9,8 @@
         "reports": "Reports",
         "usage": "Usage & cost"
       },
-      "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here."
+      "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here.",
+      "toggleMenu": "Show or hide the menu"
     },
     "common": {
       "nameLabel": "Name",
@@ -35,11 +36,20 @@
       "confirmToggle": {
         "deactivate": "Deactivate {name}?",
         "reactivate": "Reactivate {name}?"
+      },
+      "validation": {
+        "required": "Required",
+        "email": "Enter a valid email",
+        "emails": "One of the emails is not valid"
+      },
+      "errors": {
+        "statusUpdate": "Couldn't change the status."
       }
     },
     "dashboard": {
       "greeting": "Hi, {name}",
-      "hint": "Use the menu on the left to manage your account."
+      "hint": "Use the menu on the left to manage your account.",
+      "title": "Home"
     },
     "channels": {
       "new": "New channel",
@@ -56,7 +66,7 @@
         "accessTokenLabel": "Access token",
         "inboundSlugLabel": "Inbound slug",
         "leaveBlank": "Leave blank to keep unchanged",
-        "allowedSendersHint": "IDs of the senders allowed to use this channel. If left empty, the channel rejects everyone"
+        "allowedSendersHint": "Ids of who may send reports. When someone isn't on the list, the bot replies with their id so they can pass it on to you. Empty: the channel rejects everyone."
       },
       "errors": {
         "list": "Couldn't load channels.",
@@ -79,11 +89,26 @@
       },
       "fields": {
         "title": "Fields to extract",
-        "add": "+ Add field",
+        "add": "Add field",
         "empty": "No fields yet. Add at least one to generate reports.",
         "nameLabel": "Field name",
         "typeLabel": "Type",
-        "requiredLabel": "Required"
+        "requiredLabel": "Required",
+        "hint": "The name is the template variable ({example}); the label is what people read. Fields are asked for and shown in this order.",
+        "nameHint": "Template variable",
+        "labelLabel": "Label (optional)",
+        "multipleLabel": "Several photos",
+        "moveUp": "Move field up",
+        "moveDown": "Move field down",
+        "remove": "Remove field",
+        "descriptionLabel": "What the AI should look for",
+        "descriptionHint": "E.g. “the date the visit took place”",
+        "optionsLabel": "Options",
+        "columnsLabel": "Table columns",
+        "columnTitle": "Column title",
+        "removeColumn": "Remove column",
+        "addColumn": "Add column",
+        "exampleName": "visit_date"
       },
       "saveChanges": "Save changes",
       "templates": {
@@ -105,12 +130,35 @@
         "create": "Couldn't create it. Check that the name isn't already in use.",
         "load": "Couldn't load the document type.",
         "saveForm": "Couldn't save. Check the form data.",
-        "uploadTemplate": "Couldn't upload the template."
+        "uploadTemplate": "Couldn't upload the template.",
+        "templates": "Couldn't load the templates.",
+        "invalidForm": "Check the fields marked in red."
       },
       "toast": {
         "created": "Document type created.",
         "saved": "Changes saved.",
         "templateUploaded": "Template uploaded."
+      },
+      "fieldTypes": {
+        "str": "Text",
+        "int": "Whole number",
+        "float": "Decimal number",
+        "bool": "Yes / No",
+        "date": "Date",
+        "time": "Time",
+        "email": "Email",
+        "phone": "Phone",
+        "list_str": "List of texts",
+        "list_int": "List of numbers",
+        "enum": "One option from a list",
+        "list_object": "Table",
+        "image": "Photo"
+      },
+      "validation": {
+        "identifier": "Only letters, numbers and _, no spaces (e.g. visit_date)",
+        "duplicate": "Another one already has this name",
+        "options": "Add at least two different options",
+        "columns": "A table needs at least one column"
       }
     },
     "tenants": {

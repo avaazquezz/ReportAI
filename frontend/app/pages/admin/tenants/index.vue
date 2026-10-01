@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { Tenant } from '~/types'
 
-definePageMeta({ middleware: ['auth', 'require-super-admin'], layout: 'app' })
+definePageMeta({ middleware: ['auth', 'require-super-admin'], layout: 'app', titleKey: 'admin.layout.nav.tenants' })
 
 const { t } = useI18n()
 const { formatDate } = useLocaleDate()
 const { items, total, loading, error, fetchList, create, setActive } = useTenants()
+const { page, load, reload } = useTablePaging(fetchList)
 const { show } = useSnackbar()
 
 const headers = computed(() => [
@@ -20,11 +21,17 @@ const createDialog = ref(false)
 const creating = ref(false)
 const createError = ref('')
 const form = ref({ name: '', slug: '', admin_email: '', admin_full_name: '' })
+const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+
+const required = (value: string) => Boolean(value?.trim()) || t('admin.common.validation.required')
+const slugRule = (value: string) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) || t('admin.tenants.dialog.slugHint')
+const emailRule = (value: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value) || t('admin.common.validation.email')
 
 const confirmDialog = ref(false)
 const pendingTenant = ref<Tenant | null>(null)
 
 async function onCreate() {
+  if (!(await formRef.value?.validate())?.valid) return
   creating.value = true
   createError.value = ''
   try {
@@ -37,7 +44,7 @@ async function onCreate() {
         : t('admin.tenants.toast.createdInviteFailed'),
       result.invite_email_sent ? 'success' : 'error'
     )
-    await fetchList({ page: 1, itemsPerPage: 10 })
+    await reload()
   } catch {
     createError.value = t('admin.tenants.errors.create')
   } finally {
@@ -52,9 +59,13 @@ function askToggle(tenant: Tenant) {
 
 async function confirmToggle() {
   if (!pendingTenant.value) return
-  await setActive(pendingTenant.value.id, !pendingTenant.value.is_active)
-  show(t('admin.common.toastStatusUpdated'), 'success')
-  await fetchList({ page: 1, itemsPerPage: 10 })
+  try {
+    await setActive(pendingTenant.value.id, !pendingTenant.value.is_active)
+    show(t('admin.common.toastStatusUpdated'), 'success')
+    await reload()
+  } catch {
+    show(t('admin.common.errors.statusUpdate'), 'error')
+  }
 }
 </script>
 
@@ -66,12 +77,13 @@ async function confirmToggle() {
     </div>
 
     <AdminResourceTable
+      v-model:page="page"
       :headers="headers"
       :items="items"
       :total-items="total"
       :loading="loading"
       :error="error"
-      @update:options="fetchList"
+      @update:options="load"
     >
       <template #item.is_active="{ item }">
         <v-chip :color="item.is_active ? 'approved' : 'failed'" size="small" variant="tonal">
@@ -82,10 +94,12 @@ async function confirmToggle() {
         {{ formatDate(item.created_at, { year: 'numeric', month: 'short', day: 'numeric' }) }}
       </template>
       <template #item.actions="{ item }">
-        <v-btn size="small" variant="text" :to="`/admin/tenants/${item.id}`">{{ t('admin.common.view') }}</v-btn>
-        <v-btn size="small" variant="text" @click="askToggle(item)">
-          {{ item.is_active ? t('admin.common.deactivate') : t('admin.common.reactivate') }}
-        </v-btn>
+        <div class="flex justify-end whitespace-nowrap">
+          <v-btn size="small" variant="text" :to="`/admin/tenants/${item.id}`">{{ t('admin.common.view') }}</v-btn>
+          <v-btn size="small" variant="text" @click="askToggle(item)">
+            {{ item.is_active ? t('admin.common.deactivate') : t('admin.common.reactivate') }}
+          </v-btn>
+        </div>
       </template>
     </AdminResourceTable>
 
@@ -93,26 +107,25 @@ async function confirmToggle() {
       <v-card>
         <v-card-title>{{ t('admin.tenants.new') }}</v-card-title>
         <v-card-text>
-          <v-form @submit.prevent="onCreate">
-            <v-text-field v-model="form.name" :label="t('admin.common.nameLabel')" required class="mb-2" />
+          <v-form ref="formRef" @submit.prevent="onCreate">
+            <v-text-field v-model="form.name" :label="t('admin.common.nameLabel')" :rules="[required]" class="mb-2" />
             <v-text-field
               v-model="form.slug"
               :label="t('admin.tenants.headers.slug')"
               :hint="t('admin.tenants.dialog.slugHint')"
+              :rules="[required, slugRule]"
               persistent-hint
-              required
               class="mb-2"
             />
-            <v-text-field v-model="form.admin_full_name" :label="t('admin.tenants.dialog.adminNameLabel')" required class="mb-2" />
-            <v-text-field v-model="form.admin_email" :label="t('admin.tenants.dialog.adminEmailLabel')" type="email" required class="mb-2" />
+            <v-text-field v-model="form.admin_full_name" :label="t('admin.tenants.dialog.adminNameLabel')" :rules="[required]" class="mb-2" />
+            <v-text-field v-model="form.admin_email" :label="t('admin.tenants.dialog.adminEmailLabel')" type="email" :rules="[required, emailRule]" class="mb-2" />
             <v-alert v-if="createError" type="error" variant="tonal" class="mb-2">{{ createError }}</v-alert>
+            <div class="mt-2 flex justify-end gap-2">
+              <v-btn variant="text" @click="createDialog = false">{{ t('admin.common.cancel') }}</v-btn>
+              <v-btn type="submit" color="primary" :loading="creating">{{ t('admin.common.create') }}</v-btn>
+            </div>
           </v-form>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="createDialog = false">{{ t('admin.common.cancel') }}</v-btn>
-          <v-btn color="primary" :loading="creating" @click="onCreate">{{ t('admin.common.create') }}</v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
 

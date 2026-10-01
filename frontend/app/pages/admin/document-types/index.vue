@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app' })
+definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app', titleKey: 'admin.layout.nav.documentTypes' })
 
 const { t } = useI18n()
 const { items, total, loading, error, fetchList, create } = useDocumentTypes()
@@ -19,8 +19,11 @@ const createDialog = ref(false)
 const creating = ref(false)
 const createError = ref('')
 const form = ref({ name: '', description: '' })
+const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
+const required = (value: string) => Boolean(value?.trim()) || t('admin.common.validation.required')
 
 async function onCreate() {
+  if (!(await formRef.value?.validate())?.valid) return
   creating.value = true
   createError.value = ''
   try {
@@ -74,17 +77,16 @@ async function onCreate() {
       <v-card>
         <v-card-title>{{ t('admin.documentTypes.dialog.newTitle') }}</v-card-title>
         <v-card-text>
-          <v-form @submit.prevent="onCreate">
-            <v-text-field v-model="form.name" :label="t('admin.common.nameLabel')" required class="mb-2" />
+          <v-form ref="formRef" @submit.prevent="onCreate">
+            <v-text-field v-model="form.name" :label="t('admin.common.nameLabel')" :rules="[required]" class="mb-2" />
             <v-textarea v-model="form.description" :label="t('admin.common.descriptionLabel')" rows="2" class="mb-2" />
             <v-alert v-if="createError" type="error" variant="tonal" class="mb-2">{{ createError }}</v-alert>
+            <div class="mt-2 flex justify-end gap-2">
+              <v-btn variant="text" @click="createDialog = false">{{ t('admin.common.cancel') }}</v-btn>
+              <v-btn type="submit" color="primary" :loading="creating">{{ t('admin.common.create') }}</v-btn>
+            </div>
           </v-form>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn variant="text" @click="createDialog = false">{{ t('admin.common.cancel') }}</v-btn>
-          <v-btn color="primary" :loading="creating" @click="onCreate">{{ t('admin.common.create') }}</v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
   </div>

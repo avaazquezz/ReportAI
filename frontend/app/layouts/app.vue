@@ -43,7 +43,7 @@ const drawer = ref(true)
     </v-navigation-drawer>
 
     <v-app-bar color="surface" flat border>
-      <v-app-bar-nav-icon @click="drawer = !drawer" />
+      <v-app-bar-nav-icon :aria-label="t('admin.layout.toggleMenu')" @click="drawer = !drawer" />
       <v-app-bar-title>{{ authStore.user?.full_name }}</v-app-bar-title>
       <v-spacer />
       <v-chip class="mr-4" size="small" variant="tonal">{{ authStore.user?.role }}</v-chip>
