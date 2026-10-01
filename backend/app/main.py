@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, health, setup
 from app.api.admin import channel_connections as admin_channel_connections
 from app.api.admin import company as admin_company
+from app.api.admin import dashboard as admin_dashboard
 from app.api.admin import document_types as admin_document_types
 from app.api.admin import instance_settings as admin_instance_settings
 from app.api.admin import reports as admin_reports
@@ -47,7 +48,7 @@ _docs_enabled = settings.is_development
 
 app = FastAPI(
     title="ReportAI API",
-    version="0.1.0",
+    version=settings.REPORTAI_VERSION,
     lifespan=lifespan,
     docs_url="/docs" if _docs_enabled else None,
     redoc_url="/redoc" if _docs_enabled else None,
@@ -75,6 +76,7 @@ app.include_router(admin_team.router)
 app.include_router(admin_company.router)
 app.include_router(admin_template_assistant.router)
 app.include_router(admin_starter_templates.router)
+app.include_router(admin_dashboard.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)

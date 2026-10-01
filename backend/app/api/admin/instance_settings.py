@@ -26,6 +26,7 @@ from app.schemas.instance_settings import (
 from app.services import instance_settings
 from app.services.agent.tools.pricing import require_priced_model_for_spend_cap
 from app.services.settings_checks import CheckFailed, check_ai, check_smtp, check_transcription
+from app.services.updates import UpdateStatus, update_status
 
 router = APIRouter(prefix="/instance", tags=["admin:instance"])
 
@@ -152,3 +153,9 @@ async def check_email_settings(
     except CheckFailed as exc:
         return CheckResponse(ok=False, detail=str(exc))
     return CheckResponse(ok=True)
+
+
+@router.get("/version")
+async def get_version(refresh: bool = False, _: TenantUser = Depends(require_instance_admin)) -> UpdateStatus:
+    """This installation's release, the latest one, and the security advisories that affect it."""
+    return await update_status(refresh=refresh)

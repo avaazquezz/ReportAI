@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 
 router = APIRouter(tags=["health"])
@@ -15,4 +16,4 @@ async def health(db: AsyncSession = Depends(get_db)) -> JSONResponse:
     except Exception:  # noqa: BLE001 — a health probe reports status, it never propagates
         # 503, not 200-with-"degraded": uptime monitors and load balancers only look at the code.
         return JSONResponse(status_code=503, content={"status": "unavailable", "database": "down"})
-    return JSONResponse(content={"status": "ok", "database": "ok"})
+    return JSONResponse(content={"status": "ok", "database": "ok", "version": settings.REPORTAI_VERSION})
