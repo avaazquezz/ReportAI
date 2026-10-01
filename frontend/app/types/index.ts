@@ -128,6 +128,7 @@ export interface Report {
   status: string
   requester_channel: string
   requester_identifier: string
+  requester_name: string | null
   error_detail: string | null
   download_url: string | null
   created_at: string

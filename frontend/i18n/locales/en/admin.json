@@ -290,7 +290,8 @@
         "resendFailed": "Resend failed",
         "resend": "Resend",
         "sendTo": "Send to another email",
-        "send": "Send"
+        "send": "Send",
+        "retry": "Try again"
       },
       "deliveryStatus": {
         "pending": "Sending",
@@ -303,7 +304,8 @@
         "edit": "{name} corrected",
         "rerender": "{name} regenerated the PDF",
         "resend": "{name} resent",
-        "someone": "Someone"
+        "someone": "Someone",
+        "retry": "{name} tried it again"
       },
       "dialog": {
         "rejectTitle": "Reject report",
@@ -323,14 +325,17 @@
         "preview": "Couldn't generate the preview.",
         "resend": "Couldn't resend.",
         "export": "Couldn't export the CSV.",
-        "email": "Enter a valid email."
+        "email": "Enter a valid email.",
+        "retry": "Couldn't try the report again.",
+        "retryBusy": "Its sender has another report in progress: finish or cancel that one before trying this again."
       },
       "toast": {
         "approved": "Report approved — generating the document.",
         "rejected": "Report rejected.",
         "saved": "Changes saved and PDF regenerated.",
         "regenerated": "PDF regenerated.",
-        "resent": "Resending."
+        "resent": "Resending.",
+        "retried": "The report is running again."
       },
       "steps": {
         "ingest": "Message received",

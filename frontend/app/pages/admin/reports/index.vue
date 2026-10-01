@@ -13,11 +13,7 @@ const { items: documentTypes, fetchList: fetchDocumentTypes } = useDocumentTypes
 const { show } = useSnackbar()
 
 const REFRESH_EVERY_MS = 15_000
-const CHANNELS = [
-  { title: 'Telegram', value: 'telegram' },
-  { title: 'WhatsApp', value: 'whatsapp' },
-  { title: 'Email', value: 'email' }
-]
+const CHANNELS = Object.entries(CHANNEL_NAMES).map(([value, title]) => ({ title, value }))
 
 // The filters live in the URL, so coming back from a report finds the list as it was left.
 function fromQuery(key: string): string | null {
@@ -52,7 +48,7 @@ const hasFilters = computed(() =>
 
 const headers = computed(() => [
   { title: t('admin.reports.headers.documentType'), key: 'document_type_name' },
-  { title: t('admin.reports.headers.requester'), key: 'requester_identifier' },
+  { title: t('admin.reports.headers.requester'), key: 'requester_name' },
   { title: t('admin.channels.headers.channelType'), key: 'requester_channel' },
   { title: t('admin.common.statusLabel'), key: 'status' },
   { title: t('admin.common.createdLabel'), key: 'created_at' },
@@ -190,6 +186,8 @@ onBeforeUnmount(() => {
           {{ item.document_type_name ?? t('admin.reports.noType') }}
         </NuxtLink>
       </template>
+      <template #item.requester_name="{ item }">{{ item.requester_name ?? item.requester_identifier }}</template>
+      <template #item.requester_channel="{ item }">{{ channelName(item.requester_channel) }}</template>
       <template #item.status="{ item }">
         <v-chip :color="statusColor(item.status)" size="small" variant="tonal">
           {{ statusLabel(item.status) }}

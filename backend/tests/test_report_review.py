@@ -22,6 +22,7 @@ from app.models.execution_log import ExecutionLog
 from app.models.job import Job
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
+from app.models.sender_invite import SenderInvite
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 
@@ -45,9 +46,8 @@ class Panel:
         self.db.add(connection)
         await self.db.flush()
         report = Report(
-            tenant_id=self.user.tenant_id, requester_channel="telegram", requester_identifier="42",
-            channel_connection_id=connection.id,
-            **{"status": "awaiting_approval", "document_type_id": self.document_type.id, "extracted_fields": {"client": "García", "visit_date": "2026-09-30", "notes": None},
+            tenant_id=self.user.tenant_id, requester_channel="telegram", channel_connection_id=connection.id,
+            **{"requester_identifier": "42", "status": "awaiting_approval", "document_type_id": self.document_type.id, "extracted_fields": {"client": "García", "visit_date": "2026-09-30", "notes": None},
                "evidence": {"client": "para García", "visit_date": "ayer"}, **values},
         )
         self.db.add(report)
@@ -269,3 +269,48 @@ async def test_photos_and_audio_are_only_served_for_their_own_report(panel: Pane
     assert (await panel.call("GET", f"/reports/{other.id}/photos/{photo.id}")).status_code == 404
     assert (await panel.call("GET", f"/reports/{other.id}/audio")).status_code == 404
 
+
+
+async def test_a_report_shows_the_name_its_sender_joined_with(panel: Panel) -> None:
+    named = await panel.report(status="delivered")
+    unnamed = await panel.report(status="failed", requester_identifier="99")
+    panel.db.add(SenderInvite(
+        tenant_id=named.tenant_id, connection_id=named.channel_connection_id, label="Ana Ruiz", code_hash=uuid.uuid4().hex,
+        expires_at=datetime.now(UTC) + timedelta(days=1), used_at=datetime.now(UTC), sender_id="42",
+    ))
+    await panel.db.commit()
+
+    listed = {r["id"]: r["requester_name"] for r in (await panel.call("GET", "/reports")).json()["items"]}
+    detail = (await panel.call("GET", f"/reports/{named.id}")).json()
+
+    assert listed == {str(named.id): "Ana Ruiz", str(unnamed.id): None}
+    assert detail["requester_name"] == "Ana Ruiz"
+
+
+async def test_a_failed_report_runs_again_from_the_message_that_started_it(panel: Panel) -> None:
+    report = await panel.report(status="failed", error_detail="Transcription timed out", completed_at=datetime.now(UTC))
+    panel.db.add(Job(report_id=report.id, kind="run", payload={"media_reference": "file-1", "sender_label": "Ana"}, status="failed"))
+    await panel.db.commit()
+
+    response = await panel.call("POST", f"/reports/{report.id}/retry")
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "pending" and body["error_detail"] is None
+    assert body["revisions"][-1]["action"] == "retry" and body["revisions"][-1]["user_name"] == "Marta Admin"
+    queued = (await panel.db.scalars(select(Job).where(Job.report_id == report.id, Job.status == "queued"))).one()
+    assert (queued.kind, queued.payload) == ("run", {"media_reference": "file-1", "sender_label": "Ana"})
+
+
+async def test_a_rejected_report_or_a_busy_sender_cannot_be_retried(panel: Panel) -> None:
+    rejected = await panel.report(status="failed", error_detail="Rejected by admin")
+    failed = await panel.report(status="failed", error_detail="boom")
+    for report in (rejected, failed):
+        panel.db.add(Job(report_id=report.id, kind="run", payload={"text": "hola"}, status="failed"))
+    await panel.report(status="awaiting_details")  # the same sender is already busy with another one
+    await panel.db.commit()
+
+    assert (await panel.call("POST", f"/reports/{rejected.id}/retry")).status_code == 409
+    busy = await panel.call("POST", f"/reports/{failed.id}/retry")
+    assert busy.status_code == 409 and "another report" in busy.json()["detail"]
+    assert (await panel.db.get(Report, failed.id)).status == "failed"  # type: ignore[union-attr]

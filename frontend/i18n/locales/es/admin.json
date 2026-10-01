@@ -290,7 +290,8 @@
         "resendFailed": "Reenviar fallidos",
         "resend": "Reenviar",
         "sendTo": "Enviar a otro email",
-        "send": "Enviar"
+        "send": "Enviar",
+        "retry": "Reintentar"
       },
       "deliveryStatus": {
         "pending": "Enviando",
@@ -303,7 +304,8 @@
         "edit": "{name} corrigió",
         "rerender": "{name} regeneró el PDF",
         "resend": "{name} reenvió",
-        "someone": "Alguien"
+        "someone": "Alguien",
+        "retry": "{name} lo reintentó"
       },
       "dialog": {
         "rejectTitle": "Rechazar informe",
@@ -323,14 +325,17 @@
         "preview": "No se pudo generar la vista previa.",
         "resend": "No se pudo reenviar.",
         "export": "No se pudo exportar el CSV.",
-        "email": "Escribe un email válido."
+        "email": "Escribe un email válido.",
+        "retry": "No se pudo reintentar el informe.",
+        "retryBusy": "Quien lo envió tiene otro informe en curso: termínalo o cancélalo antes de reintentar este."
       },
       "toast": {
         "approved": "Informe aprobado — generando el documento.",
         "rejected": "Informe rechazado.",
         "saved": "Cambios guardados y PDF regenerado.",
         "regenerated": "PDF regenerado.",
-        "resent": "Reenvío en marcha."
+        "resent": "Reenvío en marcha.",
+        "retried": "Informe en marcha otra vez."
       },
       "steps": {
         "ingest": "Mensaje recibido",

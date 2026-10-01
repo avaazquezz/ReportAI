@@ -15,6 +15,7 @@ class ReportResponse(BaseModel):
     status: str
     requester_channel: str
     requester_identifier: str
+    requester_name: str | None = None  # who the sender's invitation was for, when they joined by one
     error_detail: str | None
     download_url: str | None
     created_at: datetime
