@@ -12,13 +12,14 @@ import signal
 import socket
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import text, update
+from sqlalchemy import delete, text, update
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.langgraph_checkpointer import close_checkpointer, get_checkpointer, init_checkpointer
 from app.core.logging import configure_logging
 from app.models.report import Report
+from app.models.used_refresh_token import UsedRefreshToken
 from app.repositories.report_repository import PENDING_STATUSES
 from app.services.jobs.queue import claim_next, fail_abandoned
 from app.services.jobs.runner import give_up, process
@@ -68,6 +69,12 @@ async def drop_finished_checkpoints() -> int:
     return len(rows)
 
 
+async def drop_expired_refresh_tokens() -> None:
+    async with AsyncSessionLocal() as session:
+        await session.execute(delete(UsedRefreshToken).where(UsedRefreshToken.expires_at < datetime.now(UTC)))
+        await session.commit()
+
+
 async def maintenance() -> None:
     for job_id, report_id in await fail_abandoned():
         logger.error("Job %s was abandoned by a dead worker with no attempts left", job_id)
@@ -76,6 +83,7 @@ async def maintenance() -> None:
     if cancelled:
         logger.info("Cancelled %s reports that waited too long for an answer", cancelled)
     await drop_finished_checkpoints()
+    await drop_expired_refresh_tokens()
 
 
 async def main() -> None:

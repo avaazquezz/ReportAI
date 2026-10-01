@@ -12,3 +12,4 @@ from app.models.report import Report  # noqa: F401
 from app.models.report_attachment import ReportAttachment  # noqa: F401
 from app.models.tenant import Tenant  # noqa: F401
 from app.models.tenant_user import TenantUser  # noqa: F401
+from app.models.used_refresh_token import UsedRefreshToken  # noqa: F401
