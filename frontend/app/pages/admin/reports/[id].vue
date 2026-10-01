@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FieldValue, ReportDelivery, ReportDetail } from '~/types'
 
-definePageMeta({ middleware: ['auth', 'require-tenant-admin'], layout: 'app', titleKey: 'admin.reports.detail.title' })
+definePageMeta({ middleware: ['auth', 'require-tenant-member'], layout: 'app', titleKey: 'admin.reports.detail.title' })
 
 const { t, te } = useI18n()
 const route = useRoute()
@@ -11,7 +11,9 @@ const { statusLabel, statusColor } = useReportStatus()
 const { getById, approve, reject, editFields, preview, resend, fetchBlob } = useReports()
 const { show } = useSnackbar()
 const authStore = useAuthStore()
-const isDemo = computed(() => authStore.user?.is_demo ?? false)
+const { canApprove } = useRole()
+// The public demo and read-only accounts look at reports; they don't change them.
+const readOnly = computed(() => (authStore.user?.is_demo ?? false) || !canApprove.value)
 
 const POLL_MS = 3000
 
@@ -37,8 +39,8 @@ const dirty = computed(() => Object.keys(edits.value).length > 0)
 const status = computed(() => report.value?.status ?? '')
 const awaitingApproval = computed(() => status.value === 'awaiting_approval')
 const delivered = computed(() => FINISHED_STATUSES.includes(status.value))
-const editable = computed(() => !isDemo.value && (awaitingApproval.value || delivered.value))
-const rejectable = computed(() => !isDemo.value && PAUSED_STATUSES.includes(status.value))
+const editable = computed(() => !readOnly.value && (awaitingApproval.value || delivered.value))
+const rejectable = computed(() => !readOnly.value && PAUSED_STATUSES.includes(status.value))
 const failedDeliveries = computed(() => report.value?.deliveries.filter((d) => d.status === 'failed') ?? [])
 
 const missing = computed(() =>
@@ -248,12 +250,12 @@ onBeforeUnmount(() => {
       </v-alert>
 
       <div class="mb-6 flex flex-wrap gap-2">
-        <template v-if="awaitingApproval && !isDemo">
+        <template v-if="awaitingApproval && !readOnly">
           <v-btn color="success" :loading="busy === 'approve'" :disabled="missing.length > 0" @click="onApprove">
             {{ dirty ? t('admin.reports.actions.approveWithChanges') : t('admin.reports.actions.approve') }}
           </v-btn>
         </template>
-        <template v-if="delivered && !isDemo">
+        <template v-if="delivered && !readOnly">
           <v-btn color="primary" :loading="busy === 'save'" :disabled="missing.length > 0" @click="onSave">
             {{ dirty ? t('admin.reports.actions.saveAndRegenerate') : t('admin.reports.actions.regenerate') }}
           </v-btn>
@@ -330,7 +332,7 @@ onBeforeUnmount(() => {
       <v-card flat border class="mt-4">
         <v-card-title class="flex flex-wrap items-center justify-between gap-2">
           {{ t('admin.reports.detail.deliveries') }}
-          <div v-if="delivered && !isDemo" class="flex gap-2">
+          <div v-if="delivered && !readOnly" class="flex gap-2">
             <v-btn v-if="failedDeliveries.length" size="small" variant="tonal" :loading="busy === 'resend'" @click="onResendFailed">
               {{ t('admin.reports.actions.resendFailed') }}
             </v-btn>
@@ -358,7 +360,7 @@ onBeforeUnmount(() => {
                 </td>
                 <td class="text-right">
                   <v-btn
-                    v-if="delivered && !isDemo && delivery.status !== 'pending'"
+                    v-if="delivered && !readOnly && delivery.status !== 'pending'"
                     size="small"
                     variant="text"
                     @click="onResendOne(delivery)"
