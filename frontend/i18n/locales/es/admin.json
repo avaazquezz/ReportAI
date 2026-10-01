@@ -9,7 +9,8 @@
         "reports": "Informes",
         "usage": "Uso y coste"
       },
-      "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí."
+      "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
+      "toggleMenu": "Mostrar u ocultar el menú"
     },
     "common": {
       "nameLabel": "Nombre",
@@ -35,11 +36,20 @@
       "confirmToggle": {
         "deactivate": "¿Desactivar {name}?",
         "reactivate": "¿Reactivar {name}?"
+      },
+      "validation": {
+        "required": "Obligatorio",
+        "email": "Escribe un email válido",
+        "emails": "Alguno de los emails no es válido"
+      },
+      "errors": {
+        "statusUpdate": "No se pudo cambiar el estado."
       }
     },
     "dashboard": {
       "greeting": "Hola, {name}",
-      "hint": "Usa el menú de la izquierda para gestionar tu cuenta."
+      "hint": "Usa el menú de la izquierda para gestionar tu cuenta.",
+      "title": "Inicio"
     },
     "channels": {
       "new": "Nuevo canal",
@@ -56,7 +66,7 @@
         "accessTokenLabel": "Access token",
         "inboundSlugLabel": "Inbound slug",
         "leaveBlank": "Dejar en blanco para no cambiar",
-        "allowedSendersHint": "Ids de los remitentes autorizados. Si queda vacío, el canal rechaza a todos"
+        "allowedSendersHint": "Ids de quienes pueden enviar informes. Si alguien no está en la lista, el bot le responde con su id para que te lo pase. Vacío: el canal rechaza a todos."
       },
       "errors": {
         "list": "No se pudieron cargar los canales.",
@@ -79,11 +89,26 @@
       },
       "fields": {
         "title": "Campos a extraer",
-        "add": "+ Añadir campo",
+        "add": "Añadir campo",
         "empty": "Sin campos todavía. Añade al menos uno para poder generar informes.",
         "nameLabel": "Nombre del campo",
         "typeLabel": "Tipo",
-        "requiredLabel": "Obligatorio"
+        "requiredLabel": "Obligatorio",
+        "hint": "El nombre es la variable de la plantilla ({example}); la etiqueta es lo que lee la gente. Los campos se piden y se muestran en este orden.",
+        "nameHint": "Variable de la plantilla",
+        "labelLabel": "Etiqueta (opcional)",
+        "multipleLabel": "Varias fotos",
+        "moveUp": "Subir campo",
+        "moveDown": "Bajar campo",
+        "remove": "Quitar campo",
+        "descriptionLabel": "Qué debe buscar la IA",
+        "descriptionHint": "P. ej. «la fecha en que se hizo la visita»",
+        "optionsLabel": "Opciones",
+        "columnsLabel": "Columnas de la tabla",
+        "columnTitle": "Título de la columna",
+        "removeColumn": "Quitar columna",
+        "addColumn": "Añadir columna",
+        "exampleName": "fecha_visita"
       },
       "saveChanges": "Guardar cambios",
       "templates": {
@@ -105,12 +130,35 @@
         "create": "No se pudo crear. Revisa que el nombre no esté en uso.",
         "load": "No se pudo cargar el tipo de documento.",
         "saveForm": "No se pudo guardar. Revisa los datos del formulario.",
-        "uploadTemplate": "No se pudo subir la plantilla."
+        "uploadTemplate": "No se pudo subir la plantilla.",
+        "templates": "No se pudieron cargar las plantillas.",
+        "invalidForm": "Revisa los campos marcados en rojo."
       },
       "toast": {
         "created": "Tipo de documento creado.",
         "saved": "Cambios guardados.",
         "templateUploaded": "Plantilla subida."
+      },
+      "fieldTypes": {
+        "str": "Texto",
+        "int": "Número entero",
+        "float": "Número decimal",
+        "bool": "Sí / No",
+        "date": "Fecha",
+        "time": "Hora",
+        "email": "Email",
+        "phone": "Teléfono",
+        "list_str": "Lista de textos",
+        "list_int": "Lista de números",
+        "enum": "Una opción de una lista",
+        "list_object": "Tabla",
+        "image": "Foto"
+      },
+      "validation": {
+        "identifier": "Solo letras sin tildes, números y _, sin espacios (p. ej. fecha_visita)",
+        "duplicate": "Ya hay otro con este nombre",
+        "options": "Añade al menos dos opciones distintas",
+        "columns": "Una tabla necesita al menos una columna"
       }
     },
     "tenants": {
