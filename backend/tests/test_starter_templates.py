@@ -60,6 +60,8 @@ def test_each_starter_renders_with_its_fields_logo_and_photos(key: str, language
     assert len(media) >= 2  # the logo in the header, the photos in the body
     body = "\n".join(p.text for p in rendered.paragraphs)
     assert "{{" not in body and "{%" not in body
+    # A4 in Spanish, US Letter in English.
+    assert round(rendered.sections[0].page_width.mm) == (210 if language == "es" else 216)
 
 
 async def _admin(client: AsyncClient, db: AsyncSession) -> dict[str, str]:
@@ -80,7 +82,9 @@ async def test_installing_a_starter_creates_a_ready_document_type(
     headers = await _admin(client, db)
 
     listed = (await client.get("/starter-templates", headers=headers)).json()
-    assert [s["name"] for s in listed] == ["Parte de trabajo", "Informe de visita", "Informe de incidencia"]
+    assert [s["name"] for s in listed] == [
+        "Visita de seguridad y salud", "Parte de trabajo", "Informe de visita", "Informe de incidencia"
+    ]
 
     first = await client.post("/starter-templates/work_order/install", headers=headers)
     second = await client.post("/starter-templates/work_order/install", headers=headers)
