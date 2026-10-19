@@ -1,61 +1,55 @@
 <script setup lang="ts">
+import gsap from 'gsap'
+
 const { t } = useI18n()
 
 // Each row is one chore of today's inspection report, next to what replaces it.
 const ROWS = ['notes', 'word', 'missing', 'send', 'find'] as const
 
 const root = ref<HTMLElement | null>(null)
-useSectionMotion(root, (tl) => {
-  tl.fromTo('.head', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6 })
-    .fromTo('.panel', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, '-=0.3')
-    .fromTo('.row', { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: 0.35, stagger: 0.1 }, '-=0.2')
-    .fromTo('.kicker', { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4 }, '-=0.1')
+useMotionScope(root, (c) => {
+  if (c.reduce) {
+    gsap.set('.strike', { backgroundSize: '100% 2px' })
+    return
+  }
+  const scrollTrigger = { trigger: '.dp-panel', start: 'top 72%', once: true }
+  gsap
+    .timeline({ scrollTrigger })
+    .from('.dp-panel', { opacity: 0, y: 24, duration: MOTION.reveal, clearProps: 'opacity,transform' })
+    // The old way is crossed out, row by row, and the new one is ticked.
+    .to('.strike', { backgroundSize: '100% 2px', duration: 0.5, stagger: 0.28 }, 0.5)
+    .from('.dp-after', { opacity: 0, x: 10, duration: 0.5, stagger: 0.28, clearProps: 'opacity,transform' }, 0.7)
+    .from('.dp-check', { scale: 0, duration: 0.4, stagger: 0.28, ease: 'back.out(2.2)', transformOrigin: '50% 50%' }, 0.7)
+  gsap.from('.dp-kicker', { opacity: 0, y: 10, duration: MOTION.reveal, scrollTrigger: { trigger: '.dp-kicker', start: 'top 90%', once: true } })
 })
 </script>
 
 <template>
-  <section id="diferencia" ref="root" class="bg-ink-900 py-20 text-white md:py-28">
-    <div class="mx-auto grid max-w-[1200px] items-start gap-12 px-6 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16">
+  <section id="problema" ref="root" class="bg-surface-0 py-20 md:py-28">
+    <div class="mx-auto grid max-w-[1240px] items-start gap-12 px-6 lg:grid-cols-[1fr_1.1fr] lg:gap-16">
       <div>
-        <div class="head m-hide">
-          <h2 class="font-display text-[clamp(2.1rem,4.2vw,3.6rem)] font-bold leading-[1.02] tracking-[-0.025em] [text-wrap:balance]">
-            {{ t('landing.differentiator.heading') }}
-          </h2>
-          <p class="mt-6 max-w-xl font-body text-lg leading-relaxed text-white/75">
-            {{ t('landing.differentiator.paragraph') }}
-          </p>
-        </div>
-        <p class="kicker m-hide mt-8 font-display text-xl font-bold text-capture-500">
-          {{ t('landing.differentiator.kicker') }}
-        </p>
+        <LandingSectionHeading>{{ t('landing.differentiator.heading') }}</LandingSectionHeading>
+        <p class="mb-0 mt-6 max-w-xl font-body text-lg leading-relaxed text-ink-900/75">{{ t('landing.differentiator.paragraph') }}</p>
+        <p class="dp-kicker mb-0 mt-8 font-plan text-xl font-bold tracking-[-0.02em] text-capture-600">{{ t('landing.differentiator.kicker') }}</p>
       </div>
 
-      <div class="panel m-hide overflow-hidden rounded-2xl bg-ink-800 ring-1 ring-white/10">
+      <div class="dp-panel overflow-hidden rounded-2xl border border-ink-900/10 bg-paper-50">
         <table class="w-full border-collapse font-body text-sm">
           <caption class="sr-only">{{ t('landing.differentiator.table.caption') }}</caption>
           <thead>
-            <tr class="border-b border-white/10">
-              <th scope="col" class="w-1/2 px-5 py-4 text-left text-xs font-medium text-white/50">
-                {{ t('landing.differentiator.table.before') }}
-              </th>
-              <th scope="col" class="w-1/2 bg-capture-500/10 px-5 py-4 text-left font-display text-sm font-bold text-capture-500">
-                {{ t('landing.differentiator.table.after') }}
-              </th>
+            <tr class="border-b border-ink-900/10">
+              <th scope="col" class="w-1/2 px-5 py-4 text-left text-xs font-medium text-ink-900/60">{{ t('landing.differentiator.table.before') }}</th>
+              <th scope="col" class="w-1/2 bg-capture-100/70 px-5 py-4 text-left font-plan text-sm font-bold text-[#A93A24]">{{ t('landing.differentiator.table.after') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="key in ROWS" :key="key" class="row m-hide border-b border-white/10 align-top last:border-b-0">
-              <td class="px-5 py-4 text-white/55">
-                <span class="flex gap-2.5">
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" class="mt-0.5 h-4 w-4 shrink-0 text-white/30" aria-hidden="true">
-                    <path d="M5 5l10 10M15 5L5 15" />
-                  </svg>
-                  {{ t(`landing.differentiator.table.rows.${key}.before`) }}
-                </span>
+            <tr v-for="key in ROWS" :key="key" class="border-b border-ink-900/10 align-top last:border-b-0">
+              <td class="px-5 py-4 text-ink-900/60">
+                <span class="strike" style="background: linear-gradient(currentColor, currentColor) no-repeat 0 56% / 0% 2px">{{ t(`landing.differentiator.table.rows.${key}.before`) }}</span>
               </td>
-              <td class="bg-capture-500/10 px-5 py-4 font-medium text-white/90">
+              <td class="dp-after bg-capture-100/70 px-5 py-4 font-medium text-ink-900">
                 <span class="flex gap-2.5">
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 h-4 w-4 shrink-0 text-capture-500" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="dp-check mt-0.5 h-4 w-4 shrink-0 text-approved-600" aria-hidden="true">
                     <path d="M4 10.5l4 4 8-9" />
                   </svg>
                   {{ t(`landing.differentiator.table.rows.${key}.after`) }}
