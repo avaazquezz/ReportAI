@@ -20,7 +20,13 @@ const ICONS: Record<Stage, string> = {
   approve: 'M12 3l7 3v5.5c0 4.6-3 7.8-7 9.5-4-1.7-7-4.9-7-9.5V6l7-3ZM9 12l2.2 2.2L15.2 10',
   deliver: 'M7 3h7l4 4v14H7V3ZM14 3v4h4M10 12.5h5M10 16.5h5'
 }
-const EXTRACT_ROWS = ['deficiencia', 'empresa', 'medida', 'plazo'] as const
+// The sample extraction's rows: the key of the value (visual.extract.values) and of the field name shown (visual.extract.keys).
+const EXTRACT_ROWS = [
+  { value: 'deficiencia', key: 'issue' },
+  { value: 'empresa', key: 'contractor' },
+  { value: 'medida', key: 'action' },
+  { value: 'plazo', key: 'deadline' }
+] as const
 // Does anything leave the server at this stage? (The wording is in i18n: stages.<key>.data.)
 const LEAVES: Record<Stage, boolean> = { dictate: true, transcribe: true, extract: true, approve: false, deliver: true }
 
@@ -231,15 +237,15 @@ const nodeClass = (i: number) =>
               <template v-else-if="key === 'extract'">
                 <div class="mt-3 rounded-lg border border-plano-700 bg-plano-950/60 p-3 text-[12px] leading-[1.6] text-white/80">
                   <div class="v-in text-white/50" style="--i: 0">{</div>
-                  <div class="v-in pl-3" style="--i: 1">"deficiencias": [{</div>
-                  <div v-for="(row, n) in EXTRACT_ROWS" :key="row" class="v-in pl-6" :style="{ '--i': n + 2 }">
-                    <span class="text-plano-line">"{{ row }}"</span>: <span :class="row === 'plazo' ? 'text-capture-500' : 'text-white/90'">"{{ t(`landing.architecture.visual.extract.values.${row}`) }}"</span>
+                  <div class="v-in pl-3" style="--i: 1">"{{ t('landing.architecture.visual.extract.keys.list') }}": [{</div>
+                  <div v-for="(row, n) in EXTRACT_ROWS" :key="row.key" class="v-in pl-6" :style="{ '--i': n + 2 }">
+                    <span class="text-plano-line">"{{ t(`landing.architecture.visual.extract.keys.${row.key}`) }}"</span>: <span :class="row.key === 'deadline' ? 'text-capture-500' : 'text-white/90'">"{{ t(`landing.architecture.visual.extract.values.${row.value}`) }}"</span>
                   </div>
                   <div class="v-in pl-3" style="--i: 6">}]</div>
                   <div class="v-in text-white/50" style="--i: 6">}</div>
                 </div>
                 <p class="v-in mb-0 mt-3 text-[11.5px] text-white/60" style="--i: 7">
-                  evidence ← <span class="text-white/90">"{{ t('landing.architecture.visual.extract.quote') }}"</span>
+                  {{ t('landing.architecture.visual.extract.evidence') }} ← <span class="text-white/90">"{{ t('landing.architecture.visual.extract.quote') }}"</span>
                 </p>
                 <p class="v-in mb-0 mt-1.5 text-[11.5px] text-[#5FD3A6]" style="--i: 8">✓ {{ t('landing.architecture.visual.extract.verified') }}</p>
                 <p class="v-in mb-0 mt-1 text-[11.5px] text-[#5FD3A6]" style="--i: 9">✓ {{ t('landing.architecture.visual.extract.valid') }}</p>

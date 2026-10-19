@@ -17,6 +17,7 @@ async function toggleLocale() {
   <button
     type="button"
     class="rounded-md border border-slate-300 px-2.5 py-1 font-body text-xs font-semibold text-ink-900 hover:border-capture-500 hover:text-capture-500"
+    :lang="locale === 'es' ? 'en' : 'es'"
     :aria-label="locale === 'es' ? 'Switch to English' : 'Cambiar a español'"
     @click="toggleLocale"
   >
