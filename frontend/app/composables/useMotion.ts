@@ -12,6 +12,7 @@ export interface MotionConditions {
   motion: boolean
   /** The visitor asked for less: jump to end states, crossfade, no scrub or pin. */
   reduce: boolean
+  /** Wide and tall enough to pin a full-height scene (only when asked for with `desktop: true`). */
   desktop: boolean
   /** A mouse, not a finger: pointer-following effects only run here. */
   finePointer: boolean
@@ -37,9 +38,10 @@ function register() {
  */
 export function useMotionScope(
   scope: Ref<HTMLElement | null>,
-  setup: (c: MotionConditions) => unknown,
-  /** Listen to the 1024px breakpoint too: setup re-runs when it is crossed. Off by default, so a
-   * resize across it doesn't replay a section that doesn't care. */
+  setup: (c: MotionConditions, ctx: gsap.Context) => unknown,
+  /** Also listen to "a desktop with room to pin a full-height scene" (1024×760 and up): setup
+   * re-runs when that is crossed. Off by default, so a resize across it doesn't replay a
+   * section that doesn't care. */
   options: { desktop?: boolean } = {}
 ) {
   let mm: gsap.MatchMedia | undefined
@@ -53,10 +55,10 @@ export function useMotionScope(
         motion: '(prefers-reduced-motion: no-preference)',
         reduce: '(prefers-reduced-motion: reduce)',
         finePointer: '(hover: hover) and (pointer: fine)',
-        ...(options.desktop ? { desktop: '(min-width: 1024px)' } : {})
+        ...(options.desktop ? { desktop: '(min-width: 1024px) and (min-height: 760px)' } : {})
       },
       (ctx) => {
-        const cleanup = setup({ desktop: false, ...ctx.conditions } as unknown as MotionConditions)
+        const cleanup = setup({ desktop: false, ...ctx.conditions } as unknown as MotionConditions, ctx)
         return typeof cleanup === 'function' ? (cleanup as () => void) : undefined
       }
     )
