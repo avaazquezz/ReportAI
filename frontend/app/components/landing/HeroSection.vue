@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import gsap from 'gsap'
 
-const { t } = useI18n()
-const contactHref = useContactHref()
+const { t, locale } = useI18n()
 
 const COMPANIES = ['company1', 'company2', 'company3'] as const
 const WAVE = [5, 9, 13, 8, 15, 6, 11, 16, 7, 12, 9, 5, 10, 14, 6]
@@ -118,10 +117,10 @@ useMotionScope(root, (c) => {
           <div ref="ctaZone" class="-m-5 p-5">
             <a
               ref="ctaButton"
-              :href="contactHref"
+              href="#como-funciona"
               class="inline-block rounded-md bg-capture-600 px-7 py-3.5 font-body text-base font-semibold text-white transition-colors hover:bg-[#A93A24]"
             >
-              {{ t('landing.cta.becomeClient') }}
+              {{ t('landing.cta.seeHow') }}
             </a>
           </div>
           <a href="#ejemplo-real" class="group inline-flex items-center gap-2.5 font-body text-base font-medium text-ink-900">
@@ -151,7 +150,7 @@ useMotionScope(root, (c) => {
       </div>
 
       <!-- Stage: the client's document rising from under the fold, the chat that produced it overlapping its corner. -->
-      <div class="relative mx-auto h-[34rem] w-full max-w-[640px] sm:h-[32rem] lg:col-span-7 lg:mr-0 lg:h-[34rem] lg:max-w-none">
+      <div class="relative mx-auto h-[43rem] w-full max-w-[640px] sm:h-[32rem] lg:col-span-7 lg:mr-0 lg:h-[34rem] lg:max-w-none">
         <div class="absolute right-0 top-0 flex h-6 w-[88%] max-w-[460px] items-center sm:w-[72%]" aria-hidden="true">
           <span class="cota-tick h-2.5 w-px bg-ink-900/45" />
           <span class="cota h-px flex-1 origin-right bg-ink-900/45" />
@@ -162,8 +161,9 @@ useMotionScope(root, (c) => {
 
         <div class="doc m-hide absolute right-0 top-9 w-[88%] max-w-[460px] min-h-[42rem] rounded-[3px] bg-surface-0 pb-24 pl-12 pr-6 pt-7 shadow-page sm:w-[72%] sm:pl-14 sm:pr-8">
           <div class="flex items-center gap-3">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[4px] bg-doc-700" aria-hidden="true">
-              <svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" class="h-4 w-4"><path d="M5 6h10M5 10h10M5 14h6" /></svg>
+            <!-- The client's own logo, as in the real demo report (PL = Prevención Levante, NS = Northline Safety). -->
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-doc-700 font-body text-[13px] font-semibold text-capture-500" aria-hidden="true">
+              {{ locale === 'es' ? 'PL' : 'NS' }}
             </span>
             <div>
               <p class="font-body text-[1.15rem] font-bold leading-none tracking-tight text-doc-700">{{ t('landing.hero.stage.docTitle') }}</p>
@@ -200,7 +200,7 @@ useMotionScope(root, (c) => {
           </div>
 
           <div
-            class="stamp m-hide absolute right-5 top-[17.5rem] rounded-sm border-[3px] border-approved-600 px-3 py-1 font-plan text-lg font-extrabold tracking-[0.12em] text-approved-600 sm:right-7"
+            class="stamp m-hide absolute right-5 top-[22rem] sm:top-[17.5rem] rounded-sm border-[3px] border-approved-600 px-3 py-1 font-plan text-lg font-extrabold tracking-[0.12em] text-approved-600 sm:right-7"
             aria-hidden="true"
           >
             {{ t('landing.hero.stage.stamp') }}

@@ -9,14 +9,14 @@ const showLegalLink = computed(() => Boolean(config.legalName && config.legalId 
 const NAV = [
   { hash: '#ejemplo-real', key: 'realExample' },
   { hash: '#como-funciona', key: 'howItWorks' },
-  { hash: '#precios', key: 'pricing' },
-  { hash: '#preguntas', key: 'faq' }
+  { hash: '#impacto', key: 'impact' },
+  { hash: '#decisiones', key: 'faq' }
 ] as const
 </script>
 
 <template>
   <footer class="border-t border-paper-100 bg-cream-50">
-    <div class="mx-auto max-w-[1200px] px-6 py-12">
+    <div class="mx-auto max-w-[1240px] px-6 py-12">
       <div class="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <div class="flex items-center gap-2">
@@ -32,7 +32,7 @@ const NAV = [
                 class="fill-capture-500"
               >R</text>
             </svg>
-            <span class="font-display text-lg font-bold text-ink-900">ReportAI</span>
+            <span class="font-plan text-lg font-extrabold tracking-[-0.03em] text-ink-900">ReportAI</span>
           </div>
           <p class="mt-3 max-w-xs font-body text-sm text-ink-900/70">{{ t('landing.footer.tagline') }}</p>
         </div>

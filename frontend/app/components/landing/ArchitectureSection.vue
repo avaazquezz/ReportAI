@@ -127,7 +127,7 @@ const nodeClass = (i: number) =>
       <div ref="rail" class="relative mt-6" style="--t: 0">
         <div class="pointer-events-none absolute left-[10%] right-[10%] top-[59px] h-px bg-plano-700" />
         <div class="pointer-events-none absolute left-[10%] top-[59px] h-px bg-capture-500" style="width: calc(var(--t) / 4 * 80%)" />
-        <div class="pointer-events-none absolute top-0 z-10 -translate-x-1/2" style="left: calc(10% + var(--t) / 4 * 80%)" aria-hidden="true">
+        <div class="pointer-events-none absolute top-0 z-10 -translate-x-1/2" style="left: clamp(54px, calc(10% + var(--t) / 4 * 80%), calc(100% - 54px))" aria-hidden="true">
           <div class="relative rounded border border-capture-500 bg-plano-950 px-2 py-0.5 font-mono text-[11px] whitespace-nowrap text-capture-500">
             <Transition name="ficha" mode="out-in">
               <span :key="active" class="block">{{ t(`landing.architecture.stages.${STAGES[active]}.artifact`) }}</span>

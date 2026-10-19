@@ -1,31 +1,33 @@
 {
   "landing": {
     "seo": {
-      "title": "ReportAI — El informe de visita, dictado por voz",
-      "description": "Dicta la visita por Telegram al terminar y recibe el informe en tu plantilla Word, con las deficiencias, quién las corrige y en qué plazo. Para técnicos de prevención, inspección y mantenimiento. En tu propio servidor."
+      "title": "ReportAI — De la nota de voz al informe, explicado por dentro",
+      "description": "Un agente de IA que convierte la nota de voz de una visita en el informe de una plantilla Word. Demo real, arquitectura interactiva (LangGraph, Pydantic, Postgres, Gotenberg) y decisiones de diseño."
     },
     "header": {
       "nav": {
-        "realExample": "Ejemplo",
-        "howItWorks": "Cómo funciona",
-        "pricing": "Precios",
-        "faq": "Preguntas"
+        "realExample": "Demo",
+        "howItWorks": "Arquitectura",
+        "faq": "Decisiones",
+        "impact": "Impacto"
       },
       "openMenu": "Abrir menú",
       "closeMenu": "Cerrar menú"
     },
     "cta": {
-      "becomeClient": "Quiero probarlo",
-      "mailSubject": "Quiero probar ReportAI con mi plantilla",
-      "listenExample": "Escuchar el ejemplo"
+      "mailSubject": "Hablemos sobre ReportAI",
+      "listenExample": "Escuchar la demo",
+      "talk": "Hablemos",
+      "seeHow": "Ver cómo funciona por dentro",
+      "seeCode": "Ver el código"
     },
     "hero": {
       "placeholderTag": "informe_de_visita",
-      "eyebrow": "Para técnicos de prevención, inspección y mantenimiento",
+      "eyebrow": "Caso práctico · un agente de IA con humano en el bucle",
       "headlineLine1": "Dicta la visita.",
       "headlineLine2": "Recibe el informe.",
-      "subheadline": "Un audio por Telegram al acabar la visita y tu plantilla Word queda rellena: lo que has visto, las deficiencias, quién las corrige y en qué plazo. Tú lo apruebas y se envía a quien corresponda.",
-      "note": "Se instala en tu servidor: audios e informes se guardan ahí. Para transcribir y redactar usa el proveedor de IA que elijas, con tus claves.",
+      "subheadline": "ReportAI convierte la nota de voz de una visita en el informe de una plantilla Word, listo para aprobar y enviar. Esta página enseña cómo está construido, con el sistema real: del audio al PDF.",
+      "note": "Construido de punta a punta: backend, agente, panel y despliegue. Código público en GitHub.",
       "replay": "Ver otra vez",
       "stage": {
         "voiceDuration": "1:19",
@@ -74,24 +76,6 @@
         }
       }
     },
-    "facts": {
-      "handsFree": {
-        "title": "Manos libres",
-        "body": "Dictas al terminar la visita. Ni formularios en el móvil ni Word por la noche."
-      },
-      "yourTemplate": {
-        "title": "Tu plantilla, tal cual",
-        "body": "Tu Word con tu logo y tus apartados. Si no tienes, empiezas con la nuestra."
-      },
-      "approval": {
-        "title": "Nada sale sin tu visto bueno",
-        "body": "El borrador llega al chat. Apruebas o corriges respondiendo."
-      },
-      "ownServer": {
-        "title": "En tu servidor",
-        "body": "Tus datos no pasan por un servicio compartido. La IA, la del proveedor que elijas."
-      }
-    },
     "realDemo": {
       "heading": "Esto no es una maqueta.",
       "paragraph": "Una visita de obra dictada y pasada por el sistema real: transcripción, extracción y relleno de la plantilla. No se ha retocado nada después, ni siquiera las erratas de la transcripción. Dale a play.",
@@ -108,30 +92,30 @@
       "note": "La voz es sintética y la obra, las empresas y las personas son ficticias. Lo demás es la salida real del sistema, que costó menos de 3 céntimos de IA."
     },
     "useCases": {
-      "heading": "Hecho para quien trabaja sobre el terreno, no en la oficina.",
-      "sub": "Empieza por la visita de seguridad y salud. Cualquier documento con apartados fijos se dicta igual.",
+      "heading": "Un motor, cualquier plantilla.",
+      "sub": "El sistema no sabe de visitas de seguridad: sabe de esquemas. Cada tipo de documento es configuración, una lista de campos y un Word con etiquetas, no código.",
       "fieldsLabel": "campos",
       "items": {
         "safetyVisit": {
           "title": "Visitas e inspecciones de seguridad",
-          "body": "Deficiencias con su responsable, medida correctora y plazo, paralizaciones y observaciones. Viene como plantilla de inicio.",
+          "body": "Deficiencias con su responsable, medida correctora y plazo, paralizaciones y observaciones. Es la plantilla de la demo.",
           "fields": "deficiencias · paralizacion · observaciones · proxima_visita"
         },
         "incident": {
           "title": "Incidentes y accidentes",
-          "body": "Qué ha pasado, dónde, cómo de grave y qué se ha hecho ya. Dictado en caliente y revisado con calma. También viene como plantilla de inicio.",
+          "body": "Qué ha pasado, dónde, cómo de grave y qué se ha hecho ya. Se dicta en caliente y se revisa con calma.",
           "fields": "fecha · lugar · descripcion · gravedad · acciones"
         },
         "custom": {
-          "title": "Lo que hoy rellenas a mano",
-          "body": "Partes de trabajo de mantenimiento (también vienen como plantilla), listas de comprobación, actas. Si ya tienes tu Word, el asistente propone los campos.",
-          "fields": "los que tenga tu plantilla"
+          "title": "Lo que hoy se rellena a mano",
+          "body": "Partes de mantenimiento, listas de comprobación, actas. Un asistente lee el Word y propone los campos; basta con corregirlos.",
+          "fields": "los que defina cada plantilla"
         }
       }
     },
     "differentiator": {
-      "heading": "El informe ya no se escribe por la noche.",
-      "paragraph": "Hoy la visita son notas en la libreta y fotos en el móvil, y el informe se pasa a Word al acabar el día. Con ReportAI queda listo antes de llegar al coche.",
+      "heading": "El problema: el informe se escribe de noche.",
+      "paragraph": "La visita son notas en la libreta y fotos en el móvil, y el informe se pasa a Word al acabar el día. Es trabajo repetitivo en el que se pierden datos por el camino: un plazo, un responsable. Justo lo que un agente con validación y aprobación humana puede hacer bien.",
       "table": {
         "caption": "Cómo se hace hoy frente a cómo se hace con ReportAI",
         "before": "Hoy",
@@ -159,12 +143,12 @@
           }
         }
       },
-      "kicker": "Lo único nuevo en tu día: un audio de un minuto."
+      "kicker": "Lo único nuevo en el día del técnico: un audio de un minuto."
     },
     "templateFidelity": {
-      "heading": "Tu plantilla, no la nuestra.",
-      "paragraph": "Subes el Word que ya usas, con tu logo y tu formato. El asistente lo lee, propone qué campos tiene y dónde va cada uno; tú lo corriges, lo ves en PDF con datos de ejemplo y lo activas. Nada de un PDF genérico con tu logo pegado encima.",
-      "check": "¿No tienes plantilla? Empiezas con la de visita de seguridad y salud, ya con tu logo, y la ajustas en Word.",
+      "heading": "La plantilla es un dato, no código.",
+      "paragraph": "Se sube el Word que la empresa ya usa, con su logo y su formato. Un asistente propone qué campos tiene y dónde va cada uno; se corrigen, se ven en PDF con datos de ejemplo y se activan. El render sustituye cada etiqueta por su valor con docxtpl, así que el documento final es el suyo, no un PDF genérico con un logo encima.",
+      "check": "Sin plantilla propia hay plantillas de inicio: visita de seguridad y salud, parte de trabajo, informe de visita e informe de incidencia.",
       "filename": "visita_obra.docx",
       "docTitle": "VISITA DE SEGURIDAD Y SALUD",
       "labels": {
@@ -181,9 +165,9 @@
       }
     },
     "approval": {
-      "heading": "Pregunta lo que falta. Nada sale sin tu visto bueno.",
-      "paragraph1": "Cada informe llega primero al chat como borrador. Si falta un dato obligatorio, como el plazo de una medida, el bot te lo pregunta. Si algo no cuadra, lo corriges respondiendo y se vuelve a generar.",
-      "paragraph2": "Funciona en Telegram: tu equipo lo instala una vez y habla con el bot de tu empresa como con cualquier contacto. Quien aprueba también puede revisar, corregir y aprobar desde el panel.",
+      "heading": "Humano en el bucle, de verdad.",
+      "paragraph1": "Cada informe llega primero al chat como borrador. Si falta un dato obligatorio, como el plazo de una medida, el bot lo pregunta y el grafo espera la respuesta. Si algo no cuadra, se corrige respondiendo y se vuelve a generar.",
+      "paragraph2": "El canal es Telegram: cada técnico habla con el bot de la empresa como con cualquier contacto. Quien aprueba también puede revisar, corregir y aprobar desde el panel.",
       "defaultChannelBadge": "Telegram",
       "otherChannelNote": "Revisión también desde el panel",
       "mockup": {
@@ -202,131 +186,15 @@
         "issuesLabel": "Deficiencias"
       }
     },
-    "onboarding": {
-      "heading": "Te lo dejamos funcionando en tu servidor.",
-      "sub": "Lo instalamos y lo mantenemos nosotros; los datos y las claves son tuyos. Así empezamos:",
-      "steps": {
-        "tell": {
-          "title": "Nos pasas tu plantilla",
-          "body": "El Word de tu informe de visita y a quién hay que enviarlo. Si no tienes, partimos de la nuestra."
-        },
-        "configure": {
-          "title": "Lo instalamos en tu servidor",
-          "body": "Uno tuyo o un VPS a tu nombre. Configuramos la IA con tu cuenta, el bot de Telegram y tu plantilla."
-        },
-        "first": {
-          "title": "Dictas la primera visita",
-          "body": "Y el informe llega a quien toca. Ajustamos la plantilla con visitas reales y después lo mantenemos al día."
-        }
-      },
-      "panelLabel": "Lo que ves en tu panel",
-      "panel": {
-        "templates": "Plantillas y asistente",
-        "channels": "Quién puede enviar informes",
-        "recipients": "Destinatarios por tipo de informe",
-        "history": "Historial con audio y transcripción",
-        "team": "Equipo y permisos"
-      }
-    },
-    "pricing": {
-      "heading": "Pagas por el servicio, no por el software.",
-      "sub": "El código de ReportAI es público y puedes instalarlo gratis. Si prefieres no tocar un servidor, te lo instalamos y lo mantenemos.",
-      "featured": "Recomendado",
-      "plans": {
-        "selfHosted": {
-          "name": "Lo instalas tú",
-          "price": "Gratis",
-          "for": "Para empresas con alguien técnico.",
-          "items": {
-            "install": "Instalación con un comando en tu servidor",
-            "features": "Todas las funciones y plantillas de inicio",
-            "updates": "Actualizaciones publicadas y avisos de seguridad",
-            "support": "Dudas y fallos en GitHub, sin compromiso de respuesta"
-          },
-          "cta": "Ver la guía de instalación"
-        },
-        "managed": {
-          "name": "Te lo instalamos y mantenemos",
-          "price": "Pago único + cuota mensual",
-          "for": "Para usarlo sin tocar un servidor.",
-          "items": {
-            "install": "Instalación en tu servidor o en un VPS a tu nombre",
-            "template": "Tu plantilla configurada y probada con visitas reales",
-            "accounts": "IA y bot de Telegram configurados con tus cuentas",
-            "support": "Actualizaciones y soporte por email o Telegram"
-          },
-          "cta": "Pedir presupuesto",
-          "mailSubject": "Presupuesto de instalación y mantenimiento de ReportAI"
-        },
-        "pilot": {
-          "name": "Piloto fundador",
-          "price": "Precio de fundador",
-          "for": "Para las primeras empresas.",
-          "items": {
-            "same": "Instalación y mantenimiento como en el plan anterior",
-            "feedback": "A cambio de tu opinión cada semana durante el piloto",
-            "case": "Y de poder contar tu caso si te funciona"
-          },
-          "mailSubject": "Quiero ser piloto de ReportAI",
-          "spotsLeft": "Queda {left} plaza de {total} | Quedan {left} plazas de {total}",
-          "spotsFull": "Plazas de piloto completas",
-          "cta": "Quiero ser piloto"
-        }
-      },
-      "extraHeading": "Lo que pagas aparte, directamente a cada proveedor",
-      "extras": {
-        "server": "Servidor: unos 9 € al mes más IVA si no tienes uno.",
-        "ai": "IA: céntimos por informe, en tu cuenta del proveedor que elijas.",
-        "telegram": "Telegram: gratis."
-      },
-      "note": "Te damos precio cerrado cuando hayamos visto tu plantilla."
-    },
-    "faq": {
-      "heading": "Preguntas que nos hacen antes de empezar.",
-      "items": {
-        "install": {
-          "q": "¿Tengo que saber de servidores?",
-          "a": "No. Si te lo instalamos nosotros, lo dejamos funcionando en un servidor tuyo o en un VPS a tu nombre. Si en tu empresa hay alguien técnico, se instala con un solo comando siguiendo la guía."
-        },
-        "channels": {
-          "q": "¿Mis técnicos tienen que instalar algo?",
-          "a": "Telegram, una vez. Desde el panel les mandas un enlace de invitación; con abrirlo ya pueden dictar. WhatsApp está en pruebas."
-        },
-        "errors": {
-          "q": "¿Y si se equivoca?",
-          "a": "El borrador llega al chat antes de enviarse y nada sale sin tu aprobación. Si falta un dato obligatorio, el bot lo pregunta; si algo está mal, lo corriges respondiendo. Cada campo se valida: una fecha tiene que ser una fecha."
-        },
-        "data": {
-          "q": "¿Dónde están los datos?",
-          "a": "En tu servidor: audios, fotos, informes y plantillas. Para transcribir y rellenar, el texto pasa por el proveedor de IA que elijas, con tus propias claves, y los mensajes, por Telegram. Las claves se guardan cifradas."
-        },
-        "ai": {
-          "q": "¿Quién escribe el informe?",
-          "a": "Un modelo de IA prepara el borrador con lo que dictas y no rellena lo que no has dicho: lo que falta, lo pregunta. El contenido sigue siendo responsabilidad de quien lo aprueba."
-        },
-        "languages": {
-          "q": "¿En qué idiomas funciona?",
-          "a": "Español e inglés. El ejemplo de esta página está en los dos."
-        },
-        "documents": {
-          "q": "¿Sirve para otros documentos?",
-          "a": "Sí. Trae plantillas de inicio de visita de seguridad y salud, parte de trabajo, informe de visita e informe de incidencia, y puedes subir cualquier Word con apartados fijos."
-        },
-        "price": {
-          "q": "¿Cuánto cuesta?",
-          "a": "Instalarlo tú es gratis. Si te lo instalamos y mantenemos, es un pago único más una cuota mensual, con precio cerrado cuando veamos tu plantilla. Aparte pagas tu servidor (unos 9 € al mes) y la IA (céntimos por informe)."
-        }
-      }
-    },
     "finalCta": {
-      "placeholderTag": "tu_proxima_visita",
-      "headline": "Dicta la visita. Recibe el informe.",
-      "sub": "Mándanos la plantilla que usas hoy y te enseñamos tu propio informe relleno a partir de un audio.",
+      "placeholderTag": "siguiente_paso",
+      "headline": "Si esto es lo que buscas, hablemos.",
+      "sub": "Un agente con estado, validación y humano en el bucle, de punta a punta: backend, interfaz y despliegue. Escríbeme o mira el código.",
       "or": "o escribe a"
     },
     "footer": {
-      "tagline": "El informe de visita, dictado por voz.",
-      "madeBy": "Un producto de",
+      "tagline": "Del audio al informe, explicado por dentro.",
+      "madeBy": "Un proyecto de",
       "legal": "Aviso legal",
       "code": "Código fuente"
     },
@@ -558,6 +426,146 @@
             "role": "Cifradas",
             "body": "Las claves de IA y de correo se guardan cifradas en la base de datos."
           }
+        }
+      }
+    },
+    "stack": {
+      "label": "Construido con",
+      "items": {
+        "fastapi": {
+          "name": "FastAPI",
+          "role": "API y webhooks"
+        },
+        "langgraph": {
+          "name": "LangGraph",
+          "role": "agente con estado y pausas"
+        },
+        "pydantic": {
+          "name": "Pydantic v2",
+          "role": "esquemas y validación"
+        },
+        "postgres": {
+          "name": "PostgreSQL 16",
+          "role": "datos, cola y checkpoints"
+        },
+        "models": {
+          "name": "Claude u OpenAI-compatible",
+          "role": "extracción"
+        },
+        "whisper": {
+          "name": "Whisper",
+          "role": "transcripción"
+        },
+        "render": {
+          "name": "docxtpl + Gotenberg",
+          "role": "Word a PDF"
+        },
+        "nuxt": {
+          "name": "Nuxt 4 + Vue 3",
+          "role": "panel y esta web"
+        },
+        "docker": {
+          "name": "Docker Compose + Caddy",
+          "role": "despliegue"
+        }
+      }
+    },
+    "impact": {
+      "heading": "El problema, con números.",
+      "sub": "Un técnico de campo dedica horas a pasar visitas a Word. Mueve los datos de un equipo y mira qué cambia. Los valores iniciales son supuestos del modelo, no mediciones.",
+      "inputsLabel": "Datos del equipo",
+      "resultLabel": "Lo que cambia",
+      "fields": {
+        "technicians": {
+          "label": "Técnicos que hacen informes",
+          "unit": "técnicos"
+        },
+        "reportsPerWeek": {
+          "label": "Informes por técnico y semana",
+          "unit": "informes"
+        },
+        "minutesBefore": {
+          "label": "Minutos por informe hoy",
+          "unit": "min"
+        },
+        "minutesAfter": {
+          "label": "Minutos por informe con ReportAI",
+          "unit": "min"
+        },
+        "hourlyCost": {
+          "label": "Coste por hora del técnico",
+          "unit": "€/h"
+        }
+      },
+      "advanced": "Otros supuestos",
+      "advancedFields": {
+        "aiCostPerReport": {
+          "label": "Coste de IA por informe",
+          "unit": "€"
+        },
+        "serverPerMonth": {
+          "label": "Servidor al mes",
+          "unit": "€"
+        },
+        "weeksPerYear": {
+          "label": "Semanas de trabajo al año",
+          "unit": "sem."
+        }
+      },
+      "token": "horas_liberadas_al_mes",
+      "hoursUnit": "h al mes",
+      "before": "Hoy",
+      "after": "Con ReportAI",
+      "hoursPerMonth": "h/mes",
+      "saved": "liberadas",
+      "stats": {
+        "reports": "Informes al mes",
+        "days": "Jornadas de 8 h al mes",
+        "gross": "Valor del tiempo, al mes",
+        "running": "Coste de IA y servidor, al mes",
+        "net": "Neto al mes",
+        "netYear": "Neto al año"
+      },
+      "live": "Se liberan {hours} horas al mes: {net} € netos al año.",
+      "howHeading": "Cómo se calcula",
+      "how": [
+        "Informes al mes = técnicos × informes por semana × semanas al año ÷ 12.",
+        "Horas liberadas = informes × (minutos hoy − minutos con ReportAI) ÷ 60.",
+        "Valor del tiempo = horas liberadas × coste por hora.",
+        "Neto = valor del tiempo − (informes × coste de IA + servidor)."
+      ],
+      "disclaimer": "Los valores iniciales son supuestos de este modelo, no resultados medidos en clientes. La IA se estima en céntimos por informe (la demo costó menos de 3) y el servidor en unos 9 € al mes. No incluye costes de implantación ni de mantenimiento."
+    },
+    "decisions": {
+      "heading": "Decisiones de diseño y sus límites.",
+      "items": {
+        "graph": {
+          "q": "¿Por qué un grafo y no un solo prompt?",
+          "a": "Porque el flujo tiene estado y pausas: espera una respuesta humana, pregunta lo que falta, reintenta y se reanuda tras un reinicio. Con LangGraph cada paso es un nodo con estado tipado y cada decisión, una arista explícita, así que se puede probar y razonar sobre cada transición."
+        },
+        "queue": {
+          "q": "¿Por qué una cola en Postgres y no Redis o Celery?",
+          "a": "Porque cada instalación vive en el servidor de una empresa y cada pieza de más es soporte. Postgres ya está: el worker reclama trabajos con FOR UPDATE SKIP LOCKED, un lease y reintentos con espera creciente. El coste es un techo de caudal más bajo que el de un broker dedicado: vale para informes de visita, no para miles de eventos por segundo."
+        },
+        "hallucination": {
+          "q": "¿Cómo se evita que la IA invente datos?",
+          "a": "En capas. El modelo devuelve null en lo que no se dijo. Cada campo rellenado trae la cita literal, que se comprueba contra la transcripción. Pydantic valida tipos y formatos: una fecha tiene que ser una fecha. Si falta un dato obligatorio, el bot lo pregunta. Y nada sale sin aprobación humana. Ninguna capa es perfecta; juntas acotan el riesgo."
+        },
+        "crash": {
+          "q": "¿Qué pasa si el servidor se cae a mitad de un informe?",
+          "a": "Cada trabajo tiene un lease que renueva un latido. Si el worker muere, el lease caduca y otro worker lo recoge, y el informe se reanuda desde el último checkpoint de LangGraph en Postgres, sin repetir la transcripción ni la extracción. Un deploy detiene el worker con gracia: termina el trabajo en curso."
+        },
+        "providers": {
+          "q": "¿Cómo se cambia de proveedor de IA?",
+          "a": "La IA es configuración, no código. Hay dos adaptadores: Anthropic con salida estructurada nativa y cualquier endpoint compatible con OpenAI con llamada a función. La transcripción es otro ajuste, sobre un endpoint compatible con OpenAI. Cada empresa pone sus propias claves."
+        },
+        "newdoc": {
+          "q": "¿Cómo se añade un tipo de documento nuevo?",
+          "a": "Es configuración: una lista de campos con su tipo (texto, número, fecha, hora, email, teléfono, lista, enum, tabla o foto) y un Word con etiquetas. El esquema de Pydantic se genera al vuelo a partir de esa lista, así que no hay que tocar código ni volver a desplegar."
+        },
+        "limits": {
+          "q": "¿Qué límites tiene hoy?",
+          "a": "Telegram es el canal oficial y WhatsApp está en pruebas. Una instalación atiende a una empresa. Los idiomas son español e inglés. Y la calidad de la extracción depende del modelo elegido y de lo bien dictada que esté la visita."
         }
       }
     }

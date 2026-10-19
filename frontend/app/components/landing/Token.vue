@@ -2,11 +2,11 @@
 // The product's own gesture: a {{ tag }} in the client's Word that becomes its value. The tag
 // shows until a section timeline swaps it (.tok-tag out, .tok-val in); app.vue's <noscript>
 // style shows the resolved value for visitors without JS.
-const props = defineProps<{ tag: string; value: string }>()
+const props = defineProps<{ tag: string; value: string; raw?: boolean }>()
 
 // Vue's template tokenizer reads a literal "{{" inside a mustache as a nested interpolation,
 // so the braces are added here.
-const label = computed(() => `{{ ${props.tag} }}`)
+const label = computed(() => (props.raw ? props.tag : `{{ ${props.tag} }}`))
 </script>
 
 <template>
