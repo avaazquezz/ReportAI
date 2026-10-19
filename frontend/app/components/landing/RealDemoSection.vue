@@ -198,7 +198,7 @@ useMotionScope(root, (c) => {
                 class="block h-1.5 w-full cursor-pointer accent-capture-600"
                 @input="seek"
               >
-              <div class="mt-1.5 flex justify-between font-mono text-xs text-ink-900/50">
+              <div class="mt-1.5 flex justify-between font-mono text-xs text-ink-900/65">
                 <span>{{ formatTime(currentTime) }}</span>
                 <span>{{ formatTime(duration) }}</span>
               </div>
@@ -206,9 +206,9 @@ useMotionScope(root, (c) => {
           </div>
 
           <div class="mt-7 border-t border-paper-100 pt-5">
-            <p class="font-body text-xs font-semibold text-ink-900/50">{{ t('landing.realDemo.transcriptLabel') }}</p>
+            <p class="font-body text-xs font-semibold text-ink-900/65">{{ t('landing.realDemo.transcriptLabel') }}</p>
             <div class="mt-2 min-h-[9rem] font-body text-[15px] leading-relaxed">
-              <p v-if="!played" class="text-ink-900/40">{{ t('landing.realDemo.playPlaceholder') }}</p>
+              <p v-if="!played" class="text-ink-900/60">{{ t('landing.realDemo.playPlaceholder') }}</p>
               <p v-else>
                 <span
                   v-for="(sentence, i) in sentences"
@@ -221,7 +221,7 @@ useMotionScope(root, (c) => {
           </div>
 
           <div class="mt-6 border-t border-paper-100 pt-5">
-            <p class="font-body text-xs font-semibold text-ink-900/50">{{ t('landing.realDemo.fieldsLabel') }}</p>
+            <p class="font-body text-xs font-semibold text-ink-900/65">{{ t('landing.realDemo.fieldsLabel') }}</p>
             <ul class="mb-0 mt-2 list-none space-y-1.5 pl-0 font-mono text-xs leading-5 text-ink-900">
               <li
                 v-for="(field, i) in content.fields"
@@ -237,8 +237,8 @@ useMotionScope(root, (c) => {
 
         <div>
           <div class="flex items-baseline justify-between gap-4">
-            <p class="font-body text-xs font-semibold text-ink-900/50">{{ t('landing.realDemo.documentLabel') }}</p>
-            <p class="font-mono text-[11px] text-ink-900/50">{{ t('landing.realDemo.pageMeta') }}</p>
+            <p class="font-body text-xs font-semibold text-ink-900/65">{{ t('landing.realDemo.documentLabel') }}</p>
+            <p class="font-mono text-[11px] text-ink-900/65">{{ t('landing.realDemo.pageMeta') }}</p>
           </div>
           <div class="page-sheet mt-2 overflow-hidden rounded-[3px] bg-surface-0 shadow-page">
             <img
