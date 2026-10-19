@@ -68,7 +68,7 @@
         },
         "page": {
           "value": "1 PDF A4",
-          "label": "en tu plantilla"
+          "label": "en la plantilla de la empresa"
         },
         "cost": {
           "value": "< 3 céntimos",
@@ -78,7 +78,7 @@
     },
     "realDemo": {
       "heading": "Esto no es una maqueta.",
-      "paragraph": "Una visita de obra dictada y pasada por el sistema real: transcripción, extracción y relleno de la plantilla. No se ha retocado nada después, ni siquiera las erratas de la transcripción. Dale a play.",
+      "paragraph": "Una visita de obra dictada y pasada por el sistema real: transcripción, extracción y relleno de la plantilla. No se ha retocado nada después, ni siquiera las erratas de la transcripción. Dale a reproducir.",
       "play": "Reproducir",
       "pause": "Pausar",
       "seek": "Posición del audio",
@@ -147,7 +147,7 @@
     },
     "templateFidelity": {
       "heading": "La plantilla es un dato, no código.",
-      "paragraph": "Se sube el Word que la empresa ya usa, con su logo y su formato. Un asistente propone qué campos tiene y dónde va cada uno; se corrigen, se ven en PDF con datos de ejemplo y se activan. El render sustituye cada etiqueta por su valor con docxtpl, así que el documento final es el suyo, no un PDF genérico con un logo encima.",
+      "paragraph": "Se sube el Word que la empresa ya usa, con su logotipo y su formato. Un asistente propone qué campos tiene y dónde va cada uno; se corrigen, se ven en PDF con datos de ejemplo y se activan. Al generar el documento, docxtpl sustituye cada etiqueta por su valor, así que el resultado es el de la empresa, no un PDF genérico con un logotipo encima.",
       "check": "Sin plantilla propia hay plantillas de inicio: visita de seguridad y salud, parte de trabajo, informe de visita e informe de incidencia.",
       "filename": "visita_obra.docx",
       "docTitle": "VISITA DE SEGURIDAD Y SALUD",
@@ -162,6 +162,12 @@
         "site": "Residencial Las Acacias, Paterna",
         "companies": "Construcciones Albufera, Estructuras Levante, Montajes Soler, Grúas Martínez",
         "issue": "Falta la barandilla del borde norte del forjado de tercera · Estructuras Levante · Inmediato"
+      },
+      "tags": {
+        "date": "fecha",
+        "site": "obra",
+        "issue": "deficiencias[0].deficiencia",
+        "companies": "empresas_presentes"
       }
     },
     "approval": {
@@ -230,7 +236,7 @@
     },
     "architecture": {
       "heading": "Del audio al informe, por dentro.",
-      "sub": "Cinco etapas, un solo recorrido. Elige una para ver qué hace, con qué lo hace y qué sale de tu servidor.",
+      "sub": "Cinco etapas, un solo recorrido. Elige una para ver qué hace, con qué lo hace y qué sale del servidor.",
       "railLabel": "Etapas del recorrido del informe",
       "hintPinned": "Desliza: el dato avanza solo. También puedes pulsar una etapa.",
       "hintTabs": "Pulsa una etapa o usa las flechas del teclado.",
@@ -247,11 +253,11 @@
           "artifact": "nota_de_voz.ogg",
           "plain": "Mandas un audio por Telegram, como a cualquier contacto. Si quieres, con fotos.",
           "tech": [
-            "Telegram avisa a tu servidor por webhook. Si la instalación no tiene dirección pública, el worker consulta a Telegram.",
-            "Cada mensaje se deduplica por su id: un reintento de Telegram no crea dos informes.",
+            "Telegram avisa al servidor por webhook. Si la instalación no tiene dirección pública, es el worker (el proceso que ejecuta los informes) quien consulta a Telegram.",
+            "Cada mensaje se deduplica por su identificador: un reintento de Telegram no crea dos informes.",
             "El informe y su trabajo en cola se crean en una sola transacción de Postgres: existen los dos o ninguno."
           ],
-          "why": "Cola en Postgres, sin Redis ni broker: cada pieza de más es una llamada de soporte en un servidor ajeno. Un trabajo se reclama con FOR UPDATE SKIP LOCKED y un lease; si el worker muere, otro lo recoge.",
+          "why": "Una cola en Postgres, sin Redis ni broker: cada pieza de más es una llamada de soporte en un servidor ajeno. El trabajo se reclama con FOR UPDATE SKIP LOCKED y una reserva temporal (lease); si el worker muere, otro lo recoge.",
           "data": "El mensaje viaja por Telegram, como cualquier chat. Nada más."
         },
         "transcribe": {
@@ -259,11 +265,11 @@
           "artifact": "transcripcion.txt",
           "plain": "El audio pasa a texto, en español o en inglés, con el servicio de voz configurado.",
           "tech": [
-            "Un modelo Whisper por cualquier endpoint compatible con OpenAI (/audio/transcriptions). Por defecto, whisper-large-v3-turbo en Groq.",
-            "temperature 0 y el idioma de tu empresa como pista: salida repetible, sin que un audio en inglés se transcriba como si fuera español.",
+            "Un modelo Whisper tras cualquier endpoint compatible con OpenAI (/audio/transcriptions). Por defecto, whisper-large-v3-turbo en Groq.",
+            "Temperatura 0 y el idioma de la empresa como pista: salida repetible, sin que un audio en inglés se transcriba como si fuera español.",
             "Si el trabajo se corta a mitad, se reanuda desde su último punto guardado en vez de volver a transcribir."
           ],
-          "why": "Un endpoint compatible con OpenAI en vez de un SDK propio: cambiar de proveedor es cambiar la URL y la clave, no el código.",
+          "why": "Un endpoint compatible con OpenAI en vez del SDK de un proveedor concreto: cambiar de proveedor es cambiar la URL y la clave, no el código.",
           "data": "El audio va al proveedor de voz configurado, con la clave de la empresa. Es el único paso que lo envía."
         },
         "extract": {
@@ -275,7 +281,7 @@
             "El esquema se genera al vuelo desde los campos de la plantilla y se pide al modelo como salida estructurada. Cada campo lleva la cita literal de lo dictado, comprobada contra la transcripción.",
             "Si la validación falla, el error vuelve al modelo y reintenta, con tope. Si falta un dato obligatorio, el grafo se pausa y el bot lo pregunta."
           ],
-          "why": "Null antes que inventar. En un documento formal, una fecha verosímil que nadie dijo es peor que un hueco: lo obligatorio que falta se pregunta, no se rellena.",
+          "why": "Mejor vacío (null) que inventado. En un documento formal, una fecha verosímil que nadie dijo es peor que un hueco: lo obligatorio que falta se pregunta, no se rellena.",
           "data": "El texto transcrito va al modelo de IA configurado (Claude u otro), con la clave de la empresa."
         },
         "approve": {
@@ -284,8 +290,8 @@
           "plain": "El borrador llega al chat. Confirmas, corriges con un audio o un texto, o cancelas. Sin tu visto bueno no sale nada.",
           "tech": [
             "El grafo se detiene con interrupt() de LangGraph y su estado se guarda en Postgres: puede esperar horas y sobrevive a un reinicio.",
-            "Un «vale» o un 👍 se resuelven por reglas, sin llamar al modelo. Una respuesta larga la clasifica el modelo, y ante la duda cuenta como corrección, nunca como aprobación.",
-            "Una corrección vuelve a la extracción con lo que añadas, con tope de intentos. También puedes revisar y aprobar desde el panel."
+            "Un «vale» o un 👍 se resuelven por reglas, sin llamar al modelo. Una respuesta larga la clasifica el modelo y, ante la duda, cuenta como corrección, nunca como aprobación.",
+            "Una corrección vuelve a la extracción con lo que se añada, con un tope de intentos. También se puede revisar y aprobar desde el panel."
           ],
           "why": "Un agente no debería enviar nada en nombre de otra persona sin un punto de control humano. Aquí es una arista del grafo, no un aviso en la interfaz.",
           "data": "Con los botones o un «vale», nada sale. Solo una respuesta larga pasa al modelo para clasificarla."
@@ -293,19 +299,19 @@
         "deliver": {
           "name": "Se entrega",
           "artifact": "informe_visita.pdf",
-          "plain": "La plantilla Word se rellena y se convierte a PDF. Llega al chat y por email a quien esté configurado, y queda en el historial.",
+          "plain": "La plantilla Word se rellena y se convierte a PDF. Llega al chat y, por correo, a quien esté configurado, y queda en el historial.",
           "tech": [
-            "docxtpl rellena el .docx de la plantilla con los campos aprobados, en un entorno Jinja2 aislado y con autoescapado: «García & Hijos» no rompe el documento.",
+            "docxtpl rellena el .docx de la plantilla con los campos aprobados, en un entorno Jinja2 aislado y con escapado automático de caracteres: «García & Hijos» no rompe el documento.",
             "Gotenberg (LibreOffice) convierte el .docx a PDF en un contenedor del propio servidor.",
-            "Cada copia, el chat y cada email, es una fila en el registro de entregas: si una falla, solo se reintenta esa."
+            "Cada copia, la del chat y la de cada correo, es una fila en el registro de entregas: si una falla, solo se reintenta esa."
           ],
-          "why": "Una entrega por copia: si un email falla, no se reenvía el chat ni se vuelve a generar el PDF.",
+          "why": "Una entrega por copia: si un correo falla, no se reenvía el chat ni se vuelve a generar el PDF.",
           "data": "Solo sale lo que se envía: el PDF por Telegram y por el servidor de correo configurado."
         }
       },
       "visual": {
         "dictate": {
-          "meta": "telegram → webhook → backend",
+          "meta": "entrada · telegram → webhook → backend",
           "job": "trabajo en cola",
           "tx": "una transacción: informe + trabajo"
         },
@@ -316,7 +322,7 @@
           "after": ", unos 10 metros. Es de estructuras Levante y la tienen que poner antes de seguir trabajando en esa zona. O sea, inmediato."
         },
         "extract": {
-          "meta": "extract → validate",
+          "meta": "grafo · extract → validate",
           "quote": "falta la barandilla del borde norte",
           "verified": "cita verificada en la transcripción",
           "valid": "validación Pydantic superada",
@@ -325,10 +331,18 @@
             "empresa": "Estructuras Levante",
             "medida": "Colocar la barandilla antes de continuar trabajando en esa zona",
             "plazo": "Inmediato"
+          },
+          "evidence": "cita",
+          "keys": {
+            "list": "deficiencias",
+            "issue": "deficiencia",
+            "contractor": "empresa",
+            "action": "medida",
+            "deadline": "plazo"
           }
         },
         "approve": {
-          "meta": "human_approval · interrupt()",
+          "meta": "grafo · human_approval · interrupt()",
           "header": "Esto es lo que he extraído para tu Visita de seguridad y salud:",
           "site": "Obra: Residencial Las Acacias",
           "date": "Fecha: 01/10/2026",
@@ -339,13 +353,13 @@
           "paused": "grafo en pausa · estado guardado en Postgres"
         },
         "deliver": {
-          "meta": "render → convert_pdf → deliver",
+          "meta": "grafo · render → convert_pdf → deliver",
           "template": "visita_obra.docx",
           "filled": "rendered.docx",
           "pdf": "visita_las_acacias.pdf",
           "telegram": "Telegram",
-          "email1": "email · contrata principal",
-          "email2": "email · promotor"
+          "email1": "correo · contrata principal",
+          "email2": "correo · promotor"
         }
       },
       "topology": {
@@ -363,14 +377,14 @@
           "telegram": {
             "name": "Telegram",
             "role": "Canal",
-            "body": "Tu audio entra y el borrador y el PDF vuelven por aquí.",
+            "body": "El audio entra y el borrador y el PDF vuelven por aquí.",
             "sends": "Mensajes, fotos y el PDF, como en cualquier chat de Telegram."
           },
           "smtp": {
             "name": "Servidor de correo",
             "role": "Entrega",
-            "body": "El PDF sale por email por el SMTP configurado en el panel.",
-            "sends": "El PDF y el texto del email, solo a los destinatarios configurados."
+            "body": "El PDF sale por correo a través del SMTP configurado en el panel.",
+            "sends": "El PDF y el texto del correo, solo a los destinatarios configurados."
           },
           "voice": {
             "name": "Proveedor de voz",
@@ -414,7 +428,7 @@
           "gotenberg": {
             "name": "Gotenberg",
             "role": "PDF",
-            "body": "Convierte tu Word en PDF con LibreOffice, sin salir del servidor."
+            "body": "Convierte el Word de la plantilla en PDF con LibreOffice, sin salir del servidor."
           },
           "storage": {
             "name": "Almacenamiento",
@@ -446,11 +460,11 @@
         },
         "postgres": {
           "name": "PostgreSQL 16",
-          "role": "datos, cola y checkpoints"
+          "role": "datos, cola y puntos de guardado"
         },
         "models": {
-          "name": "Claude u OpenAI-compatible",
-          "role": "extracción"
+          "name": "Claude u otro modelo",
+          "role": "extracción, configurable"
         },
         "whisper": {
           "name": "Whisper",
@@ -534,34 +548,34 @@
         "Valor del tiempo = horas liberadas × coste por hora.",
         "Neto = valor del tiempo − (informes × coste de IA + servidor)."
       ],
-      "disclaimer": "Los valores iniciales son supuestos de este modelo, no resultados medidos en clientes. La IA se estima en céntimos por informe (la demo costó menos de 3) y el servidor en unos 9 € al mes. No incluye costes de implantación ni de mantenimiento."
+      "disclaimer": "Los valores iniciales son supuestos de este modelo, no resultados medidos en clientes. La IA se estima en céntimos por informe (la demo costó menos de 3 céntimos) y el servidor en unos 9 € al mes. No incluye costes de implantación ni de mantenimiento."
     },
     "decisions": {
       "heading": "Decisiones de diseño y sus límites.",
       "items": {
         "graph": {
-          "q": "¿Por qué un grafo y no un solo prompt?",
+          "q": "¿Por qué un grafo y no una sola llamada al modelo?",
           "a": "Porque el flujo tiene estado y pausas: espera una respuesta humana, pregunta lo que falta, reintenta y se reanuda tras un reinicio. Con LangGraph cada paso es un nodo con estado tipado y cada decisión, una arista explícita, así que se puede probar y razonar sobre cada transición."
         },
         "queue": {
           "q": "¿Por qué una cola en Postgres y no Redis o Celery?",
-          "a": "Porque cada instalación vive en el servidor de una empresa y cada pieza de más es soporte. Postgres ya está: el worker reclama trabajos con FOR UPDATE SKIP LOCKED, un lease y reintentos con espera creciente. El coste es un techo de caudal más bajo que el de un broker dedicado: vale para informes de visita, no para miles de eventos por segundo."
+          "a": "Porque cada instalación vive en el servidor de una empresa y cada pieza de más es soporte. Postgres ya está: el worker reclama los trabajos con FOR UPDATE SKIP LOCKED, una reserva temporal (lease) y reintentos con espera creciente. El coste es un techo de caudal más bajo que el de un broker dedicado: vale para informes de visita, no para miles de eventos por segundo."
         },
         "hallucination": {
           "q": "¿Cómo se evita que la IA invente datos?",
-          "a": "En capas. El modelo devuelve null en lo que no se dijo. Cada campo rellenado trae la cita literal, que se comprueba contra la transcripción. Pydantic valida tipos y formatos: una fecha tiene que ser una fecha. Si falta un dato obligatorio, el bot lo pregunta. Y nada sale sin aprobación humana. Ninguna capa es perfecta; juntas acotan el riesgo."
+          "a": "En capas. El modelo deja vacío (null) lo que no se dijo. Cada campo rellenado trae la cita literal, que se comprueba contra la transcripción. Pydantic valida tipos y formatos: una fecha tiene que ser una fecha. Si falta un dato obligatorio, el bot lo pregunta. Y nada sale sin aprobación humana. Ninguna capa es perfecta; juntas acotan el riesgo."
         },
         "crash": {
           "q": "¿Qué pasa si el servidor se cae a mitad de un informe?",
-          "a": "Cada trabajo tiene un lease que renueva un latido. Si el worker muere, el lease caduca y otro worker lo recoge, y el informe se reanuda desde el último checkpoint de LangGraph en Postgres, sin repetir la transcripción ni la extracción. Un deploy detiene el worker con gracia: termina el trabajo en curso."
+          "a": "Cada trabajo tiene una reserva temporal (lease) que un latido va renovando. Si el worker muere, la reserva caduca y otro worker recoge el trabajo, que se reanuda desde el último punto de guardado (checkpoint) de LangGraph en Postgres, sin repetir la transcripción ni la extracción. Un despliegue detiene el worker con calma: termina el trabajo en curso."
         },
         "providers": {
           "q": "¿Cómo se cambia de proveedor de IA?",
-          "a": "La IA es configuración, no código. Hay dos adaptadores: Anthropic con salida estructurada nativa y cualquier endpoint compatible con OpenAI con llamada a función. La transcripción es otro ajuste, sobre un endpoint compatible con OpenAI. Cada empresa pone sus propias claves."
+          "a": "La IA es configuración, no código. Hay dos adaptadores: Anthropic con salida estructurada nativa y cualquier endpoint compatible con OpenAI mediante llamadas a funciones. La transcripción es otro ajuste, sobre un endpoint compatible con OpenAI. Cada empresa pone sus propias claves."
         },
         "newdoc": {
           "q": "¿Cómo se añade un tipo de documento nuevo?",
-          "a": "Es configuración: una lista de campos con su tipo (texto, número, fecha, hora, email, teléfono, lista, enum, tabla o foto) y un Word con etiquetas. El esquema de Pydantic se genera al vuelo a partir de esa lista, así que no hay que tocar código ni volver a desplegar."
+          "a": "Es configuración: una lista de campos con su tipo (texto, número, fecha, hora, correo, teléfono, lista, opción única, tabla o foto) y un Word con etiquetas. El esquema de Pydantic se genera al vuelo a partir de esa lista, así que no hay que tocar código ni volver a desplegar."
         },
         "limits": {
           "q": "¿Qué límites tiene hoy?",

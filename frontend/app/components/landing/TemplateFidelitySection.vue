@@ -4,8 +4,10 @@ import gsap from 'gsap'
 const { t } = useI18n()
 
 // Real docxtpl syntax: the sheet shows the client's .docx as the engine sees it, then does what
-// the product does — each tag resolves into its value.
-const FOR_LOOP = '{% for e in empresas_presentes %}{{ e }}{% endfor %}'
+// the product does — each tag resolves into its value. The tag names are in i18n so each
+// language reads its own.
+// (Braces stay out of the i18n messages, where they are placeholder syntax: the loop is composed here.)
+const forLoop = computed(() => `{% for e in ${t('landing.templateFidelity.tags.companies')} %}{{ e }}{% endfor %}`)
 
 const root = ref<HTMLElement | null>(null)
 useMotionScope(root, (c) => {
@@ -39,19 +41,19 @@ useMotionScope(root, (c) => {
 
           <p class="tf-line mb-0 mt-5 font-body text-[13px] leading-6 text-ink-900">
             <b class="font-semibold">{{ t('landing.templateFidelity.labels.date') }}</b>
-            <LandingToken class="ml-1" tag="fecha" :value="t('landing.templateFidelity.values.date')" />
+            <LandingToken class="ml-1" :tag="t('landing.templateFidelity.tags.date')" :value="t('landing.templateFidelity.values.date')" />
           </p>
           <p class="tf-line mb-0 mt-1 font-body text-[13px] leading-6 text-ink-900">
             <b class="font-semibold">{{ t('landing.templateFidelity.labels.site') }}</b>
-            <LandingToken class="ml-1" tag="obra" :value="t('landing.templateFidelity.values.site')" />
+            <LandingToken class="ml-1" :tag="t('landing.templateFidelity.tags.site')" :value="t('landing.templateFidelity.values.site')" />
           </p>
           <p class="tf-line mb-0 mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.companies') }}</p>
           <p class="tf-line mb-0 mt-1 font-body text-[13px] leading-6 text-ink-900">
-            <LandingToken :tag="FOR_LOOP" raw :value="t('landing.templateFidelity.values.companies')" />
+            <LandingToken :tag="forLoop" raw :value="t('landing.templateFidelity.values.companies')" />
           </p>
           <p class="tf-line mb-0 mt-4 font-body text-sm font-semibold text-doc-700">{{ t('landing.templateFidelity.labels.issue') }}</p>
           <p class="tf-line mb-0 mt-1 font-body text-[13px] leading-6 text-ink-900">
-            <LandingToken tag="deficiencias[0].deficiencia" :value="t('landing.templateFidelity.values.issue')" />
+            <LandingToken :tag="t('landing.templateFidelity.tags.issue')" :value="t('landing.templateFidelity.values.issue')" />
           </p>
         </div>
       </div>
