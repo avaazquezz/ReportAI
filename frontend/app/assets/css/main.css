@@ -117,8 +117,7 @@ a {
   }
 }
 
-/* Initial state for elements a section timeline reveals (see useSectionMotion).
-   app.vue restores them under <noscript>. */
+/* Initial state for hero elements its timeline reveals; app.vue restores them under <noscript>. */
 .m-hide {
   opacity: 0;
 }

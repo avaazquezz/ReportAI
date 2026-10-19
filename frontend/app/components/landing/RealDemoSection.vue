@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import gsap from 'gsap'
+
 const { t, locale } = useI18n()
 
 // Real pipeline output, generated once with backend/scripts/generate_landing_demo_audio.py
@@ -141,25 +143,25 @@ watch(locale, () => {
 })
 
 const root = ref<HTMLElement | null>(null)
-useSectionMotion(root, (tl) => {
-  tl.fromTo('.head', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 })
-    .fromTo('.player', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.55 }, '-=0.2')
-    .fromTo('.page', { opacity: 0, y: 28, rotate: 1.5 }, { opacity: 1, y: 0, rotate: 0, duration: 0.7 }, '-=0.35')
+useMotionScope(root, (c) => {
+  if (!c.motion) return
+  gsap.from('.demo-lead', { opacity: 0, y: 14, duration: MOTION.reveal, clearProps: 'opacity,transform', scrollTrigger: { trigger: '.demo-lead', start: 'top 88%', once: true } })
+  gsap.from('.player', { opacity: 0, y: 28, duration: MOTION.reveal + 0.2, clearProps: 'opacity,transform', scrollTrigger: { trigger: '.player', start: 'top 82%', once: true } })
+  // The report sheet is uncovered from the top, like paper coming out of a printer.
+  gsap.fromTo('.page-sheet', { clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0% 0)', duration: MOTION.piece + 0.4, ease: 'power3.inOut', clearProps: 'clipPath', scrollTrigger: { trigger: '.page-sheet', start: 'top 80%', once: true } })
 })
 </script>
 
 <template>
   <section id="ejemplo-real" ref="root" class="bg-paper-50 py-20 md:py-28">
-    <div class="mx-auto max-w-[1200px] px-6">
-      <div class="head m-hide max-w-2xl">
-        <h2 class="font-display text-[clamp(1.9rem,3.4vw,2.9rem)] font-bold leading-[1.05] tracking-[-0.02em] text-ink-900">
-          {{ t('landing.realDemo.heading') }}
-        </h2>
-        <p class="mt-4 font-body text-lg leading-relaxed text-ink-900/75">{{ t('landing.realDemo.paragraph') }}</p>
+    <div class="mx-auto max-w-[1240px] px-6">
+      <div class="max-w-2xl">
+        <LandingSectionHeading>{{ t('landing.realDemo.heading') }}</LandingSectionHeading>
+        <p class="demo-lead mb-0 mt-5 font-body text-lg leading-relaxed text-ink-900/75">{{ t('landing.realDemo.paragraph') }}</p>
       </div>
 
       <div class="mt-12 grid items-start gap-10 lg:grid-cols-[1fr_0.92fr] lg:gap-14">
-        <div class="player m-hide rounded-2xl bg-surface-0 p-6 shadow-page md:p-8">
+        <div class="player rounded-2xl bg-surface-0 p-6 shadow-page md:p-8">
           <audio
             ref="audioEl"
             :src="content.audioSrc"
@@ -233,12 +235,12 @@ useSectionMotion(root, (tl) => {
           </div>
         </div>
 
-        <div class="page m-hide">
+        <div>
           <div class="flex items-baseline justify-between gap-4">
             <p class="font-body text-xs font-semibold text-ink-900/50">{{ t('landing.realDemo.documentLabel') }}</p>
             <p class="font-mono text-[11px] text-ink-900/50">{{ t('landing.realDemo.pageMeta') }}</p>
           </div>
-          <div class="mt-2 overflow-hidden rounded-[3px] bg-surface-0 shadow-page">
+          <div class="page-sheet mt-2 overflow-hidden rounded-[3px] bg-surface-0 shadow-page">
             <img
               :src="content.pageSrc"
               :alt="t('landing.realDemo.pageAlt')"

@@ -12,16 +12,15 @@ useSeoMeta({
 <template>
   <div>
     <LandingHeroSection />
-    <LandingFactStrip />
+    <LandingStackStrip />
     <LandingRealDemoSection />
     <LandingArchitectureSection />
-    <LandingUseCasesSection />
     <LandingDifferentiatorSection />
+    <LandingSavingsSection />
+    <LandingUseCasesSection />
     <LandingTemplateFidelitySection />
     <LandingApprovalSection />
-    <LandingOnboardingSection />
-    <LandingPricingSection />
-    <LandingFaqSection />
+    <LandingDecisionsSection />
     <LandingFinalCtaSection />
   </div>
 </template>
