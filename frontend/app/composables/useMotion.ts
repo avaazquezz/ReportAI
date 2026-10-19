@@ -35,7 +35,13 @@ function register() {
  * (tweens, ScrollTriggers, SplitTexts) is reverted when the component unmounts or when a media
  * condition flips, and `setup` runs again with the new conditions.
  */
-export function useMotionScope(scope: Ref<HTMLElement | null>, setup: (c: MotionConditions) => void) {
+export function useMotionScope(
+  scope: Ref<HTMLElement | null>,
+  setup: (c: MotionConditions) => unknown,
+  /** Listen to the 1024px breakpoint too: setup re-runs when it is crossed. Off by default, so a
+   * resize across it doesn't replay a section that doesn't care. */
+  options: { desktop?: boolean } = {}
+) {
   let mm: gsap.MatchMedia | undefined
 
   onMounted(() => {
@@ -46,11 +52,12 @@ export function useMotionScope(scope: Ref<HTMLElement | null>, setup: (c: Motion
       {
         motion: '(prefers-reduced-motion: no-preference)',
         reduce: '(prefers-reduced-motion: reduce)',
-        desktop: '(min-width: 1024px)',
-        finePointer: '(hover: hover) and (pointer: fine)'
+        finePointer: '(hover: hover) and (pointer: fine)',
+        ...(options.desktop ? { desktop: '(min-width: 1024px)' } : {})
       },
       (ctx) => {
-        setup(ctx.conditions as unknown as MotionConditions)
+        const cleanup = setup({ desktop: false, ...ctx.conditions } as unknown as MotionConditions)
+        return typeof cleanup === 'function' ? (cleanup as () => void) : undefined
       }
     )
   })

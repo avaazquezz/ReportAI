@@ -24,8 +24,8 @@
       "eyebrow": "For safety, inspection and maintenance teams",
       "headlineLine1": "Dictate the inspection.",
       "headlineLine2": "Get the report.",
-      "subheadline": "When the visit's done, you send a voice note on Telegram. ReportAI fills in your Word template with it: what you saw, the issues, who fixes them and by when. Once you approve it, it goes to the right people.",
-      "note": "Installed on your own server: the recordings and reports stay with you.",
+      "subheadline": "Send one voice note on Telegram when the visit ends and your Word template fills itself: what you saw, the deficiencies, who fixes them and by when. You approve it and it goes to whoever should get it.",
+      "note": "It installs on your server: audio and reports are stored there. To transcribe and write it uses the AI provider you choose, with your own keys.",
       "replay": "Play again",
       "stage": {
         "voiceDuration": "1:06",
@@ -58,6 +58,20 @@
           "issue": "Edge protection missing on the north side of the third-floor deck. Summit Concrete · Immediate."
         },
         "stamp": "APPROVED"
+      },
+      "proof": {
+        "caption": "Measured in the demo below",
+        "audio": {
+          "label": "of audio"
+        },
+        "page": {
+          "value": "1 A4 PDF",
+          "label": "in your template"
+        },
+        "cost": {
+          "value": "< 3 cents",
+          "label": "of AI"
+        }
       }
     },
     "facts": {

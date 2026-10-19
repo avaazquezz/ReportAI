@@ -24,8 +24,8 @@
       "eyebrow": "Para técnicos de prevención, inspección y mantenimiento",
       "headlineLine1": "Dicta la visita.",
       "headlineLine2": "Recibe el informe.",
-      "subheadline": "Al acabar la visita mandas un audio por Telegram. ReportAI rellena con él tu plantilla Word: lo que has visto, las deficiencias, quién las corrige y en qué plazo. Cuando lo apruebas, se envía a quien corresponda.",
-      "note": "Se instala en tu servidor: los audios y los informes se quedan contigo.",
+      "subheadline": "Un audio por Telegram al acabar la visita y tu plantilla Word queda rellena: lo que has visto, las deficiencias, quién las corrige y en qué plazo. Tú lo apruebas y se envía a quien corresponda.",
+      "note": "Se instala en tu servidor: audios e informes se guardan ahí. Para transcribir y redactar usa el proveedor de IA que elijas, con tus claves.",
       "replay": "Ver otra vez",
       "stage": {
         "voiceDuration": "1:19",
@@ -58,6 +58,20 @@
           "issue": "Falta la barandilla del borde norte del forjado de tercera. Estructuras Levante · Inmediato."
         },
         "stamp": "APROBADO"
+      },
+      "proof": {
+        "caption": "Medido en la demo de más abajo",
+        "audio": {
+          "label": "de audio"
+        },
+        "page": {
+          "value": "1 PDF A4",
+          "label": "en tu plantilla"
+        },
+        "cost": {
+          "value": "< 3 céntimos",
+          "label": "de IA"
+        }
       }
     },
     "facts": {

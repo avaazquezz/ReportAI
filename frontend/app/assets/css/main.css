@@ -51,11 +51,13 @@ a {
   pointer-events: none;
   background-size: 32px 32px;
   background-position: -1px -1px;
+  /* Vuetify's reset sets background-repeat: no-repeat on every pseudo-element. */
+  background-repeat: repeat;
 }
 .grid-paper::before {
   background-image:
-    linear-gradient(to right, rgb(18 21 28 / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(18 21 28 / 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgb(18 21 28 / 0.09) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(18 21 28 / 0.09) 1px, transparent 1px);
   -webkit-mask-image: radial-gradient(ellipse 95% 80% at 50% 0%, #000 15%, transparent 80%);
   mask-image: radial-gradient(ellipse 95% 80% at 50% 0%, #000 15%, transparent 80%);
 }
@@ -91,6 +93,7 @@ a {
     linear-gradient(to right, rgb(143 176 227 / 0.04) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(143 176 227 / 0.04) 1px, transparent 1px);
   background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
+  background-repeat: repeat;
   -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 88%);
   mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 88%);
 }
