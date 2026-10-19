@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   // Tailwind preflight is disabled (see tailwind.config.ts), so load order is
   // what keeps Vuetify's own component styles from being overridden.
   modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxt/eslint', '@nuxtjs/i18n'],
-  css: ['@mdi/font/css/materialdesignicons.css', '~/assets/css/main.css'],
+  css: ['@mdi/font/css/materialdesignicons.css', '~/assets/css/fonts.css', '~/assets/css/main.css'],
   runtimeConfig: {
     // Server-side base for SSR fetches: inside Docker the public domain isn't
     // reachable from the container, so SSR talks to the backend service directly.
