@@ -19,7 +19,7 @@ useHead({
   ],
   // Landing elements that start hidden (.m-hide) or as an unresolved {{ tag }} are revealed by
   // GSAP — without JS nothing would ever show them, so show the resolved state instead.
-  noscript: [{ innerHTML: '<style>.m-hide{opacity:1}.tok-tag{display:none}.tok-val{opacity:1}</style>' }]
+  noscript: [{ innerHTML: '<style>.m-hide{opacity:1}.tok-tag{display:none}.tok-val{opacity:1}.v-in{opacity:1!important}.v-mark{background-size:100% 100%!important}</style>' }]
 })
 </script>
 
