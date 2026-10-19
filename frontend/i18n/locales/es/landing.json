@@ -107,39 +107,6 @@
       "pageAlt": "Informe de visita de seguridad y salud generado por ReportAI a partir de la nota de voz",
       "note": "La voz es sintética y la obra, las empresas y las personas son ficticias. Lo demás es la salida real del sistema, que costó menos de 3 céntimos de IA."
     },
-    "howItWorks": {
-      "heading": "Del audio al informe entregado.",
-      "sub": "Cinco pasos. Tú haces dos: dictar y aprobar.",
-      "you": "Tú",
-      "system": "ReportAI",
-      "steps": {
-        "record": {
-          "artifact": "nota_de_voz.ogg",
-          "title": "Dictas la visita",
-          "body": "Al terminar la visita, en el coche o donde estés. En Telegram, como un audio más, con las fotos si quieres."
-        },
-        "transcribe": {
-          "artifact": "transcripcion.txt",
-          "title": "Se transcribe",
-          "body": "En segundos, en español o en inglés, con el servicio de voz que elijas."
-        },
-        "extract": {
-          "artifact": "campos.json",
-          "title": "Se rellenan los campos",
-          "body": "Los apartados de tu plantilla: lugar, deficiencias con su responsable y plazo, observaciones. Si falta un dato obligatorio, te lo pregunta."
-        },
-        "approve": {
-          "artifact": "aprobado ✓",
-          "title": "Lo apruebas",
-          "body": "Revisas el borrador en el chat y confirmas, o corriges respondiendo con un audio o un texto."
-        },
-        "deliver": {
-          "artifact": "informe_visita.pdf",
-          "title": "Se entrega",
-          "body": "Tu plantilla en PDF, por email al cliente, al responsable o a quien hayas configurado, y guardada en el historial."
-        }
-      }
-    },
     "useCases": {
       "heading": "Hecho para quien trabaja sobre el terreno, no en la oficina.",
       "sub": "Empieza por la visita de seguridad y salud. Cualquier documento con apartados fijos se dicta igual.",
@@ -391,6 +358,207 @@
       "law": {
         "heading": "Legislación aplicable",
         "body": "Este aviso legal se rige por la legislación española. Las controversias se someterán a los juzgados y tribunales que resulten competentes conforme a la normativa aplicable."
+      }
+    },
+    "architecture": {
+      "heading": "Del audio al informe, por dentro.",
+      "sub": "Cinco etapas, un solo recorrido. Elige una para ver qué hace, con qué lo hace y qué sale de tu servidor.",
+      "railLabel": "Etapas del recorrido del informe",
+      "hintPinned": "Desliza: el dato avanza solo. También puedes pulsar una etapa.",
+      "hintTabs": "Pulsa una etapa o usa las flechas del teclado.",
+      "stageOf": "Etapa {n} de {total}",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "plainLabel": "En corto",
+      "insideLabel": "Por dentro",
+      "dataLabel": "Qué sale del servidor",
+      "whyLabel": "Decisión de diseño",
+      "stages": {
+        "dictate": {
+          "name": "Dictas",
+          "artifact": "nota_de_voz.ogg",
+          "plain": "Mandas un audio por Telegram, como a cualquier contacto. Si quieres, con fotos.",
+          "tech": [
+            "Telegram avisa a tu servidor por webhook. Si la instalación no tiene dirección pública, el worker consulta a Telegram.",
+            "Cada mensaje se deduplica por su id: un reintento de Telegram no crea dos informes.",
+            "El informe y su trabajo en cola se crean en una sola transacción de Postgres: existen los dos o ninguno."
+          ],
+          "why": "Cola en Postgres, sin Redis ni broker: cada pieza de más es una llamada de soporte en un servidor ajeno. Un trabajo se reclama con FOR UPDATE SKIP LOCKED y un lease; si el worker muere, otro lo recoge.",
+          "data": "El mensaje viaja por Telegram, como cualquier chat. Nada más."
+        },
+        "transcribe": {
+          "name": "Se transcribe",
+          "artifact": "transcripcion.txt",
+          "plain": "El audio pasa a texto, en español o en inglés, con el servicio de voz configurado.",
+          "tech": [
+            "Un modelo Whisper por cualquier endpoint compatible con OpenAI (/audio/transcriptions). Por defecto, whisper-large-v3-turbo en Groq.",
+            "temperature 0 y el idioma de tu empresa como pista: salida repetible, sin que un audio en inglés se transcriba como si fuera español.",
+            "Si el trabajo se corta a mitad, se reanuda desde su último punto guardado en vez de volver a transcribir."
+          ],
+          "why": "Un endpoint compatible con OpenAI en vez de un SDK propio: cambiar de proveedor es cambiar la URL y la clave, no el código.",
+          "data": "El audio va al proveedor de voz configurado, con la clave de la empresa. Es el único paso que lo envía."
+        },
+        "extract": {
+          "name": "Se rellenan los campos",
+          "artifact": "campos.json",
+          "plain": "El modelo lee la transcripción y rellena los apartados de la plantilla. Lo que no se ha dicho queda vacío: no se inventa.",
+          "tech": [
+            "Un grafo de LangGraph con estado tipado en Pydantic: cada etapa es un nodo y cada decisión, una arista condicional.",
+            "El esquema se genera al vuelo desde los campos de la plantilla y se pide al modelo como salida estructurada. Cada campo lleva la cita literal de lo dictado, comprobada contra la transcripción.",
+            "Si la validación falla, el error vuelve al modelo y reintenta, con tope. Si falta un dato obligatorio, el grafo se pausa y el bot lo pregunta."
+          ],
+          "why": "Null antes que inventar. En un documento formal, una fecha verosímil que nadie dijo es peor que un hueco: lo obligatorio que falta se pregunta, no se rellena.",
+          "data": "El texto transcrito va al modelo de IA configurado (Claude u otro), con la clave de la empresa."
+        },
+        "approve": {
+          "name": "Lo apruebas",
+          "artifact": "aprobado ✓",
+          "plain": "El borrador llega al chat. Confirmas, corriges con un audio o un texto, o cancelas. Sin tu visto bueno no sale nada.",
+          "tech": [
+            "El grafo se detiene con interrupt() de LangGraph y su estado se guarda en Postgres: puede esperar horas y sobrevive a un reinicio.",
+            "Un «vale» o un 👍 se resuelven por reglas, sin llamar al modelo. Una respuesta larga la clasifica el modelo, y ante la duda cuenta como corrección, nunca como aprobación.",
+            "Una corrección vuelve a la extracción con lo que añadas, con tope de intentos. También puedes revisar y aprobar desde el panel."
+          ],
+          "why": "Un agente no debería enviar nada en nombre de otra persona sin un punto de control humano. Aquí es una arista del grafo, no un aviso en la interfaz.",
+          "data": "Con los botones o un «vale», nada sale. Solo una respuesta larga pasa al modelo para clasificarla."
+        },
+        "deliver": {
+          "name": "Se entrega",
+          "artifact": "informe_visita.pdf",
+          "plain": "La plantilla Word se rellena y se convierte a PDF. Llega al chat y por email a quien esté configurado, y queda en el historial.",
+          "tech": [
+            "docxtpl rellena el .docx de la plantilla con los campos aprobados, en un entorno Jinja2 aislado y con autoescapado: «García & Hijos» no rompe el documento.",
+            "Gotenberg (LibreOffice) convierte el .docx a PDF en un contenedor del propio servidor.",
+            "Cada copia, el chat y cada email, es una fila en el registro de entregas: si una falla, solo se reintenta esa."
+          ],
+          "why": "Una entrega por copia: si un email falla, no se reenvía el chat ni se vuelve a generar el PDF.",
+          "data": "Solo sale lo que se envía: el PDF por Telegram y por el servidor de correo configurado."
+        }
+      },
+      "visual": {
+        "dictate": {
+          "meta": "telegram → webhook → backend",
+          "job": "trabajo en cola",
+          "tx": "una transacción: informe + trabajo"
+        },
+        "transcribe": {
+          "meta": "whisper-large-v3-turbo · temperature 0 · es",
+          "before": "…Primero, en el forjado de Tercera ",
+          "mark": "falta la barandilla del borde norte",
+          "after": ", unos 10 metros. Es de estructuras Levante y la tienen que poner antes de seguir trabajando en esa zona. O sea, inmediato."
+        },
+        "extract": {
+          "meta": "extract → validate",
+          "quote": "falta la barandilla del borde norte",
+          "verified": "cita verificada en la transcripción",
+          "valid": "validación Pydantic superada",
+          "values": {
+            "deficiencia": "Falta la barandilla del borde norte en el forjado de la planta tercera, unos 10 metros",
+            "empresa": "Estructuras Levante",
+            "medida": "Colocar la barandilla antes de continuar trabajando en esa zona",
+            "plazo": "Inmediato"
+          }
+        },
+        "approve": {
+          "meta": "human_approval · interrupt()",
+          "header": "Esto es lo que he extraído para tu Visita de seguridad y salud:",
+          "site": "Obra: Residencial Las Acacias",
+          "date": "Fecha: 01/10/2026",
+          "issues": "Deficiencias: 3",
+          "confirm": "✅ Confirmar",
+          "correct": "✏️ Corregir",
+          "cancel": "❌ Cancelar",
+          "paused": "grafo en pausa · estado guardado en Postgres"
+        },
+        "deliver": {
+          "meta": "render → convert_pdf → deliver",
+          "template": "visita_obra.docx",
+          "filled": "rendered.docx",
+          "pdf": "visita_las_acacias.pdf",
+          "telegram": "Telegram",
+          "email1": "email · contrata principal",
+          "email2": "email · promotor"
+        }
+      },
+      "topology": {
+        "heading": "Qué corre en el servidor y qué sale de él.",
+        "sub": "Todo vive en un único servidor de la empresa, con Docker. Solo cuatro cosas hablan con el exterior, y la empresa elige las cuatro.",
+        "insideLabel": "Servidor de la empresa",
+        "insideHint": "o un VPS a su nombre",
+        "outsideLabel": "Fuera del servidor",
+        "toggleOn": "Resaltar lo que sale",
+        "toggleOff": "Mostrar todo",
+        "captionHint": "Pulsa cualquier pieza para ver qué hace.",
+        "sends": "Qué sale",
+        "stays": "Se queda en el servidor",
+        "outside": {
+          "telegram": {
+            "name": "Telegram",
+            "role": "Canal",
+            "body": "Tu audio entra y el borrador y el PDF vuelven por aquí.",
+            "sends": "Mensajes, fotos y el PDF, como en cualquier chat de Telegram."
+          },
+          "smtp": {
+            "name": "Servidor de correo",
+            "role": "Entrega",
+            "body": "El PDF sale por email por el SMTP configurado en el panel.",
+            "sends": "El PDF y el texto del email, solo a los destinatarios configurados."
+          },
+          "voice": {
+            "name": "Proveedor de voz",
+            "role": "Transcripción",
+            "body": "Un endpoint compatible con OpenAI. Whisper en Groq por defecto.",
+            "sends": "El audio de cada nota de voz, con la clave de la empresa."
+          },
+          "model": {
+            "name": "Modelo de IA",
+            "role": "Extracción",
+            "body": "Anthropic de forma nativa o cualquier endpoint compatible con OpenAI.",
+            "sends": "La transcripción y los campos de la plantilla, con la clave de la empresa."
+          }
+        },
+        "inside": {
+          "caddy": {
+            "name": "Caddy",
+            "role": "HTTPS",
+            "body": "Entrada con certificado automático cuando la instalación tiene dominio."
+          },
+          "frontend": {
+            "name": "Panel",
+            "role": "Nuxt",
+            "body": "Plantillas, equipo, destinatarios e historial con audio y transcripción."
+          },
+          "backend": {
+            "name": "API",
+            "role": "FastAPI",
+            "body": "Recibe los mensajes de Telegram y sirve el panel."
+          },
+          "worker": {
+            "name": "Worker",
+            "role": "LangGraph",
+            "body": "Ejecuta cada informe: transcribe, extrae, se pausa, renderiza y entrega."
+          },
+          "postgres": {
+            "name": "Postgres",
+            "role": "Datos",
+            "body": "Informes, cola de trabajos y estado del grafo. Sin Redis ni broker."
+          },
+          "gotenberg": {
+            "name": "Gotenberg",
+            "role": "PDF",
+            "body": "Convierte tu Word en PDF con LibreOffice, sin salir del servidor."
+          },
+          "storage": {
+            "name": "Almacenamiento",
+            "role": "Volumen",
+            "body": "Audios, fotos, plantillas e informes en un volumen propio."
+          },
+          "keys": {
+            "name": "Claves",
+            "role": "Cifradas",
+            "body": "Las claves de IA y de correo se guardan cifradas en la base de datos."
+          }
+        }
       }
     }
   }

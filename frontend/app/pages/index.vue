@@ -14,7 +14,7 @@ useSeoMeta({
     <LandingHeroSection />
     <LandingFactStrip />
     <LandingRealDemoSection />
-    <LandingHowItWorksSection />
+    <LandingArchitectureSection />
     <LandingUseCasesSection />
     <LandingDifferentiatorSection />
     <LandingTemplateFidelitySection />
