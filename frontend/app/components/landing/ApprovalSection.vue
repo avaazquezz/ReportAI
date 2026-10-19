@@ -71,7 +71,7 @@ useMotionScope(root, (c) => {
               <p class="m-0"><span class="text-ink-900/60">{{ t('landing.approval.mockup.issuesLabel') }}:</span> 3</p>
             </div>
             <div class="mt-3 flex gap-2">
-              <span class="rounded-md border border-approved-600 px-2.5 py-1 font-body text-xs font-medium text-approved-600">{{ t('landing.approval.mockup.approve') }}</span>
+              <span class="rounded-md border border-approved-600 px-2.5 py-1 font-body text-xs font-medium text-[#136B4F]">{{ t('landing.approval.mockup.approve') }}</span>
               <span class="rounded-md border border-ink-900/15 px-2.5 py-1 font-body text-xs text-ink-900/60">{{ t('landing.approval.mockup.correct') }}</span>
             </div>
           </div>
@@ -89,7 +89,7 @@ useMotionScope(root, (c) => {
               </span>
               <div>
                 <p class="m-0 break-all font-mono text-xs text-ink-900">{{ t('landing.approval.mockup.filename') }}</p>
-                <p class="m-0 mt-0.5 font-body text-xs font-medium text-approved-600">{{ t('landing.approval.mockup.sentTo') }}</p>
+                <p class="m-0 mt-0.5 font-body text-xs font-medium text-[#136B4F]">{{ t('landing.approval.mockup.sentTo') }}</p>
               </div>
             </div>
           </div>

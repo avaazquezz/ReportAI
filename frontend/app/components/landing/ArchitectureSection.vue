@@ -253,7 +253,7 @@ const nodeClass = (i: number) =>
                   </p>
                 </div>
                 <div class="mt-3 flex max-w-[19rem] flex-wrap gap-2 font-body text-[12px]">
-                  <span class="v-in rounded-md border border-approved-600 bg-surface-0 px-2.5 py-1 font-medium text-approved-600" style="--i: 2">{{ t('landing.architecture.visual.approve.confirm') }}</span>
+                  <span class="v-in rounded-md border border-approved-600 bg-surface-0 px-2.5 py-1 font-medium text-[#136B4F]" style="--i: 2">{{ t('landing.architecture.visual.approve.confirm') }}</span>
                   <span class="v-in rounded-md border border-white/25 px-2.5 py-1 text-white/80" style="--i: 3">{{ t('landing.architecture.visual.approve.correct') }}</span>
                   <span class="v-in rounded-md border border-white/25 px-2.5 py-1 text-white/80" style="--i: 4">{{ t('landing.architecture.visual.approve.cancel') }}</span>
                 </div>
@@ -280,7 +280,7 @@ const nodeClass = (i: number) =>
             </div>
 
             <p class="mb-0 mt-2.5 flex items-start gap-2.5 font-body text-[12.5px] leading-snug" :class="LEAVES[key] ? 'text-white/75' : 'text-[#5FD3A6]'">
-              <span class="mt-0.5 shrink-0 font-mono text-[11px] text-white/45">{{ t('landing.architecture.dataLabel') }}</span>
+              <span class="mt-0.5 shrink-0 font-mono text-[11px] text-white/55">{{ t('landing.architecture.dataLabel') }}</span>
               <span>{{ t(`landing.architecture.stages.${key}.data`) }}</span>
             </p>
           </div>
@@ -288,7 +288,7 @@ const nodeClass = (i: number) =>
       </div>
 
       <div class="mt-4 flex items-center justify-between gap-4">
-        <p class="m-0 font-mono text-[11px] text-white/45">{{ pinned ? t('landing.architecture.hintPinned') : t('landing.architecture.hintTabs') }}</p>
+        <p class="m-0 font-mono text-[11px] text-white/55">{{ pinned ? t('landing.architecture.hintPinned') : t('landing.architecture.hintTabs') }}</p>
         <div class="flex gap-2">
           <button
             type="button"

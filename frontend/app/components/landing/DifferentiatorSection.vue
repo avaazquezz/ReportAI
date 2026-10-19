@@ -39,7 +39,7 @@ useMotionScope(root, (c) => {
           <thead>
             <tr class="border-b border-ink-900/10">
               <th scope="col" class="w-1/2 px-5 py-4 text-left text-xs font-medium text-ink-900/60">{{ t('landing.differentiator.table.before') }}</th>
-              <th scope="col" class="w-1/2 bg-capture-100/70 px-5 py-4 text-left font-plan text-sm font-bold text-capture-600">{{ t('landing.differentiator.table.after') }}</th>
+              <th scope="col" class="w-1/2 bg-capture-100/70 px-5 py-4 text-left font-plan text-sm font-bold text-[#A93A24]">{{ t('landing.differentiator.table.after') }}</th>
             </tr>
           </thead>
           <tbody>

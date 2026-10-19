@@ -36,7 +36,7 @@ useMotionScope(root, (c) => {
             <h3 class="uc-copy m-0 font-plan text-[1.5rem] font-extrabold leading-tight tracking-[-0.03em] text-ink-900">{{ t(`landing.useCases.items.${key}.title`) }}</h3>
             <p class="uc-copy m-0 font-body text-base leading-relaxed text-ink-900/75">{{ t(`landing.useCases.items.${key}.body`) }}</p>
             <div class="flex flex-wrap content-start gap-2 lg:justify-end">
-              <span class="uc-copy w-full font-mono text-[11px] text-ink-900/55 lg:text-right">{{ t('landing.useCases.fieldsLabel') }}</span>
+              <span class="uc-copy w-full font-mono text-[11px] text-ink-900/65 lg:text-right">{{ t('landing.useCases.fieldsLabel') }}</span>
               <span v-for="f in fields(key)" :key="f" class="uc-chip rounded border border-capture-600/35 bg-capture-100/50 px-2 py-0.5 font-mono text-[11.5px] text-capture-600">{{ f }}</span>
             </div>
           </div>

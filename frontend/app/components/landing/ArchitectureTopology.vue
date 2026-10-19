@@ -102,7 +102,7 @@ useMotionScope(root, (c) => {
         class="frame relative mt-6 rounded-2xl border border-dashed border-plano-line/60 bg-plano-950/40 p-4 pt-7 lg:col-start-3 lg:row-span-2 lg:row-start-1 lg:mt-0"
       >
         <p class="absolute -top-3 left-4 m-0 bg-plano-900 px-2 font-mono text-[11px] text-plano-line">
-          {{ t('landing.architecture.topology.insideLabel') }} · <span class="text-white/45">{{ t('landing.architecture.topology.insideHint') }}</span>
+          {{ t('landing.architecture.topology.insideLabel') }} · <span class="text-white/55">{{ t('landing.architecture.topology.insideHint') }}</span>
         </p>
         <div class="grid h-full grid-cols-2 content-center gap-2.5 sm:grid-cols-4">
           <button
@@ -150,7 +150,7 @@ useMotionScope(root, (c) => {
         </p>
         <p class="mb-0 mt-1.5 font-body text-[14px] leading-snug text-white/75">{{ caption.body }}</p>
         <p class="mb-0 mt-2 font-body text-[13.5px] leading-snug" :class="caption.leaves ? 'text-capture-500' : 'text-[#5FD3A6]'">
-          <span class="font-mono text-[11px] text-white/45">{{ caption.leaves ? t('landing.architecture.topology.sends') : '' }}</span>
+          <span class="font-mono text-[11px] text-white/55">{{ caption.leaves ? t('landing.architecture.topology.sends') : '' }}</span>
           {{ caption.leaves ? '' : '✓ ' }}{{ caption.detail }}
         </p>
       </template>

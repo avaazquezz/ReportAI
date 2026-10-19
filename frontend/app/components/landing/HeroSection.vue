@@ -102,8 +102,11 @@ useMotionScope(root, (c) => {
       <p class="hero-eyebrow m-hide mb-6 max-w-xl font-mono text-[13px] leading-snug text-capture-600">
         {{ t('landing.hero.eyebrow') }}
       </p>
-      <h1 class="font-plan text-[clamp(2.4rem,7.4vw,6.9rem)] font-extrabold leading-[0.95] tracking-[-0.045em] text-ink-900">
-        <span class="h-line" style="--d: 0.05s"><span>{{ t('landing.hero.headlineLine1') }}</span></span>
+      <h1
+        class="font-plan font-extrabold leading-[0.95] tracking-[-0.045em] text-ink-900"
+        :class="locale === 'es' ? 'text-[clamp(2.4rem,7.4vw,6.9rem)]' : 'text-[clamp(2.1rem,5.4vw,5rem)]'"
+      >
+        <span class="h-line" style="--d: 0.05s"><span>{{ t('landing.hero.headlineLine1') }}</span></span>{{ ' ' }}
         <span class="h-line" style="--d: 0.17s"><span>{{ t('landing.hero.headlineLine2') }}</span></span>
       </h1>
     </div>
@@ -244,7 +247,7 @@ useMotionScope(root, (c) => {
               </span>
               <span class="min-w-0 leading-tight">
                 <span class="block truncate font-mono text-[10px] text-ink-900/70">{{ t('landing.hero.stage.filename') }}</span>
-                <span class="block font-body text-[11px] font-medium text-approved-600">{{ t('landing.hero.stage.sent') }} ✓</span>
+                <span class="block font-body text-[11px] font-medium text-[#136B4F]">{{ t('landing.hero.stage.sent') }} ✓</span>
               </span>
             </div>
           </div>
