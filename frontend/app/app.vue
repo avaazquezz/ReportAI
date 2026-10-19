@@ -1,16 +1,15 @@
 <script setup lang="ts">
+// Self-hosted fonts live in assets/css/fonts.css; the body face is preloaded for every page.
+// The landing preloads its own headline and mono faces (pages/index.vue).
+import plexSans from '~/assets/fonts/ibm-plex-sans-w100-400-600-latin.woff2?url'
+
 const { t, locale } = useI18n()
 
 useHead({
   title: computed(() => t('landing.seo.title')),
   htmlAttrs: { lang: locale },
   link: [
-    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-    {
-      rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112.5,700;112.5,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap'
-    },
+    { rel: 'preload', as: 'font', type: 'font/woff2', href: plexSans, crossorigin: '' },
     { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
     { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
     { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/favicon-16x16.png' },
