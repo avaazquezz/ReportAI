@@ -25,7 +25,10 @@ export default <Partial<Config>>{
         slate: { 300: '#C6CCD3' },
         // The demo document's own heading color — document mockups wear the *client's*
         // template styling, deliberately not ReportAI's orange.
-        doc: { 700: '#1F2D4A' }
+        doc: { 700: '#1F2D4A' },
+        // The landing's "plano" block (architecture): a cyanotype-blue ink, not black, so the
+        // technical section reads as a drawing sheet. `line` is the trace colour on it.
+        plano: { 950: '#0A1220', 900: '#0E1624', 800: '#16233A', 700: '#223552', line: '#8FB0E3' }
       },
       boxShadow: {
         // A sheet of paper on a desk, not a floating SaaS card.
@@ -34,6 +37,9 @@ export default <Partial<Config>>{
       },
       fontFamily: {
         display: ['"Space Grotesk"', 'sans-serif'],
+        // The landing's headline face. Pair with a `font-plan` rule in main.css that sets the
+        // expanded width the font is requested at (112.5%).
+        plan: ['Archivo', 'Arial', 'sans-serif'],
         body: ['"IBM Plex Sans"', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'monospace']
       }

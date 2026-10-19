@@ -1,0 +1,10 @@
+Fonts used by this site, served from this server (assets/fonts, latin + latin-ext subsets).
+
+  Archivo         Archivo Project Authors        https://github.com/Omnibus-Type/Archivo
+  IBM Plex Mono   IBM Corp.                      https://github.com/IBM/plex
+  IBM Plex Sans   IBM Corp.                      https://github.com/IBM/plex
+  Space Grotesk   Space Grotesk Project Authors  https://github.com/floriankarsten/space-grotesk
+
+All four are distributed under the SIL Open Font License, Version 1.1:
+https://openfontlicense.org
+Copies were taken from Google Fonts (https://fonts.google.com), which publishes them under that licence.

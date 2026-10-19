@@ -22,9 +22,106 @@ a {
   outline: 2px solid #c0432a;
   outline-offset: 3px;
 }
+/* On the blueprint-blue blocks the brand red is too dim: use its lighter step. */
+.grid-plano :focus-visible {
+  outline-color: #ff6a45;
+}
 
-/* Initial state for elements a section timeline reveals (see useSectionMotion).
-   app.vue restores them under <noscript>. */
+/* ── Landing: "plano" design system ─────────────────────────────────────────── */
+:root {
+  /* Brand ease: dry start, long brake. Same curve as the GSAP CustomEase "ra" (useMotion.ts). */
+  --ease-ra: cubic-bezier(0.22, 0.8, 0.12, 1);
+}
+
+/* The headline face is requested from Google Fonts at 112.5% width (app.vue). */
+.font-plan {
+  font-stretch: 112.5%;
+}
+
+/* Millimetre paper. A faint grid fades out from the top; a second, warmer grid is revealed
+   under the pointer (--gx / --gy, in px, are set by the hero). */
+.grid-paper {
+  position: relative;
+  isolation: isolate;
+  --gx: 900;
+  --gy: 260;
+}
+.grid-paper::before,
+.grid-paper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-size: 32px 32px;
+  background-position: -1px -1px;
+  /* Vuetify's reset sets background-repeat: no-repeat on every pseudo-element. */
+  background-repeat: repeat;
+}
+.grid-paper::before {
+  background-image:
+    linear-gradient(to right, rgb(18 21 28 / 0.09) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(18 21 28 / 0.09) 1px, transparent 1px);
+  -webkit-mask-image: radial-gradient(ellipse 95% 80% at 50% 0%, #000 15%, transparent 80%);
+  mask-image: radial-gradient(ellipse 95% 80% at 50% 0%, #000 15%, transparent 80%);
+}
+.grid-paper::after {
+  background-image:
+    linear-gradient(to right, rgb(192 67 42 / 0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(192 67 42 / 0.2) 1px, transparent 1px);
+  -webkit-mask-image: radial-gradient(340px circle at calc(var(--gx) * 1px) calc(var(--gy) * 1px), #000, transparent 70%);
+  mask-image: radial-gradient(340px circle at calc(var(--gx) * 1px) calc(var(--gy) * 1px), #000, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-ra);
+}
+@media (hover: hover) and (pointer: fine) {
+  .grid-paper:hover::after {
+    opacity: 1;
+  }
+}
+
+/* The same sheet in blueprint blue: a major grid every 64px, a minor one every 16px. */
+.grid-plano {
+  position: relative;
+  isolation: isolate;
+}
+.grid-plano::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(143 176 227 / 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(143 176 227 / 0.1) 1px, transparent 1px),
+    linear-gradient(to right, rgb(143 176 227 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(143 176 227 / 0.04) 1px, transparent 1px);
+  background-size: 64px 64px, 64px 64px, 16px 16px, 16px 16px;
+  background-repeat: repeat;
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 88%);
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 40%, #000 30%, transparent 88%);
+}
+
+/* Hero headline: pure CSS so it paints from the first frame — no JS gap, no hydration flash,
+   and the LCP text starts moving immediately. Each line is a clipped mask with its own --d delay. */
+.h-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+.h-line > span {
+  display: block;
+  transform: translateY(112%);
+  animation: h-line-up 0.95s var(--ease-ra) var(--d, 0s) forwards;
+}
+@keyframes h-line-up {
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Initial state for hero elements its timeline reveals; app.vue restores them under <noscript>. */
 .m-hide {
   opacity: 0;
 }
@@ -44,6 +141,7 @@ summary {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
