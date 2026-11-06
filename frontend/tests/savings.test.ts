@@ -1,4 +1,4 @@
-// Run from frontend/ with: node_modules/.bin/jiti tests/savings.test.ts (the system Node has no TypeScript support)
+// Run from frontend/ with: npm test (jiti runs it, because the system Node has no TypeScript support)
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { computeSavings, SAVINGS_DEFAULTS } from '../app/utils/savings.ts'
