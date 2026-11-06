@@ -4,6 +4,10 @@ import re
 from typing import Any
 
 import sentry_sdk
+from sentry_sdk.integrations.anthropic import AnthropicIntegration
+from sentry_sdk.integrations.langchain import LangchainIntegration
+from sentry_sdk.integrations.langgraph import LanggraphIntegration
+from sentry_sdk.integrations.openai import OpenAIIntegration
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 from sentry_sdk.types import Event, Hint
 
@@ -55,6 +59,14 @@ def init_error_tracking(component: str) -> None:
         # With tracing off, sentry-trace/baggage (they carry the DSN's public key) would only reach
         # Telegram, the AI providers and tenant-chosen base URLs, for nothing.
         trace_propagation_targets=[],
+        # They report every provider error as an event, even the ones our retries recover from, and
+        # with tracing off they add nothing else: an AI outage would just burn the event quota.
+        disabled_integrations=[
+            AnthropicIntegration(),
+            OpenAIIntegration(),
+            LangchainIntegration(),
+            LanggraphIntegration(),
+        ],
         before_send=_before_send,
         before_breadcrumb=lambda crumb, hint: scrub(crumb),
     )
