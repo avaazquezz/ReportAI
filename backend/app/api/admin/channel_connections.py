@@ -1,7 +1,8 @@
 import secrets
 import uuid
+from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +25,7 @@ from app.schemas.channel_connection import (
     routing_key_for,
 )
 from app.schemas.common import PaginatedResponse
+from app.services import audit
 from app.services.channels.telegram_webhook import register_telegram_webhook, verify_telegram_bot
 from app.services.sender_invites import create_invite, sender_labels, telegram_link
 
@@ -33,9 +35,21 @@ router = APIRouter(prefix="/channels", tags=["admin:channels"])
 _ROUTING_TAKEN = "Another connection already uses this phone number id or inbound address"
 
 
+def _audited(connection: ChannelConnection) -> dict[str, Any]:
+    """What an edit is compared on. Credentials by name (credentials.bot_token): only the names
+    of the changed ones are recorded, never a token."""
+    return {
+        "display_name": connection.display_name,
+        "allowed_senders": connection.allowed_senders,
+        "is_active": connection.is_active,
+        **{f"credentials.{key}": value for key, value in connection.credentials.items()},
+    }
+
+
 @router.post("", status_code=201)
 async def create_channel_connection(
     payload: ChannelConnectionCreateRequest,
+    request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ChannelConnectionResponse:
@@ -61,6 +75,10 @@ async def create_channel_connection(
         )
     except IntegrityError as exc:
         raise ConflictException(_ROUTING_TAKEN) from exc
+    await audit.record(
+        db, "channel.created", actor=current_user, target=connection.id, request=request,
+        channel_type=connection.channel_type, display_name=connection.display_name,
+    )
     labels = await sender_labels(db, [connection.id])
     return ChannelConnectionResponse.from_model(connection, labels.get(connection.id))
 
@@ -103,12 +121,14 @@ async def get_channel_connection(
 async def update_channel_connection(
     connection_id: uuid.UUID,
     payload: ChannelConnectionUpdateRequest,
+    request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> ChannelConnectionResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(ChannelConnection, db)
     connection = await get_scoped_or_404(repo, connection_id, tenant_id=tenant_id)
+    before = _audited(connection)
 
     merged_credentials = dict(connection.credentials)
     if payload.credentials:
@@ -135,6 +155,8 @@ async def update_channel_connection(
         )
     except IntegrityError as exc:
         raise ConflictException(_ROUTING_TAKEN) from exc
+    if fields := audit.changed_fields(before, _audited(connection)):
+        await audit.record(db, "channel.updated", actor=current_user, target=connection.id, request=request, fields=fields)
     labels = await sender_labels(db, [connection.id])
     return ChannelConnectionResponse.from_model(connection, labels.get(connection.id))
 
@@ -143,6 +165,7 @@ async def update_channel_connection(
 async def create_sender_invite(
     connection_id: uuid.UUID,
     payload: SenderInviteCreateRequest,
+    request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> SenderInviteCreatedResponse:
@@ -154,6 +177,10 @@ async def create_sender_invite(
         username = await verify_telegram_bot(connection.credentials["bot_token"])
         connection.credentials = {**connection.credentials, "bot_username": username}
     invite, code = await create_invite(db, connection, payload.label, current_user.id)
+    await audit.record(
+        db, "channel.invite_created", actor=current_user, target=connection.id, request=request,
+        invite_id=str(invite.id), label=invite.label,
+    )
     return SenderInviteCreatedResponse(
         **SenderInviteResponse.model_validate(invite).model_dump(),
         code=code,
@@ -179,6 +206,7 @@ async def list_sender_invites(
 async def revoke_sender_invite(
     connection_id: uuid.UUID,
     invite_id: uuid.UUID,
+    request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> None:
@@ -190,4 +218,8 @@ async def revoke_sender_invite(
         raise ResourceNotFoundException()
     if invite.used_at is not None:
         raise ConflictException("This invitation was already used")
+    await audit.record(
+        db, "channel.invite_revoked", actor=current_user, target=connection_id, request=request,
+        invite_id=str(invite.id), label=invite.label,
+    )
     await db.delete(invite)

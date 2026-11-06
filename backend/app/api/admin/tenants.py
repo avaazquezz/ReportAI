@@ -2,7 +2,7 @@ import logging
 import secrets
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +22,7 @@ from app.schemas.tenant import (
     TenantUpdateRequest,
 )
 from app.schemas.usage import UsageSummaryResponse
-from app.services import plans
+from app.services import audit, plans
 from app.services.notifications.invites import send_invite
 
 router = APIRouter(
@@ -33,7 +33,10 @@ logger = logging.getLogger(__name__)
 
 @router.post("", status_code=201)
 async def create_tenant(
-    payload: TenantCreateRequest, db: AsyncSession = Depends(get_db)
+    payload: TenantCreateRequest,
+    request: Request,
+    current_user: TenantUser = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
 ) -> TenantCreateResponse:
     tenant_repo = BaseRepository(Tenant, db)
     try:
@@ -55,6 +58,10 @@ async def create_tenant(
 
     # A failed email doesn't roll back the tenant: invite_email_sent=false, retry with /resend-invite.
     invite_sent, _ = await send_invite(db, admin_user)
+    await audit.record(
+        db, "tenant.created", actor=current_user, tenant_id=tenant.id, target=tenant.id, request=request,
+        name=tenant.name, slug=tenant.slug, admin_email=admin_user.email, invite_email_sent=invite_sent,
+    )
     return TenantCreateResponse(
         **TenantResponse.model_validate(tenant).model_dump(), invite_email_sent=invite_sent
     )
@@ -83,18 +90,34 @@ async def get_tenant(tenant_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -
 
 @router.patch("/{tenant_id}")
 async def update_tenant(
-    tenant_id: uuid.UUID, payload: TenantUpdateRequest, db: AsyncSession = Depends(get_db)
+    tenant_id: uuid.UUID,
+    payload: TenantUpdateRequest,
+    request: Request,
+    current_user: TenantUser = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
 ) -> TenantResponse:
     repo = BaseRepository(Tenant, db)
     tenant = await repo.get_by_id(tenant_id)
     if tenant is None:
         raise ResourceNotFoundException()
+    was_active, old_plan, old_status = tenant.is_active, tenant.plan, tenant.plan_status
     if payload.is_active is not None:
         tenant.is_active = payload.is_active
     if payload.plan is not None and payload.plan != tenant.plan:
         plans.start_plan(tenant, payload.plan, payload.plan_status or "active")
     elif payload.plan_status is not None:
         tenant.plan_status = payload.plan_status
+    # One event per concern: suspending or reactivating the company, and its plan.
+    if tenant.is_active != was_active:
+        await audit.record(
+            db, "tenant.updated", actor=current_user, tenant_id=tenant.id, target=tenant.id, request=request,
+            changes={"is_active": {"from": was_active, "to": tenant.is_active}},
+        )
+    if (tenant.plan, tenant.plan_status) != (old_plan, old_status):
+        await audit.record(
+            db, "plan.changed", actor=current_user, tenant_id=tenant.id, target=tenant.id, request=request,
+            plan={"from": old_plan, "to": tenant.plan}, plan_status={"from": old_status, "to": tenant.plan_status},
+        )
     await db.flush()
     await db.refresh(tenant)
     return TenantResponse.model_validate(tenant)

@@ -38,6 +38,7 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.schemas.common import MessageResponse
+from app.services import audit
 from app.services.branding import Branding
 from app.services.i18n import t
 from app.services.notifications.email import send_plain_email
@@ -47,10 +48,6 @@ router = APIRouter(tags=["auth"])
 logger = logging.getLogger(__name__)
 
 _FORGOT_PASSWORD_MESSAGE = "If that email exists, we've sent password reset instructions."
-
-
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
 
 
 def tokens_for(user: TenantUser) -> TokenResponse:
@@ -88,7 +85,7 @@ async def _use_refresh_token(db: AsyncSession, token: str) -> dict[str, Any] | N
 async def login(
     payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
-    email_key, ip_key = payload.email.lower(), _client_ip(request)
+    email_key, ip_key = payload.email.lower(), audit.client_ip(request)
     await rate_limit.login_by_email.check(db, email_key)
     await rate_limit.login_by_ip.check(db, ip_key)
 
@@ -96,10 +93,16 @@ async def login(
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(payload.password, user.hashed_password) or not await can_sign_in(db, user):
+        # Before the attempt is counted: that commit is what keeps the event through the rollback.
+        await audit.record(
+            db, "auth.login_failed", tenant_id=user.tenant_id if user else None, target=user.id if user else None,
+            request=request, email=payload.email[:320],  # unvalidated input: bounded before it is stored
+        )
         await rate_limit.login_by_email.record(db, email_key)
         await rate_limit.login_by_ip.record(db, ip_key)
         raise AuthenticationException("Incorrect email or password")
     await rate_limit.login_by_email.reset(db, email_key)
+    await audit.record(db, "auth.login_succeeded", actor=user, request=request)
     return tokens_for(user)
 
 
@@ -147,9 +150,15 @@ async def me(current_user: TenantUser = Depends(get_current_user)) -> UserRespon
 @router.patch("/auth/me")
 async def update_profile(
     payload: ProfileUpdateRequest,
+    request: Request,
     current_user: TenantUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UserResponse:
+    if payload.full_name != current_user.full_name:
+        await audit.record(
+            db, "auth.profile_updated", actor=current_user, target=current_user.id, request=request,
+            changes={"full_name": {"from": current_user.full_name, "to": payload.full_name}},
+        )
     current_user.full_name = payload.full_name
     await db.flush()
     return await me(current_user)
@@ -158,6 +167,7 @@ async def update_profile(
 @router.post("/auth/change-password")
 async def change_password(
     payload: ChangePasswordRequest,
+    request: Request,
     current_user: TenantUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
@@ -166,6 +176,7 @@ async def change_password(
         raise ValidationException("The current password is not right")
     current_user.hashed_password = hash_password(payload.new_password)
     current_user.token_version += 1
+    await audit.record(db, "auth.password_changed", actor=current_user, target=current_user.id, request=request)
     await db.flush()
     return tokens_for(current_user)
 
@@ -177,7 +188,7 @@ async def forgot_password(
     """Always returns the same message regardless of whether the email exists — the
     response, and any email-delivery failure, must never let a caller distinguish a
     known account from an unknown one."""
-    email_key, ip_key = payload.email.lower(), _client_ip(request)
+    email_key, ip_key = payload.email.lower(), audit.client_ip(request)
     await rate_limit.forgot_by_email.check(db, email_key)
     await rate_limit.forgot_by_ip.check(db, ip_key)
     await rate_limit.forgot_by_email.record(db, email_key)
@@ -198,12 +209,18 @@ async def forgot_password(
             )
         except Exception:
             logger.exception("Failed to send password reset email to %s", user.email)
+        else:
+            # Whoever asked is not signed in: the account it concerns is the target, not the actor.
+            await audit.record(
+                db, "auth.password_reset_requested", tenant_id=user.tenant_id, target=user.id, request=request,
+                email=user.email,
+            )
     return MessageResponse(message=_FORGOT_PASSWORD_MESSAGE)
 
 
 @router.post("/auth/reset-password")
 async def reset_password(
-    payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+    payload: ResetPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)
 ) -> MessageResponse:
     try:
         user = await consume_reset_token(db, payload.token)
@@ -213,5 +230,7 @@ async def reset_password(
     user.hashed_password = hash_password(payload.new_password)
     # Whoever knew the old password may still hold a session: it ends here.
     user.token_version += 1
+    # The link reached the account's inbox: whoever used it acted as the account.
+    await audit.record(db, "auth.password_reset", actor=user, target=user.id, request=request)
     await db.flush()
     return MessageResponse(message="Password updated successfully.")
