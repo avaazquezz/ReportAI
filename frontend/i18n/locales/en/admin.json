@@ -10,7 +10,8 @@
         "usage": "Usage & cost",
         "settings": "Settings",
         "team": "Team",
-        "myReports": "My reports"
+        "myReports": "My reports",
+        "audit": "Audit log"
       },
       "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here.",
       "toggleMenu": "Show or hide the menu"
@@ -639,6 +640,61 @@
       "errors": {
         "load": "Couldn't load the plan.",
         "save": "Couldn't change the plan."
+      }
+    },
+    "audit": {
+      "help": "Who did what and when: sign-ins and changes to the team, the channels and the settings. Kept for a year.",
+      "system": "System",
+      "anonymous": "Not signed in",
+      "headers": {
+        "when": "Date",
+        "who": "Who",
+        "what": "What",
+        "details": "Details"
+      },
+      "errors": {
+        "load": "Couldn't load the audit log."
+      },
+      "actions": {
+        "auth": {
+          "login_succeeded": "Signed in",
+          "login_failed": "Failed sign-in attempt",
+          "password_changed": "Changed their password",
+          "password_reset_requested": "A password reset was requested",
+          "password_reset": "Reset the password",
+          "profile_updated": "Updated their profile"
+        },
+        "team": {
+          "member_invited": "Invited a person to the team",
+          "member_updated": "Changed a team member",
+          "invite_resent": "Resent an invitation"
+        },
+        "company": {
+          "updated": "Changed the company's details",
+          "logo_set": "Uploaded the logo",
+          "logo_removed": "Removed the logo"
+        },
+        "instance": {
+          "ai_updated": "Changed the AI settings",
+          "email_updated": "Changed the mail server"
+        },
+        "channel": {
+          "created": "Created a channel",
+          "updated": "Changed a channel",
+          "invite_created": "Invited a sender",
+          "invite_revoked": "Revoked a sender invitation",
+          "sender_enrolled": "A sender joined with their invitation"
+        },
+        "setup": {
+          "completed": "Set up the installation"
+        },
+        "tenant": {
+          "created": "Created the company",
+          "updated": "Suspended or reactivated the company"
+        },
+        "plan": {
+          "changed": "Changed the plan"
+        }
       }
     }
   }

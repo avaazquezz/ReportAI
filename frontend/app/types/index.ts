@@ -333,6 +333,17 @@ export interface TeamInviteResult {
   invite_link: string | null
 }
 
+// backend/app/schemas/audit.py
+export interface AuditEvent {
+  id: string
+  created_at: string
+  actor_label: string | null
+  action: string
+  target: string | null
+  ip: string | null
+  details: Record<string, unknown> | null
+}
+
 export interface SenderInvite {
   id: string
   label: string
