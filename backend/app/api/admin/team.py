@@ -122,3 +122,19 @@ async def resend_invite(
     return TeamInviteResponse(
         member=TeamMemberResponse.model_validate(member), invite_email_sent=sent, invite_link=None if sent else link
     )
+
+
+@router.post("/{member_id}/sign-out", status_code=204)
+async def sign_out_everywhere(
+    member_id: uuid.UUID,
+    request: Request,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Ends every session the person holds, on every device: a lost or shared phone. They can
+    sign in again (a technician with a new link), unlike deactivating them."""
+    tenant_id = require_tenant_id(current_user)
+    member = await get_scoped_or_404(BaseRepository(TenantUser, db), member_id, tenant_id=tenant_id)
+    member.token_version += 1
+    await audit.record(db, "team.signed_out", actor=current_user, target=member.id, request=request, email=member.email)
+    await db.flush()

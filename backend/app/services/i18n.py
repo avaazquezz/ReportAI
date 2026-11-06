@@ -61,6 +61,9 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         # emails from the panel
         "invite_subject": "{company}: tu acceso a ReportAI",
         "invite_body": "Hola, {name}:\n\n{company} te ha dado acceso a su panel de ReportAI. Elige tu contraseña aquí (el enlace caduca en 7 días):\n\n{link}",
+        "magic_subject": "{company}: tu enlace para entrar en ReportAI",
+        "magic_body": "Hola, {name}:\n\nPara entrar en ReportAI, abre este enlace en el móvil (caduca en 15 minutos):\n\n{link}\n\nSi usas la app instalada en la pantalla de inicio, escribe este código en ella: {code}\n\nSi no lo has pedido tú, ignora este mensaje.",
+        "magic_invite_body": "Hola, {name}:\n\n{company} te ha dado acceso a ReportAI para preparar sus informes desde el móvil. Abre este enlace en el móvil para entrar (caduca en 7 días):\n\n{link}\n\nSi usas la app instalada en la pantalla de inicio, escribe este código en ella: {code}",
         "reset_subject": "Restablece tu contraseña de ReportAI",
         "reset_body": "Para elegir una contraseña nueva, abre este enlace (caduca en 1 hora):\n\n{link}\n\nSi no lo has pedido tú, ignora este mensaje.",
         # values in summaries
@@ -110,6 +113,9 @@ _MESSAGES: Final[dict[str, dict[str, str]]] = {
         "report": "Report",
         "invite_subject": "{company}: your access to ReportAI",
         "invite_body": "Hi {name},\n\n{company} has given you access to its ReportAI panel. Choose your password here (the link expires in 7 days):\n\n{link}",
+        "magic_subject": "{company}: your link to sign in to ReportAI",
+        "magic_body": "Hi {name},\n\nTo sign in to ReportAI, open this link on your phone (it expires in 15 minutes):\n\n{link}\n\nIf you use the app installed on your home screen, type this code in it: {code}\n\nIf you didn't ask for it, ignore this message.",
+        "magic_invite_body": "Hi {name},\n\n{company} has given you access to ReportAI to prepare its reports from your phone. Open this link on your phone to sign in (it expires in 7 days):\n\n{link}\n\nIf you use the app installed on your home screen, type this code in it: {code}",
         "reset_subject": "Reset your ReportAI password",
         "reset_body": "To choose a new password, open this link (it expires in 1 hour):\n\n{link}\n\nIf you didn't ask for it, ignore this message.",
         "yes": "Yes",

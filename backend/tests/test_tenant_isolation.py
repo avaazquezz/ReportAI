@@ -64,6 +64,7 @@ ID_ROUTES: dict[tuple[str, str], dict[str, Any]] = {
     ("GET", "/reports/{report_id}/photos/{photo_id}"): {},
     ("PATCH", "/team/{member_id}"): {"json": {"is_active": False}},
     ("POST", "/team/{member_id}/invite"): {},
+    ("POST", "/team/{member_id}/sign-out"): {},
 }
 
 

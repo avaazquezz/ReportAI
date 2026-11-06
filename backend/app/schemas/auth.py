@@ -1,6 +1,6 @@
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.validators import EmailField
 
@@ -12,6 +12,24 @@ class LoginRequest(BaseModel):
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailField
+
+
+class MagicLinkRequest(BaseModel):
+    email: EmailField
+
+
+class MagicSignInRequest(BaseModel):
+    """The emailed link's token, or the email and the code typed in the installed app."""
+
+    token: str | None = Field(default=None, max_length=200)
+    email: EmailField | None = None
+    code: str | None = Field(default=None, max_length=20)
+
+    @model_validator(mode="after")
+    def _token_or_code(self) -> "MagicSignInRequest":
+        if not self.token and not (self.email and self.code):
+            raise ValueError("Send the link's token, or the email and the code")
+        return self
 
 
 class ResetPasswordRequest(BaseModel):

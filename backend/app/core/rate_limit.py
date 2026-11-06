@@ -59,6 +59,12 @@ forgot_by_email = AttemptLimiter("forgot_email", max_attempts=5, window_seconds=
 forgot_by_ip = AttemptLimiter("forgot_ip", max_attempts=20, window_seconds=60 * 60)
 # Wrong setup codes: the code is long enough not to be guessed, this just keeps it that way.
 setup_code_by_ip = AttemptLimiter("setup_code_ip", max_attempts=10, window_seconds=15 * 60)
+# Technicians' sign-in links: each request sends an email, like a reset.
+magic_link_by_email = AttemptLimiter("magic_link_email", max_attempts=5, window_seconds=60 * 60)
+magic_link_by_ip = AttemptLimiter("magic_link_ip", max_attempts=20, window_seconds=60 * 60)
+# Wrong typed codes: 5 and the outstanding code dies with them (8 characters, 31 symbols each).
+MAGIC_CODE_ATTEMPTS = 5
+magic_code_by_email = AttemptLimiter("magic_code_email", max_attempts=MAGIC_CODE_ATTEMPTS, window_seconds=15 * 60)
 
 
 async def prune(db: AsyncSession) -> None:

@@ -19,7 +19,7 @@ from app import worker
 from app.api import auth as auth_api
 from app.api.admin import channel_connections
 from app.core.config import settings
-from app.core.security import hash_password
+from app.core.security import create_access_token, hash_password
 from app.models.audit_event import AuditEvent
 from app.models.channel_connection import ChannelConnection
 from app.models.tenant import Tenant
@@ -59,6 +59,9 @@ async def _person(db: AsyncSession, role: str = "tenant_admin", tenant: Tenant |
 
 
 async def _headers(client: AsyncClient, user: TenantUser) -> dict[str, str]:
+    if user.role == "technician":  # signs in with an emailed link, never a password
+        claims = {"sub": str(user.id), "role": user.role, "tenant_id": str(user.tenant_id), "ver": user.token_version}
+        return {"Authorization": f"Bearer {create_access_token(claims)}"}
     response = await client.post("/auth/login", json={"email": user.email, "password": PASSWORD})
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
