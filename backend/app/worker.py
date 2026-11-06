@@ -15,6 +15,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, text, update
 
+from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.langgraph_checkpointer import close_checkpointer, get_checkpointer, init_checkpointer
@@ -82,6 +83,12 @@ async def drop_expired_refresh_tokens() -> None:
         await session.commit()
 
 
+async def prune_rate_limit_hits() -> None:
+    async with AsyncSessionLocal() as session:
+        await rate_limit.prune(session)
+        await session.commit()
+
+
 async def maintenance() -> None:
     for job_id, report_id in await fail_abandoned():
         logger.error("Job %s was abandoned by a dead worker with no attempts left", job_id)
@@ -91,6 +98,7 @@ async def maintenance() -> None:
         logger.info("Cancelled %s reports that waited too long for an answer", cancelled)
     await drop_finished_checkpoints()
     await drop_expired_refresh_tokens()
+    await prune_rate_limit_hits()
     await asyncio.to_thread(drop_expired_drafts)
 
 
