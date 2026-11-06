@@ -450,6 +450,13 @@
           "logo": "No se pudo actualizar el logo."
         }
       },
+      "export": {
+        "title": "Exportar datos",
+        "hint": "Descarga en un zip todo lo que ReportAI guarda de tu empresa: sus datos, el equipo, los canales, los tipos de documento con sus plantillas, los informes con sus documentos, audios y fotos, y el registro de auditoría.",
+        "action": "Exportar datos",
+        "tooSoon": "Solo se pueden exportar los datos una vez por hora. Vuelve a intentarlo más tarde.",
+        "error": "No se pudieron exportar los datos."
+      },
       "ai": {
         "openaiCompatible": "Compatible con OpenAI (OpenAI, DeepSeek, Mistral, Ollama…)",
         "effortDefault": "El del modelo",
@@ -683,7 +690,8 @@
         "company": {
           "updated": "Cambió los datos de la empresa",
           "logo_set": "Subió el logo",
-          "logo_removed": "Quitó el logo"
+          "logo_removed": "Quitó el logo",
+          "exported": "Exportó los datos de la empresa"
         },
         "instance": {
           "ai_updated": "Cambió los ajustes de IA",
