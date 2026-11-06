@@ -9,9 +9,10 @@ export type Api = <T = unknown>(url: string, options?: FetchOptions) => Promise<
 
 export const ACCESS_COOKIE = 'reportai_token'
 export const REFRESH_COOKIE = 'reportai_refresh'
-// The longest a refresh token lives (a technician's, TECHNICIAN_REFRESH_DAYS): the cookie must not
-// drop it sooner. A panel user's token expires earlier on the server and is refused there.
-const REFRESH_MAX_AGE = 30 * 24 * 60 * 60
+// The server alone decides when a session ends (REFRESH_TOKEN_EXPIRE_DAYS, TECHNICIAN_REFRESH_DAYS):
+// the cookie just never drops a token sooner. 400 days is the most browsers keep a cookie; an
+// expired token left in it is refused by /auth/refresh and the person signs in again.
+const REFRESH_MAX_AGE = 400 * 24 * 60 * 60
 
 // Endpoints whose 401 means "wrong credentials", not "the session expired".
 const NO_RENEW = ['/auth/login', '/auth/demo-login', '/auth/refresh', '/auth/logout', '/auth/magic', '/auth/magic-link']
