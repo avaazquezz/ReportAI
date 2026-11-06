@@ -12,7 +12,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "typecheck": "nuxi typecheck"
+    "typecheck": "nuxi typecheck",
+    "test": "jiti tests/savings.test.ts"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
