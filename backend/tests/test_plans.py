@@ -253,7 +253,7 @@ async def test_the_company_sees_its_plan_and_usage(client: AsyncClient, db: Asyn
 
 async def test_the_template_assistant_is_refused_once_the_cap_is_hit(client: AsyncClient, db: AsyncSession) -> None:
     tenant, _ = await _company(db, plan="trial", status="trialing")
-    doc_type = DocumentType(tenant_id=tenant.id, name="Visita", field_schema=[])
+    doc_type = DocumentType(tenant_id=tenant.id, name="Visita", field_schema={})
     db.add(doc_type)
     await db.commit()
     await _spent(db, tenant, 5.0)
