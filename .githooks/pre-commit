@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Fast checks for what is being committed; enable once per clone with `make hooks`.
+# ponytail: checks the working tree, not the staged snapshot, so unstaged edits count too;
+# lint a `git checkout-index --prefix=<tmp>/` copy of the index if that ever matters.
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+staged=$(git diff --cached --name-only)
+
+if grep -q '^backend/' <<<"$staged"; then
+  echo "pre-commit: backend/ staged, running ruff and mypy"
+  (
+    cd "$root/backend"
+    uv run --extra dev ruff check .
+    uv run --extra dev mypy app
+  )
+fi
+
+if grep -q '^frontend/' <<<"$staged"; then
+  (
+    cd "$root/frontend"
+    if [[ ! -d node_modules ]]; then
+      echo "pre-commit: frontend/ staged but frontend/node_modules is missing, skipping eslint"
+    elif [[ ! -f .nuxt/eslint.config.mjs ]]; then
+      echo "pre-commit: eslint's config is generated in .nuxt/; run node_modules/.bin/nuxi prepare in frontend/ first" >&2
+      exit 1
+    else
+      echo "pre-commit: frontend/ staged, running eslint"
+      node_modules/.bin/eslint .
+    fi
+  )
+fi
