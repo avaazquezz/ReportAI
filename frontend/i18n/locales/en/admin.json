@@ -9,7 +9,8 @@
         "reports": "Reports",
         "usage": "Usage & cost",
         "settings": "Settings",
-        "team": "Team"
+        "team": "Team",
+        "myReports": "My reports"
       },
       "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here.",
       "toggleMenu": "Show or hide the menu"
@@ -394,7 +395,8 @@
       "tenant_admin": "Administrator",
       "approver": "Approver",
       "viewer": "Read only",
-      "super_admin": "Super admin"
+      "super_admin": "Super admin",
+      "technician": "Field technician"
     },
     "updates": {
       "securityTitle": "Security update pending",
