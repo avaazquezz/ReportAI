@@ -16,6 +16,7 @@ const logoFile = ref<File | null>(null)
 const uploading = ref(false)
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null)
 const required = (v: string) => Boolean(v?.trim()) || t('admin.common.validation.required')
+const optionalEmail = (v: string | null) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) || t('admin.common.validation.email')
 
 async function loadLogo() {
   if (logoUrl.value) URL.revokeObjectURL(logoUrl.value)
@@ -41,8 +42,11 @@ async function save() {
   if (!company.value || !(await form.value?.validate())?.valid) return
   saving.value = true
   try {
-    const { name, language, timezone, brand_color } = company.value
-    company.value = await api<Company>('/company', { method: 'PATCH', body: { name, language, timezone, brand_color } })
+    const { name, language, timezone, brand_color, reply_to_email } = company.value
+    company.value = await api<Company>('/company', {
+      method: 'PATCH',
+      body: { name, language, timezone, brand_color, reply_to_email: reply_to_email || null }
+    })
     show(t('admin.settings.saved'), 'success')
   } catch {
     show(t('admin.settings.company.errors.save'), 'error')
@@ -101,6 +105,16 @@ onBeforeUnmount(() => {
           />
           <v-autocomplete v-model="company.timezone" :items="timezones" :label="t('admin.settings.company.timezone')" />
         </div>
+        <v-text-field
+          v-model="company.reply_to_email"
+          type="email"
+          :label="t('admin.settings.company.replyTo')"
+          :hint="t('admin.settings.company.replyToHint')"
+          :rules="[optionalEmail]"
+          persistent-hint
+          clearable
+          class="mt-4"
+        />
         <div class="mt-4 flex items-center gap-3">
           <label for="brand-color" class="text-sm">{{ t('admin.settings.company.color') }}</label>
           <input

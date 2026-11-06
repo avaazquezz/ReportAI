@@ -36,12 +36,16 @@ def _response(tenant: Tenant) -> CompanyResponse:
         language=tenant.language,
         timezone=tenant.timezone,
         brand_color=tenant.brand_color,
+        reply_to_email=tenant.reply_to_email,
         has_logo=bool(tenant.logo_path and Path(tenant.logo_path).exists()),
     )
 
 
 def _settings(tenant: Tenant) -> dict[str, str | None]:
-    return {"name": tenant.name, "language": tenant.language, "timezone": tenant.timezone, "brand_color": tenant.brand_color}
+    return {
+        "name": tenant.name, "language": tenant.language, "timezone": tenant.timezone,
+        "brand_color": tenant.brand_color, "reply_to_email": tenant.reply_to_email,
+    }
 
 
 def _forget(path: str | None) -> None:
@@ -82,6 +86,7 @@ async def update_company(
     before = _settings(tenant)
     tenant.name, tenant.language, tenant.timezone = payload.name, payload.language, payload.timezone
     tenant.brand_color = payload.brand_color.upper() if payload.brand_color else None
+    tenant.reply_to_email = payload.reply_to_email
     if fields := audit.changed_fields(before, _settings(tenant)):
         await audit.record(db, "company.updated", actor=current_user, target=tenant.id, request=request, fields=fields)
     await db.flush()

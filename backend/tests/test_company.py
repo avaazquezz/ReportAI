@@ -21,6 +21,7 @@ from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.services.branding import Branding
 from app.services.delivery import email as smtp_delivery
+from app.services.instance_settings import SMTPConfig
 from app.services.rendering.docx_render import fill_template
 
 
@@ -64,10 +65,24 @@ async def test_the_admin_edits_the_company_and_everyone_reads_it(client: AsyncCl
     )
 
     assert updated.json() == {
-        "name": "Reformas García S.L.", "language": "en", "timezone": "Atlantic/Canary", "brand_color": "#0A7C66", "has_logo": False,
+        "name": "Reformas García S.L.", "language": "en", "timezone": "Atlantic/Canary", "brand_color": "#0A7C66",
+        "reply_to_email": None, "has_logo": False,
     }
     bad = await client.patch("/company", json={"name": "X", "language": "en", "timezone": "Mars/Base"}, headers=admin)
     assert bad.status_code == 422
+
+
+async def test_replies_to_its_emails_go_where_the_admin_says(client: AsyncClient, db: AsyncSession) -> None:
+    admin = await _headers(client, await _person(db))
+    company = {"name": "Reformas García", "language": "es", "timezone": "Europe/Madrid"}
+
+    saved = await client.patch("/company", json={**company, "reply_to_email": "oficina@garcia.test"}, headers=admin)
+
+    assert saved.json()["reply_to_email"] == "oficina@garcia.test"
+    assert (await client.get("/company", headers=admin)).json()["reply_to_email"] == "oficina@garcia.test"
+    assert (await client.patch("/company", json={**company, "reply_to_email": "oficina"}, headers=admin)).status_code == 422
+    cleared = await client.patch("/company", json={**company, "reply_to_email": ""}, headers=admin)
+    assert cleared.json()["reply_to_email"] is None
 
 
 async def test_only_the_admin_changes_it(client: AsyncClient, db: AsyncSession) -> None:
@@ -111,6 +126,7 @@ async def test_report_emails_carry_the_companys_name_colour_and_logo(
     monkeypatch.setattr(smtp_delivery.aiosmtplib, "send", send)
     monkeypatch.setattr(settings, "SMTP_HOST", "smtp.test")
     monkeypatch.setattr(settings, "SMTP_FROM_ADDRESS", "informes@garcia.test")
+    monkeypatch.setattr(settings, "SINGLE_TENANT", True)  # its own mail server: the sender is the company
     logo = tmp_path / "logo.png"
     Image.new("RGB", (100, 40), "red").save(logo)
     pdf = tmp_path / "report.pdf"
@@ -128,6 +144,28 @@ async def test_report_emails_carry_the_companys_name_colour_and_logo(
     assert any(part.get_content_type() == "image/png" for part in sent.walk())
     assert any(part.get_content_type() == "application/pdf" for part in sent.walk())
     assert next(p for p in sent.walk() if p.get_content_type() == "text/plain").get_payload(decode=True).decode().startswith("Adjunto")
+
+
+@pytest.mark.parametrize(
+    ("single_tenant", "sender"), [(True, "Reformas García"), (False, "Reformas García via ReportAI")]
+)
+def test_the_sender_says_whose_server_it_is_and_replies_reach_the_company(
+    monkeypatch: pytest.MonkeyPatch, single_tenant: bool, sender: str
+) -> None:
+    monkeypatch.setattr(settings, "SINGLE_TENANT", single_tenant)
+    config = SMTPConfig(host="smtp.test", port=587, security="starttls", user="", password="", from_address="informes@reportai.test")
+    tenant = Tenant(name="Reformas García", slug="garcia", reply_to_email="oficina@garcia.test")
+
+    def message(branding: Branding | None):  # type: ignore[no-untyped-def]
+        return smtp_delivery.new_message(config, to=["jefe@cliente.test"], subject="Visita", body="Hola", branding=branding)
+
+    with_reply_to = message(Branding.of(tenant))
+    assert str(make_header(decode_header(with_reply_to["From"]))) == f"{sender} <informes@reportai.test>"
+    assert with_reply_to["Reply-To"] == "oficina@garcia.test"
+    tenant.reply_to_email = None
+    assert message(Branding.of(tenant))["Reply-To"] is None
+    unbranded = message(None)  # e.g. a reply in an email channel's thread: it must come back to the bot
+    assert (unbranded["From"], unbranded["Reply-To"]) == ("informes@reportai.test", None)
 
 
 def test_templates_can_show_the_company_name_and_logo(tmp_path: Path) -> None:
