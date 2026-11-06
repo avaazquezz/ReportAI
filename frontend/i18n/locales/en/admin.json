@@ -601,6 +601,43 @@
         "load": "Couldn't load the templates.",
         "install": "Couldn't create the document type."
       }
+    },
+    "plan": {
+      "names": {
+        "unlimited": "Unlimited",
+        "trial": "Trial",
+        "starter": "Starter",
+        "pro": "Pro",
+        "business": "Business"
+      },
+      "status": {
+        "trialing": "On trial",
+        "active": "Active",
+        "past_due": "Payment due",
+        "canceled": "Canceled"
+      },
+      "notice": {
+        "trialDaysLeft": "{days} days left in your free trial.",
+        "trialEnded": "The free trial has ended: no new reports are prepared until you choose a plan.",
+        "quotaNear": "You've used {used} of your plan's {limit} reports this month.",
+        "quotaReached": "You've used all {limit} reports in your plan this month: no new reports are prepared until the next period or an upgrade.",
+        "pastDue": "A plan payment is due. The service stays on while it's sorted out.",
+        "inactive": "The plan isn't active: no reports are prepared."
+      },
+      "seePlan": "See the plan",
+      "trialUntil": "Trial until {date}",
+      "renewsOn": "The period renews on {date}",
+      "reportsUsed": "{used} of {limit} reports this period",
+      "noQuota": "{used} reports this period, no limit",
+      "planLabel": "Plan",
+      "planHint": "Changing plan starts a new period from today",
+      "statusLabel": "Plan status",
+      "periodEnd": "Period ends: {date}",
+      "toastSaved": "Plan updated",
+      "errors": {
+        "load": "Couldn't load the plan.",
+        "save": "Couldn't change the plan."
+      }
     }
   }
 }

@@ -20,12 +20,28 @@ export interface PaginatedResponse<T> {
   limit: number
 }
 
+// services/plans.py PLANS on the backend.
+export type PlanKey = 'unlimited' | 'trial' | 'starter' | 'pro' | 'business'
+export type PlanStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
+
 export interface Tenant {
   id: string
   name: string
   slug: string
   is_active: boolean
+  plan: PlanKey
+  plan_status: PlanStatus
+  plan_period_end: string | null
   created_at: string
+}
+
+export interface PlanUsage {
+  plan: PlanKey
+  status: PlanStatus
+  period_start: string | null
+  period_end: string | null
+  reports_used: number
+  reports_limit: number | null
 }
 
 export interface TenantCreateResponse extends Tenant {
