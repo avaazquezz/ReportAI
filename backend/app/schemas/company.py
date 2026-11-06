@@ -15,6 +15,15 @@ class CompanyResponse(BaseModel):
     has_logo: bool
 
 
+class CompanyDeletionRequest(BaseModel):
+    password: str = Field(max_length=128)
+    company_name: str = Field(max_length=255)  # typed by hand, as the last confirmation
+
+
+class CompanyDeletionResponse(BaseModel):
+    purge_after: datetime  # when every piece of the company's data is gone for good
+
+
 class CompanyUpdateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     language: Language

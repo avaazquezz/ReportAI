@@ -58,6 +58,9 @@ class Settings(BaseSettings):
 
     # ── Agent pipeline ───────────────────────────────────────────────────
     DOCUMENT_STORAGE_PATH: str = "storage"
+    # Voice notes are deleted this many days after they arrive (the transcript stays with the
+    # report). 0 = kept for good, as installations always have; the hosted service sets 90.
+    AUDIO_RETENTION_DAYS: int = 0
     MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3
     MAX_VALIDATION_RETRIES: int = 3
     MAX_CORRECTION_RETRIES: int = 2
