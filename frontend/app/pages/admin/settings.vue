@@ -70,6 +70,7 @@ async function exportData() {
             <v-btn variant="tonal" color="primary" prepend-icon="mdi-download" :loading="exporting" @click="exportData">
               {{ t('admin.settings.export.action') }}
             </v-btn>
+            <SettingsDeleteCompany />
           </template>
         </template>
         <SettingsAiSettings v-else-if="tab === 'ai'" />
