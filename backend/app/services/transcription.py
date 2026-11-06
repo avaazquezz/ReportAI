@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import NamedTuple
 
 from openai import AsyncOpenAI
@@ -10,10 +11,22 @@ from app.services.instance_settings import (
     transcription_config,
 )
 
+# The provider reads the audio format off the file name, so stored audio keeps its real
+# extension. A table, not `mimetypes`: the slim image has no /etc/mime.types, so .ogg and .m4a
+# are unknown there, and where the file exists audio/ogg maps to .oga, not a format providers list.
+AUDIO_TYPES = {".ogg": "audio/ogg", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".wav": "audio/wav", ".webm": "audio/webm"}
+
 
 class Transcript(NamedTuple):
     text: str
     model: str
+
+
+def audio_suffix(media_reference: str) -> str:
+    """Telegram and WhatsApp hand over an opaque id for a voice note, which is OGG Opus; an email
+    attachment is a file stored under its real extension."""
+    suffix = Path(media_reference).suffix.lower()
+    return suffix if suffix in AUDIO_TYPES else ".ogg"
 
 
 @lru_cache(maxsize=4)

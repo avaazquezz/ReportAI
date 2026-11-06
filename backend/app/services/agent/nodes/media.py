@@ -37,7 +37,7 @@ async def download_media_node(state: AgentState) -> AgentState:
 
     storage_dir = Path(settings.DOCUMENT_STORAGE_PATH) / str(state.report_id)
     storage_dir.mkdir(parents=True, exist_ok=True)
-    audio_path = storage_dir / "audio.ogg"
+    audio_path = storage_dir / f"audio{transcription.audio_suffix(state.media_reference)}"
     audio_path.write_bytes(media_bytes)
     await save_report(state.report_id, audio_path=str(audio_path))
 
