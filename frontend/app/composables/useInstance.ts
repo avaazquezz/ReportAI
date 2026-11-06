@@ -35,11 +35,13 @@ export function useRole() {
   const isAdmin = computed(() => role.value === 'tenant_admin')
   const isSuperAdmin = computed(() => role.value === 'super_admin')
   const isMember = computed(() => TENANT_ROLES.includes(role.value))
+  // Captures reports and reads only their own: outside TENANT_ROLES on purpose, like the API.
+  const isTechnician = computed(() => role.value === 'technician')
   const canApprove = computed(() => role.value === 'tenant_admin' || role.value === 'approver')
   // Runs the installation (AI keys, email server, updates): its company's admin when it serves one
   // company, the super admin when it hosts several.
   const isInstanceAdmin = computed(() =>
     status.value?.single_tenant ? role.value === 'tenant_admin' : role.value === 'super_admin'
   )
-  return { role, isAdmin, isSuperAdmin, isMember, canApprove, isInstanceAdmin }
+  return { role, isAdmin, isSuperAdmin, isMember, isTechnician, canApprove, isInstanceAdmin }
 }

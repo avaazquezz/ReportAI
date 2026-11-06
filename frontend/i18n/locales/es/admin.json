@@ -9,7 +9,8 @@
         "reports": "Informes",
         "usage": "Uso y coste",
         "settings": "Ajustes",
-        "team": "Equipo"
+        "team": "Equipo",
+        "myReports": "Mis informes"
       },
       "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
       "toggleMenu": "Mostrar u ocultar el menú"
@@ -394,7 +395,8 @@
       "tenant_admin": "Administrador",
       "approver": "Aprobador",
       "viewer": "Solo lectura",
-      "super_admin": "Super admin"
+      "super_admin": "Super admin",
+      "technician": "Técnico de campo"
     },
     "updates": {
       "securityTitle": "Actualización de seguridad pendiente",

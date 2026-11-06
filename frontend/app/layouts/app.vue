@@ -11,7 +11,7 @@ useHead({
 })
 const { state: snackbar } = useSnackbar()
 
-const { isAdmin, isMember, isSuperAdmin, isInstanceAdmin } = useRole()
+const { isAdmin, isMember, isTechnician, isSuperAdmin, isInstanceAdmin } = useRole()
 
 const navItems = computed(() => {
   const settings = { title: t('admin.layout.nav.settings'), to: '/admin/settings', icon: 'mdi-cog-outline' }
@@ -20,6 +20,9 @@ const navItems = computed(() => {
       { title: t('admin.layout.nav.tenants'), to: '/admin/tenants', icon: 'mdi-domain' },
       ...(isInstanceAdmin.value ? [settings] : [])
     ]
+  }
+  if (isTechnician.value) {
+    return [{ title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }]
   }
   const items = [
     { title: t('admin.dashboard.title'), to: '/dashboard', icon: 'mdi-home-outline' },

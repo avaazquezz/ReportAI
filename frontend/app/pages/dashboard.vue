@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import type { Dashboard } from '~/types'
 
-definePageMeta({ middleware: 'auth', layout: 'app', titleKey: 'admin.dashboard.title' })
+definePageMeta({
+  middleware: [
+    'auth',
+    // A technician has no dashboard: their page is their reports.
+    () => {
+      if (useRole().isTechnician.value) return navigateTo('/admin/reports')
+    }
+  ],
+  layout: 'app',
+  titleKey: 'admin.dashboard.title'
+})
 
 const { t } = useI18n()
 const authStore = useAuthStore()
