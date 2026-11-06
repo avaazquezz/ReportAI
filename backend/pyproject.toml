@@ -24,6 +24,7 @@ dependencies = [
     "docxtpl>=0.18",
     "aiosmtplib>=3.0",
     "python-multipart>=0.0.9",
+    "sentry-sdk[fastapi]>=2.74",
 ]
 
 [project.optional-dependencies]
