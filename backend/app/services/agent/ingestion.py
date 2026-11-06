@@ -201,6 +201,10 @@ async def ingest_message(
     if incoming.external_id and not await _first_delivery(db, connection.id, incoming.external_id):
         return IngestResult("duplicate")
 
+    if tenant is None or not tenant.is_active:  # suspended: nothing new starts, nothing resumes
+        await say(connection, incoming.sender_id, t(language, "tenant_suspended"), meta=incoming.meta)
+        return IngestResult("rejected")
+
     # An invitation code lets its holder in — and is answered, never turned into a report.
     code = sender_invites.code_in(incoming.text)
     if code and (invite := await sender_invites.redeem(db, connection, code, incoming.sender_id)):

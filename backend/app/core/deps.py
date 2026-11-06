@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import AuthenticationException, AuthorizationException
 from app.core.security import decode_token
+from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -16,6 +17,18 @@ _READ_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 def is_demo_user(user: TenantUser) -> bool:
     return bool(settings.DEMO_USER_EMAIL) and user.email == settings.DEMO_USER_EMAIL
+
+
+async def can_sign_in(db: AsyncSession, user: TenantUser | None) -> bool:
+    """The one answer to "may this account act?", shared by every way in (token, password,
+    refresh, reset email): an active person in an active company. Suspending a company ends
+    its people's access at once, whatever session they hold."""
+    if user is None or not user.is_active:
+        return False
+    if user.tenant_id is None:  # super_admin
+        return True
+    tenant = await db.get(Tenant, user.tenant_id)
+    return tenant is not None and tenant.is_active
 
 
 async def get_current_user(
@@ -40,7 +53,7 @@ async def get_current_user(
 
     result = await db.execute(select(TenantUser).where(TenantUser.id == user_id))
     user = result.scalar_one_or_none()
-    if user is None or not user.is_active:
+    if user is None or not await can_sign_in(db, user):
         raise AuthenticationException("User not found or inactive")
     if payload.get("ver", 0) != user.token_version:
         raise AuthenticationException("Session ended, please sign in again")
