@@ -457,6 +457,20 @@
         "tooSoon": "The data can be exported once an hour. Try again later.",
         "error": "Couldn't export the data."
       },
+      "delete": {
+        "title": "Delete the company",
+        "hint": "Blocks the whole team's access at once and, 30 days later, deletes all of the company's data for good: reports, audio, photos, templates and team. Export your data first if you'll need it.",
+        "action": "Delete the company",
+        "warning": "Nobody in the company will be able to sign in or send reports from now on. After 30 days, all its data is deleted with no way back.",
+        "nameLabel": "Type “{name}” to confirm",
+        "passwordLabel": "Your password",
+        "wrongPassword": "That password is wrong.",
+        "tooManyAttempts": "Too many attempts. Wait a few minutes.",
+        "error": "Couldn't delete the company.",
+        "doneTitle": "Company blocked",
+        "done": "Your data will be deleted for good on {date}. If you change your mind before then, write to {email}.",
+        "signOut": "Sign out"
+      },
       "ai": {
         "openaiCompatible": "OpenAI-compatible (OpenAI, DeepSeek, Mistral, Ollama…)",
         "effortDefault": "The model's default",
@@ -691,7 +705,9 @@
           "updated": "Changed the company's details",
           "logo_set": "Uploaded the logo",
           "logo_removed": "Removed the logo",
-          "exported": "Exported the company's data"
+          "exported": "Exported the company's data",
+          "deletion_requested": "Asked to delete the company",
+          "deletion_cancelled": "Cancelled the company's deletion"
         },
         "instance": {
           "ai_updated": "Changed the AI settings",
@@ -709,7 +725,8 @@
         },
         "tenant": {
           "created": "Created the company",
-          "updated": "Suspended or reactivated the company"
+          "updated": "Suspended or reactivated the company",
+          "purged": "All of a company's data was purged"
         },
         "plan": {
           "changed": "Changed the plan"

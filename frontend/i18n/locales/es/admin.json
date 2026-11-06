@@ -457,6 +457,20 @@
         "tooSoon": "Solo se pueden exportar los datos una vez por hora. Vuelve a intentarlo más tarde.",
         "error": "No se pudieron exportar los datos."
       },
+      "delete": {
+        "title": "Borrar la empresa",
+        "hint": "Bloquea al momento el acceso de todo el equipo y, 30 días después, borra para siempre todos los datos de la empresa: informes, audios, fotos, plantillas y equipo. Exporta antes tus datos si los vas a necesitar.",
+        "action": "Borrar la empresa",
+        "warning": "Nadie de la empresa podrá entrar ni enviar informes desde ahora. Pasados 30 días, todos sus datos se borrarán sin vuelta atrás.",
+        "nameLabel": "Escribe «{name}» para confirmar",
+        "passwordLabel": "Tu contraseña",
+        "wrongPassword": "La contraseña no es correcta.",
+        "tooManyAttempts": "Demasiados intentos. Espera unos minutos.",
+        "error": "No se pudo borrar la empresa.",
+        "doneTitle": "Empresa bloqueada",
+        "done": "Tus datos se borrarán para siempre el {date}. Si cambias de opinión antes, escribe a {email}.",
+        "signOut": "Salir"
+      },
       "ai": {
         "openaiCompatible": "Compatible con OpenAI (OpenAI, DeepSeek, Mistral, Ollama…)",
         "effortDefault": "El del modelo",
@@ -691,7 +705,9 @@
           "updated": "Cambió los datos de la empresa",
           "logo_set": "Subió el logo",
           "logo_removed": "Quitó el logo",
-          "exported": "Exportó los datos de la empresa"
+          "exported": "Exportó los datos de la empresa",
+          "deletion_requested": "Pidió borrar la empresa",
+          "deletion_cancelled": "Anuló el borrado de la empresa"
         },
         "instance": {
           "ai_updated": "Cambió los ajustes de IA",
@@ -709,7 +725,8 @@
         },
         "tenant": {
           "created": "Dio de alta la empresa",
-          "updated": "Suspendió o reactivó la empresa"
+          "updated": "Suspendió o reactivó la empresa",
+          "purged": "Se purgaron todos los datos de una empresa"
         },
         "plan": {
           "changed": "Cambió el plan"
