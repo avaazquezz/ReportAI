@@ -13,6 +13,8 @@ from app.models.report import Report
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 
+_HASH = hash_password("x")  # bcrypt is slow on purpose: hash once, not per user
+
 
 async def _tenant(db: AsyncSession) -> Tenant:
     tenant = Tenant(name="Acme", slug=f"acme-{uuid.uuid4().hex[:6]}", is_active=True)
@@ -25,7 +27,7 @@ async def _user(db: AsyncSession, tenant: Tenant, role: str, name: str = "Person
     user = TenantUser(
         tenant_id=tenant.id,
         email=f"{role}-{uuid.uuid4().hex[:6]}@acme.test",
-        hashed_password=hash_password("x"),
+        hashed_password=_HASH,
         full_name=name,
         role=role,
         is_active=True,
