@@ -433,6 +433,8 @@
         "timezone": "Zona horaria",
         "color": "Color de marca",
         "colorHint": "Se usa en los emails que envía ReportAI",
+        "replyTo": "Email para respuestas",
+        "replyToHint": "Las respuestas a los emails que ReportAI envía por tu empresa llegan aquí. Vacío: llegan a la dirección que los envía.",
         "logo": "Logo",
         "logoHint": "Sale en los emails y, si la plantilla lo incluye ({tag}), en los documentos.",
         "noLogo": "Sin logo",

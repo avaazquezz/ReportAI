@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
+from app.core.validators import EmailField
 from app.schemas.setup import Language, TimezoneField
 
 
@@ -10,6 +11,7 @@ class CompanyResponse(BaseModel):
     language: str
     timezone: str
     brand_color: str | None
+    reply_to_email: str | None
     has_logo: bool
 
 
@@ -18,6 +20,13 @@ class CompanyUpdateRequest(BaseModel):
     language: Language
     timezone: TimezoneField
     brand_color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    # Where replies to its emails go. Empty or null: none, replies go to the sending address.
+    reply_to_email: EmailField | None = Field(default=None, max_length=320)
+
+    @field_validator("reply_to_email", mode="before")
+    @classmethod
+    def _empty_clears(cls, value: object) -> object:
+        return value or None
 
 
 class PlanUsageResponse(BaseModel):

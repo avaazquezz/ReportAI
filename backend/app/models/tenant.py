@@ -25,6 +25,8 @@ class Tenant(Base):
     # The company's look on what it sends: emails and, through {{ branding.* }}, its documents.
     brand_color: Mapped[str | None] = mapped_column(String(7), nullable=True)  # #RRGGBB
     logo_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    # Its emails leave from the platform's address; replies to them go here, to the company.
+    reply_to_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     # What it may use (services/plans.py). Defaults keep companies from before plans unlimited.
     plan: Mapped[str] = mapped_column(String(32), nullable=False, default="unlimited", server_default="unlimited")
     plan_status: Mapped[str] = mapped_column(String(16), nullable=False, default="active", server_default="active")

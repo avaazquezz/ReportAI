@@ -178,11 +178,14 @@ async def test_company_changes_are_recorded(
     monkeypatch.setattr(settings, "DOCUMENT_STORAGE_PATH", str(tmp_path))
     admin_user = await _person(db)
     admin = await _headers(client, admin_user)
-    company = {"name": "Reformas García S.L.", "language": "es", "timezone": "Europe/Madrid", "brand_color": "#0A7C66"}
+    company = {
+        "name": "Reformas García S.L.", "language": "es", "timezone": "Europe/Madrid", "brand_color": "#0A7C66",
+        "reply_to_email": "oficina@garcia.test",
+    }
 
     await client.patch("/company", json=company, headers=admin)
     await client.patch("/company", json=company, headers=admin)  # the same again: nothing to record
-    assert (await _one(db, "company.updated")).details == {"fields": ["brand_color", "name"]}
+    assert (await _one(db, "company.updated")).details == {"fields": ["brand_color", "name", "reply_to_email"]}
 
     logo = io.BytesIO()
     Image.new("RGB", (10, 10), "red").save(logo, "PNG")

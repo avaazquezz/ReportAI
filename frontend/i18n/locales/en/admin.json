@@ -433,6 +433,8 @@
         "timezone": "Time zone",
         "color": "Brand colour",
         "colorHint": "Used in the emails ReportAI sends",
+        "replyTo": "Reply-to email",
+        "replyToHint": "Replies to the emails ReportAI sends for your company arrive here. Empty: they go to the sending address.",
         "logo": "Logo",
         "logoHint": "Shown in emails and, when the template includes it ({tag}), in documents.",
         "noLogo": "No logo",

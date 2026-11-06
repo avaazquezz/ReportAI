@@ -315,6 +315,7 @@ export interface Company {
   language: 'es' | 'en'
   timezone: string
   brand_color: string | null
+  reply_to_email: string | null
   has_logo: boolean
 }
 
