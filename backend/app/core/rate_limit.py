@@ -65,6 +65,8 @@ magic_link_by_ip = AttemptLimiter("magic_link_ip", max_attempts=20, window_secon
 # Wrong typed codes: 5 and the outstanding code dies with them (8 characters, 31 symbols each).
 MAGIC_CODE_ATTEMPTS = 5
 magic_code_by_email = AttemptLimiter("magic_code_email", max_attempts=MAGIC_CODE_ATTEMPTS, window_seconds=15 * 60)
+# A company's data export reads every file it has: once an hour is plenty for portability.
+export_by_tenant = AttemptLimiter("export_tenant", max_attempts=1, window_seconds=60 * 60)
 
 
 async def prune(db: AsyncSession) -> None:

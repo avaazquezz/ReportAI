@@ -4,10 +4,12 @@ look (logo and colour) on the emails and documents ReportAI sends for it."""
 import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.background import BackgroundTask
 
 from app.core import rate_limit
 from app.core.config import settings
@@ -25,7 +27,7 @@ from app.schemas.company import (
     CompanyUpdateRequest,
     PlanUsageResponse,
 )
-from app.services import audit, data_lifecycle, plans
+from app.services import audit, data_lifecycle, export, plans
 from app.services.branding import InvalidLogoError, store_logo
 
 router = APIRouter(prefix="/company", tags=["admin:company"])
@@ -176,3 +178,26 @@ async def get_logo(
     if not tenant.logo_path or not Path(tenant.logo_path).exists():
         raise ResourceNotFoundException("This company has no logo")
     return FileResponse(tenant.logo_path, media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
+
+
+@router.get("/export")
+async def export_company(
+    request: Request,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    """Everything ReportAI holds for the company, as one zip (data portability)."""
+    tenant = await _tenant(db, current_user)
+    await rate_limit.export_by_tenant.check(db, str(tenant.id))
+    await rate_limit.export_by_tenant.record(db, str(tenant.id))
+    await audit.record(db, "company.exported", actor=current_user, target=tenant.id, request=request)
+    now = datetime.now(ZoneInfo(tenant.timezone))
+    # ponytail: built in the request; a company with gigabytes of audio will hit proxy
+    # timeouts — move to a job that emails a download link when that happens.
+    archive = await export.build(db, tenant, now)
+    return FileResponse(
+        archive,
+        filename=f"reportai-export-{tenant.slug}-{now.date().isoformat()}.zip",
+        media_type="application/zip",
+        background=BackgroundTask(archive.unlink),
+    )
