@@ -4,6 +4,8 @@ lenient comparator would make the real eval report numbers that mean nothing."""
 import re
 from datetime import timedelta
 
+import pytest
+
 from app.services.agent.tools.extraction_schema import build_extraction_model
 from tests.eval.golden import TODAY, VISIT_SCHEMA, Case, build_cases, grade, values_match
 
@@ -76,3 +78,41 @@ def test_grading_tells_an_invented_value_from_a_missed_one() -> None:
     verdicts = {o.field: o.verdict for o in grade(case, {"a": "x", "b": "2026-03-12", "c": None})}
 
     assert verdicts == {"a": "correct", "b": "invented", "c": "missed"}
+
+
+async def test_the_harness_retries_provider_hiccups_but_not_invalid_answers(monkeypatch: pytest.MonkeyPatch) -> None:
+    from tests.eval import test_golden_set as harness
+
+    cases = build_cases()[:2]
+    flaky, broken = cases
+    calls: dict[str, int] = {}
+
+    async def fake_extract(case: Case) -> dict[str, object]:
+        calls[case.id] = calls.get(case.id, 0) + 1
+        if case is broken:
+            raise harness.InvalidExtraction("still invalid")
+        if calls[case.id] == 1:
+            raise TimeoutError("provider overloaded")
+        return dict(case.expected)
+
+    monkeypatch.setattr(harness, "_extract", fake_extract)
+    monkeypatch.setattr(harness, "_PROVIDER_RETRY_DELAYS", (0, 0))
+
+    report = await harness.run_golden_set(cases)
+
+    assert calls == {flaky.id: 2, broken.id: 1}  # the invalid answer is never asked again
+    assert list(report.retried) == [flaky.id] and "overloaded" in report.retried[flaky.id][0]
+    assert list(report.errors) == [broken.id]
+    assert report.count("invented") == 0 and report.accuracy == 1.0
+
+
+def test_an_echo_of_the_message_is_wrong_but_only_an_unsaid_value_is_invented() -> None:
+    case = next(c for c in build_cases() if c.id == "visit-16")
+    echoed = {**case.expected, "trabajos": [{"tarea": "mantenimiento preventivo", "horas": None}]}
+    unsaid = {**case.expected, "urgente": True, "proxima_visita": "2026-03-20"}
+
+    echo_verdicts = {o.field: o.verdict for o in grade(case, echoed)}
+    unsaid_verdicts = {o.field: o.verdict for o in grade(case, unsaid)}
+
+    assert echo_verdicts["trabajos"] == "wrong"
+    assert unsaid_verdicts["urgente"] == "invented" and unsaid_verdicts["proxima_visita"] == "invented"
