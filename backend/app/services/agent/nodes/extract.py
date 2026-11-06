@@ -4,13 +4,13 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
-from app.services.agent.state import AgentState, ToolUsage
+from app.services.agent.state import AgentState
 from app.services.agent.tools.extraction_schema import (
     build_extraction_model,
     build_result_model,
     unverified_evidence_keys,
 )
-from app.services.agent.tools.pricing import estimate_cost_usd
+from app.services.agent.tools.pricing import usage_of
 from app.services.i18n import LANGUAGE_NAMES, normalize_language
 from app.services.llm import structured_completion
 from app.services.observability.execution_log import observed_node
@@ -96,10 +96,7 @@ async def extract_node(state: AgentState) -> AgentState:
             "corrections": corrections,
             "extraction_attempts": state.extraction_attempts + 1,
             "correction_text": None,
-            "last_tool_usage": ToolUsage(
-                model_used=completion.model,
-                cost_usd=estimate_cost_usd(completion.model, completion.input_tokens, completion.output_tokens),
-            ),
+            "last_tool_usage": usage_of(completion),
         }
     )
 

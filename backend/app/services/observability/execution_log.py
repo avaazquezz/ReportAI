@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.logging import describe_exception
 from app.models.execution_log import ExecutionLog
-from app.services.agent.state import AgentState
+from app.services.agent.state import AgentState, ToolUsage
 
 # All nodes are async — including validate_node, which does no I/O but stays
 # async for interface uniformity so this wrapper doesn't need a sync branch.
@@ -20,14 +20,14 @@ NodeFn = Callable[[AgentState], Awaitable[AgentState]]
 async def write_execution_log(
     *,
     tenant_id: uuid.UUID,
-    report_id: uuid.UUID,
+    report_id: uuid.UUID | None,
     step: str,
     status: str,
-    model_used: str | None = None,
-    cost_usd: float | None = None,
+    usage: ToolUsage | None = None,
     latency_ms: int | None = None,
     error_detail: str | None = None,
 ) -> None:
+    """report_id is None for AI work outside a report (the template assistant)."""
     async with AsyncSessionLocal() as session:
         session.add(
             ExecutionLog(
@@ -35,10 +35,9 @@ async def write_execution_log(
                 report_id=report_id,
                 step=step,
                 status=status,
-                model_used=model_used,
-                cost_usd=cost_usd,
                 latency_ms=latency_ms,
                 error_detail=error_detail,
+                **(usage or ToolUsage()).model_dump(),
             )
         )
         await session.commit()
@@ -59,14 +58,12 @@ def observed_node(step: str) -> Callable[[NodeFn], Callable[[AgentState], Awaita
                 async with asyncio.timeout(settings.NODE_TIMEOUT_SECONDS):
                     new_state = await fn(state)
 
-                usage = new_state.last_tool_usage
                 await write_execution_log(
                     tenant_id=new_state.tenant_id,
                     report_id=new_state.report_id,
                     step=step,
                     status="success",
-                    model_used=usage.model_used if usage else None,
-                    cost_usd=usage.cost_usd if usage else None,
+                    usage=new_state.last_tool_usage,
                     latency_ms=int((time.monotonic() - start) * 1000),
                 )
                 return new_state.model_copy(update={"last_tool_usage": None})

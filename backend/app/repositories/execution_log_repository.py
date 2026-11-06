@@ -11,6 +11,9 @@ from app.models.execution_log import ExecutionLog
 class CostSummary(TypedDict):
     total_cost_usd: float
     avg_latency_ms: float | None
+    total_input_tokens: int
+    total_output_tokens: int
+    total_audio_seconds: float
 
 
 class ExecutionLogRepository:
@@ -21,12 +24,18 @@ class ExecutionLogRepository:
         query = select(
             func.coalesce(func.sum(ExecutionLog.cost_usd), 0),
             func.avg(ExecutionLog.latency_ms),
+            func.coalesce(func.sum(ExecutionLog.input_tokens), 0),
+            func.coalesce(func.sum(ExecutionLog.output_tokens), 0),
+            func.coalesce(func.sum(ExecutionLog.audio_seconds), 0),
         ).where(ExecutionLog.tenant_id == tenant_id, ExecutionLog.created_at >= since)
         result = await self.db.execute(query)
-        total_cost, avg_latency = result.one()
+        total_cost, avg_latency, input_tokens, output_tokens, audio_seconds = result.one()
         return {
             "total_cost_usd": float(total_cost),
             "avg_latency_ms": float(avg_latency) if avg_latency is not None else None,
+            "total_input_tokens": int(input_tokens),
+            "total_output_tokens": int(output_tokens),
+            "total_audio_seconds": float(audio_seconds),
         }
 
     async def total_cost_since(self, since: datetime) -> float:

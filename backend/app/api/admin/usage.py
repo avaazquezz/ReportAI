@@ -33,6 +33,9 @@ async def build_usage_summary(
         total_reports=sum(reports_by_status.values()),
         reports_by_status=reports_by_status,
         avg_latency_ms=cost_summary["avg_latency_ms"],
+        total_input_tokens=cost_summary["total_input_tokens"],
+        total_output_tokens=cost_summary["total_output_tokens"],
+        total_audio_minutes=cost_summary["total_audio_seconds"] / 60,
         daily_cost=[DailyCostPoint(date=date, cost_usd=cost) for date, cost in daily_cost],
     )
 

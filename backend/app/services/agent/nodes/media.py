@@ -7,7 +7,8 @@ from app.models.channel_connection import ChannelConnection
 from app.repositories.base import BaseRepository
 from app.services import transcription
 from app.services.agent.persistence import save_report
-from app.services.agent.state import AgentState, ToolUsage
+from app.services.agent.state import AgentState
+from app.services.agent.tools.pricing import transcription_usage
 from app.services.channels.factory import get_channel_adapter
 from app.services.observability.execution_log import observed_node
 
@@ -49,7 +50,8 @@ async def transcribe_node(state: AgentState) -> AgentState:
     assert state.media_local_path is not None
 
     audio_bytes = await asyncio.to_thread(Path(state.media_local_path).read_bytes)
-    text, model = await transcription.transcribe(audio_bytes, Path(state.media_local_path).name, state.language)
+    transcript = await transcription.transcribe(audio_bytes, Path(state.media_local_path).name, state.language)
+    text = transcript.text
     await save_report(state.report_id, source_text=text)
 
     return state.model_copy(
@@ -57,6 +59,6 @@ async def transcribe_node(state: AgentState) -> AgentState:
             "transcript": text,
             "incoming_text": text,
             "source_text": text,
-            "last_tool_usage": ToolUsage(model_used=model),
+            "last_tool_usage": transcription_usage(transcript),
         }
     )

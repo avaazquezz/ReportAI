@@ -212,6 +212,9 @@ export interface UsageSummary {
   total_reports: number
   reports_by_status: Record<string, number>
   avg_latency_ms: number | null
+  total_input_tokens: number
+  total_output_tokens: number
+  total_audio_minutes: number
   daily_cost: DailyCostPoint[]
 }
 
