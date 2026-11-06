@@ -10,7 +10,7 @@ const authStore = useAuthStore()
 const { formatDate } = useLocaleDate()
 
 const ROLES = computed<{ value: TenantRole; title: string; subtitle: string }[]>(() =>
-  (['tenant_admin', 'approver', 'viewer'] as const).map((value) => ({
+  (['tenant_admin', 'approver', 'viewer', 'technician'] as const).map((value) => ({
     value,
     title: t(`admin.roles.${value}`),
     subtitle: t(`admin.team.roleHelp.${value}`)
@@ -91,6 +91,16 @@ async function resendInvite(member: TeamMember) {
   }
 }
 
+// A lost or shared phone: every session of the person ends; they can sign in again.
+async function signOut(member: TeamMember) {
+  try {
+    await api(`/team/${member.id}/sign-out`, { method: 'POST' })
+    show(t('admin.team.toast.signedOut', { name: member.full_name }), 'success')
+  } catch (err) {
+    show(errorText(err, t('admin.team.errors.signOut')), 'error')
+  }
+}
+
 async function copy(text: string) {
   await navigator.clipboard.writeText(text)
   show(t('admin.common.copied'), 'success')
@@ -158,6 +168,7 @@ async function confirmToggle() {
         <template #item.actions="{ item }">
           <div v-if="item.id !== authStore.user?.id" class="flex justify-end whitespace-nowrap">
             <v-btn v-if="item.is_active" size="small" variant="text" @click="resendInvite(item)">{{ t('admin.team.resend') }}</v-btn>
+            <v-btn v-if="item.is_active" size="small" variant="text" @click="signOut(item)">{{ t('admin.team.signOut') }}</v-btn>
             <v-btn size="small" variant="text" @click="pending = item; confirmDialog = true">
               {{ item.is_active ? t('admin.common.deactivate') : t('admin.common.reactivate') }}
             </v-btn>
