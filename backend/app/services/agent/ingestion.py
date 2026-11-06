@@ -27,7 +27,7 @@ from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
 from app.repositories.report_repository import PENDING_STATUSES, ReportRepository
-from app.services import plans, sender_invites
+from app.services import audit, plans, sender_invites
 from app.services.channels.base import IncomingMessage, OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.i18n import t
@@ -207,6 +207,10 @@ async def ingest_message(
     # An invitation code lets its holder in — and is answered, never turned into a report.
     code = sender_invites.code_in(incoming.text)
     if code and (invite := await sender_invites.redeem(db, connection, code, incoming.sender_id)):
+        await audit.record(
+            db, "channel.sender_enrolled", tenant_id=connection.tenant_id, target=connection.id, actor_label="system",
+            invite_id=str(invite.id), label=invite.label, sender_id=incoming.sender_id,
+        )
         await say(connection, incoming.sender_id, t(language, "enrolled", name=invite.label), meta=incoming.meta)
         return IngestResult("replied")
 

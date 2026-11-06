@@ -24,7 +24,7 @@ from app.core.logging import configure_logging
 from app.models.report import Report
 from app.models.used_refresh_token import UsedRefreshToken
 from app.repositories.report_repository import PENDING_STATUSES
-from app.services import plans
+from app.services import audit, plans
 from app.services.channels.telegram_updates import (
     polling_enabled,
     register_all_webhooks,
@@ -99,6 +99,12 @@ async def prune_rate_limit_hits() -> None:
         await session.commit()
 
 
+async def prune_audit_events() -> None:
+    async with AsyncSessionLocal() as session:
+        await audit.prune(session)
+        await session.commit()
+
+
 async def maintenance() -> None:
     for job_id, report_id in await fail_abandoned():
         logger.error("Job %s was abandoned by a dead worker with no attempts left", job_id)
@@ -109,6 +115,7 @@ async def maintenance() -> None:
     await drop_finished_checkpoints()
     await drop_expired_refresh_tokens()
     await prune_rate_limit_hits()
+    await prune_audit_events()
     await roll_plan_periods()
     await asyncio.to_thread(drop_expired_drafts)
 

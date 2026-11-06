@@ -4,7 +4,7 @@ look (logo and colour) on the emails and documents ReportAI sends for it."""
 import asyncio
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,7 @@ from app.core.scoping import require_tenant_id
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.schemas.company import CompanyResponse, CompanyUpdateRequest, PlanUsageResponse
-from app.services import plans
+from app.services import audit, plans
 from app.services.branding import InvalidLogoError, store_logo
 
 router = APIRouter(prefix="/company", tags=["admin:company"])
@@ -38,6 +38,10 @@ def _response(tenant: Tenant) -> CompanyResponse:
         brand_color=tenant.brand_color,
         has_logo=bool(tenant.logo_path and Path(tenant.logo_path).exists()),
     )
+
+
+def _settings(tenant: Tenant) -> dict[str, str | None]:
+    return {"name": tenant.name, "language": tenant.language, "timezone": tenant.timezone, "brand_color": tenant.brand_color}
 
 
 def _forget(path: str | None) -> None:
@@ -70,12 +74,16 @@ async def get_plan(
 @router.patch("")
 async def update_company(
     payload: CompanyUpdateRequest,
+    request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> CompanyResponse:
     tenant = await _tenant(db, current_user)
+    before = _settings(tenant)
     tenant.name, tenant.language, tenant.timezone = payload.name, payload.language, payload.timezone
     tenant.brand_color = payload.brand_color.upper() if payload.brand_color else None
+    if fields := audit.changed_fields(before, _settings(tenant)):
+        await audit.record(db, "company.updated", actor=current_user, target=tenant.id, request=request, fields=fields)
     await db.flush()
     return _response(tenant)
 
@@ -83,6 +91,7 @@ async def update_company(
 @router.put("/logo")
 async def upload_logo(
     file: UploadFile,
+    request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> CompanyResponse:
@@ -95,6 +104,7 @@ async def upload_logo(
     except InvalidLogoError as exc:
         raise ValidationException(str(exc)) from exc
     previous, tenant.logo_path = tenant.logo_path, path
+    await audit.record(db, "company.logo_set", actor=current_user, target=tenant.id, request=request)
     await db.flush()
     _forget(previous)
     return _response(tenant)
@@ -102,10 +112,14 @@ async def upload_logo(
 
 @router.delete("/logo")
 async def delete_logo(
-    current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db)
+    request: Request,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
 ) -> CompanyResponse:
     tenant = await _tenant(db, current_user)
     previous, tenant.logo_path = tenant.logo_path, None
+    if previous:
+        await audit.record(db, "company.logo_removed", actor=current_user, target=tenant.id, request=request)
     await db.flush()
     _forget(previous)
     return _response(tenant)
