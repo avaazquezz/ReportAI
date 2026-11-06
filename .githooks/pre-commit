@@ -11,8 +11,9 @@ if grep -q '^backend/' <<<"$staged"; then
   echo "pre-commit: backend/ staged, running ruff and mypy"
   (
     cd "$root/backend"
-    uv run --extra dev ruff check .
-    uv run --extra dev mypy app
+    # Caches outside the checkout: the dev container writes root-owned ones into backend/.
+    uv run --extra dev ruff check --no-cache .
+    uv run --extra dev mypy --cache-dir "${XDG_CACHE_HOME:-$HOME/.cache}/reportai-mypy" app
   )
 fi
 
