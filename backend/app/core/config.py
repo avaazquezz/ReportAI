@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # A technician's phone stays signed in this long after each use (refresh tokens rotate):
+    # signing in again in front of a site, gloves on, is what the field app must spare them.
+    TECHNICIAN_REFRESH_DAYS: int = 30
 
     # ── Secrets at rest (app.core.crypto). Any long random string; empty = derived from
     #    SECRET_KEY (older installations). Changing it makes stored secrets unreadable. ──

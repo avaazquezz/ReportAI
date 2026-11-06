@@ -6,7 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.validators import EmailField
 
-TeamRole = Literal["tenant_admin", "approver", "viewer"]
+# "technician": captures reports from the field app and signs in with an emailed link.
+TeamRole = Literal["tenant_admin", "approver", "viewer", "technician"]
 
 
 class TeamMemberResponse(BaseModel):

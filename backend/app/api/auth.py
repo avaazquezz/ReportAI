@@ -11,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import can_sign_in, get_current_user, is_demo_user
+from app.core.deps import TECHNICIAN, can_sign_in, get_current_user, is_demo_user
 from app.core.exceptions import (
     AuthenticationException,
+    RateLimitException,
     ResourceNotFoundException,
     ValidationException,
 )
@@ -31,6 +32,8 @@ from app.schemas.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    MagicLinkRequest,
+    MagicSignInRequest,
     ProfileUpdateRequest,
     RefreshRequest,
     ResetPasswordRequest,
@@ -42,7 +45,14 @@ from app.services import audit
 from app.services.branding import Branding
 from app.services.i18n import t
 from app.services.notifications.email import send_plain_email
-from app.services.notifications.tokens import consume_reset_token, issue_reset_token
+from app.services.notifications.invites import send_magic_link
+from app.services.notifications.tokens import (
+    MAGIC,
+    consume_magic_code,
+    consume_reset_token,
+    invalidate_sign_ins,
+    issue_reset_token,
+)
 
 router = APIRouter(tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -57,9 +67,10 @@ def tokens_for(user: TenantUser) -> TokenResponse:
         "tenant_id": str(user.tenant_id) if user.tenant_id else None,
         "ver": user.token_version,
     }
+    days = settings.TECHNICIAN_REFRESH_DAYS if user.role == TECHNICIAN else settings.REFRESH_TOKEN_EXPIRE_DAYS
     return TokenResponse(
         access_token=create_access_token(token_payload),
-        refresh_token=create_refresh_token({"sub": str(user.id), "ver": user.token_version}),
+        refresh_token=create_refresh_token({"sub": str(user.id), "ver": user.token_version}, days),
     )
 
 
@@ -92,7 +103,14 @@ async def login(
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
 
-    if user is None or not verify_password(payload.password, user.hashed_password) or not await can_sign_in(db, user):
+    # A technician signs in with an emailed link, never a password (a panel user moved to the
+    # technician role may still hold one).
+    if (
+        user is None
+        or user.role == TECHNICIAN
+        or not verify_password(payload.password, user.hashed_password)
+        or not await can_sign_in(db, user)
+    ):
         # Before the attempt is counted: that commit is what keeps the event through the rollback.
         await audit.record(
             db, "auth.login_failed", tenant_id=user.tenant_id if user else None, target=user.id if user else None,
@@ -195,7 +213,11 @@ async def forgot_password(
     await rate_limit.forgot_by_ip.record(db, ip_key)
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
-    if user is not None and await can_sign_in(db, user):
+    if user is not None and user.role == TECHNICIAN and await can_sign_in(db, user):
+        sent, _ = await send_magic_link(db, user)  # no password to reset: a way in instead
+        if sent:
+            await audit.record(db, "auth.magic_link_requested", tenant_id=user.tenant_id, target=user.id, request=request)
+    elif user is not None and await can_sign_in(db, user):
         token = await issue_reset_token(db, user.id)
         reset_link = f"{settings.FRONTEND_ORIGIN}/reset-password?token={token}"
         tenant = await db.get(Tenant, user.tenant_id) if user.tenant_id else None
@@ -234,3 +256,61 @@ async def reset_password(
     await audit.record(db, "auth.password_reset", actor=user, target=user.id, request=request)
     await db.flush()
     return MessageResponse(message="Password updated successfully.")
+
+
+_MAGIC_LINK_MESSAGE = "If that email belongs to a technician, we've sent them a sign-in link and code."
+
+
+@router.post("/auth/magic-link")
+async def request_magic_link(
+    payload: MagicLinkRequest, request: Request, db: AsyncSession = Depends(get_db)
+) -> MessageResponse:
+    """A technician asks for a sign-in link. The same answer whoever asks, so the endpoint never
+    says whether an address has an account (or a technician's)."""
+    email_key, ip_key = payload.email.lower(), audit.client_ip(request)
+    await rate_limit.magic_link_by_email.check(db, email_key)
+    await rate_limit.magic_link_by_ip.check(db, ip_key)
+    await rate_limit.magic_link_by_email.record(db, email_key)
+    await rate_limit.magic_link_by_ip.record(db, ip_key)
+    user = await db.scalar(select(TenantUser).where(TenantUser.email == payload.email))
+    if user is not None and user.role == TECHNICIAN and await can_sign_in(db, user):
+        sent, _ = await send_magic_link(db, user)
+        if sent:
+            await audit.record(db, "auth.magic_link_requested", tenant_id=user.tenant_id, target=user.id, request=request)
+    return MessageResponse(message=_MAGIC_LINK_MESSAGE)
+
+
+@router.post("/auth/magic")
+async def magic_sign_in(
+    payload: MagicSignInRequest, request: Request, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
+    """Spends an emailed sign-in (the link's token, or its code typed in the installed app) for a
+    session. Every refusal reads the same."""
+    refused = AuthenticationException("That sign-in link or code is wrong or has expired. Ask for a new one.")
+    if payload.token:
+        try:
+            user: TenantUser | None = await consume_reset_token(db, payload.token, purpose=MAGIC)
+        except ValueError:
+            raise refused from None
+    elif payload.email is None or payload.code is None:  # the schema already requires both
+        raise refused
+    else:
+        email_key = payload.email.lower()
+        await rate_limit.magic_code_by_email.check(db, email_key)
+        user = await db.scalar(select(TenantUser).where(TenantUser.email == payload.email))
+        if user is None or not await consume_magic_code(db, user.id, payload.code):
+            await rate_limit.magic_code_by_email.record(db, email_key)
+            try:
+                await rate_limit.magic_code_by_email.check(db, email_key)
+            except RateLimitException:
+                if user is not None:  # the code out there can't be guessed any further
+                    await invalidate_sign_ins(db, user.id)
+                    await db.commit()
+                raise
+            raise refused
+    if user is None or user.role != TECHNICIAN or not await can_sign_in(db, user):
+        raise refused
+    user.email_verified_at = user.email_verified_at or datetime.now(UTC)
+    await audit.record(db, "auth.magic_sign_in", actor=user, target=user.id, request=request)
+    await db.flush()
+    return tokens_for(user)
