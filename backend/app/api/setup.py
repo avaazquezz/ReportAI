@@ -51,9 +51,9 @@ async def _require_code(request: Request, db: AsyncSession, code: str) -> None:
     if not await needs_setup(db):
         raise ConflictException("This installation is already set up. Sign in instead.")
     ip = _client_ip(request)
-    rate_limit.setup_code_by_ip.check(ip)
+    await rate_limit.setup_code_by_ip.check(db, ip)
     if not await code_is_valid(db, code):
-        rate_limit.setup_code_by_ip.record(ip)
+        await rate_limit.setup_code_by_ip.record(db, ip)
         raise ValidationException(
             "That setup code is wrong or has expired. Get a new one on the server with: reportai setup-code"
         )

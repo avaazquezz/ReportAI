@@ -1,13 +1,17 @@
-"""SEC-3: login and password reset had no attempt limit at all."""
+"""SEC-3: login and password reset had no attempt limit at all; then the limit lived in each\nprocess's memory, so two API workers doubled it and a restart reset it."""
+
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.core import rate_limit
 from app.core.exceptions import RateLimitException
 from app.core.rate_limit import AttemptLimiter
 from app.core.security import hash_password
+from app.models.rate_limit_hit import RateLimitHit
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 
@@ -33,23 +37,54 @@ def _login(client: AsyncClient, password: str, email: str = "admin@acme.test"): 
     return client.post("/auth/login", json={"email": email, "password": password})
 
 
-def test_limiter_blocks_after_max_attempts_and_frees_after_the_window(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    now = [1000.0]
-    monkeypatch.setattr("app.core.rate_limit.time.monotonic", lambda: now[0])
-    limiter = AttemptLimiter(max_attempts=2, window_seconds=60)
+async def test_limiter_blocks_after_max_attempts_and_frees_after_the_window(db: AsyncSession) -> None:
+    limiter = AttemptLimiter("t", max_attempts=2, window_seconds=60)
 
-    limiter.record("k")
-    limiter.record("k")
+    await limiter.record(db, "k")
+    await limiter.record(db, "k")
     with pytest.raises(RateLimitException) as blocked:
-        limiter.check("k")
+        await limiter.check(db, "k")
     assert blocked.value.status_code == 429
-    assert blocked.value.headers == {"Retry-After": "60"}
+    assert 58 <= int(blocked.value.headers["Retry-After"]) <= 60
 
-    limiter.check("other-key")  # keys are independent
-    now[0] += 61
-    limiter.check("k")  # window elapsed
+    await limiter.check(db, "other-key")  # keys are independent
+    await AttemptLimiter("other-limiter", max_attempts=2, window_seconds=60).check(db, "k")  # so are limiters
+    await db.execute(update(RateLimitHit).values(at=func.now() - timedelta(seconds=61)))
+    await limiter.check(db, "k")  # window elapsed
+
+
+async def test_every_api_worker_sees_the_same_count(db: AsyncSession, _test_engine: AsyncEngine) -> None:
+    # Two uvicorn workers are two processes with their own sessions: the count lives in Postgres.
+    limiter = AttemptLimiter("t", max_attempts=1, window_seconds=60)
+    other_worker = async_sessionmaker(_test_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async with other_worker() as session:
+        await limiter.record(session, "k")
+
+    with pytest.raises(RateLimitException):
+        await limiter.check(db, "k")
+
+
+async def test_an_attempt_still_counts_when_the_request_then_fails(db: AsyncSession) -> None:
+    # A failed login raises right after recording, and get_db rolls the request back.
+    limiter = AttemptLimiter("t", max_attempts=1, window_seconds=60)
+
+    await limiter.record(db, "k")
+    await db.rollback()
+
+    with pytest.raises(RateLimitException):
+        await limiter.check(db, "k")
+
+
+async def test_maintenance_prunes_only_old_attempts(db: AsyncSession) -> None:
+    limiter = AttemptLimiter("t", max_attempts=1, window_seconds=60)
+    await limiter.record(db, "recent")
+    db.add(RateLimitHit(key="t:old", at=datetime.now(UTC) - rate_limit.KEEP_HITS_FOR - timedelta(minutes=1)))
+    await db.commit()
+
+    await rate_limit.prune(db)
+
+    assert list((await db.execute(select(RateLimitHit.key))).scalars()) == ["t:recent"]
 
 
 async def test_account_locks_after_five_wrong_passwords_even_for_the_right_one(

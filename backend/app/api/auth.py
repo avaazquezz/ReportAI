@@ -89,17 +89,17 @@ async def login(
     payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
 ) -> TokenResponse:
     email_key, ip_key = payload.email.lower(), _client_ip(request)
-    rate_limit.login_by_email.check(email_key)
-    rate_limit.login_by_ip.check(ip_key)
+    await rate_limit.login_by_email.check(db, email_key)
+    await rate_limit.login_by_ip.check(db, ip_key)
 
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
 
     if user is None or not verify_password(payload.password, user.hashed_password) or not await can_sign_in(db, user):
-        rate_limit.login_by_email.record(email_key)
-        rate_limit.login_by_ip.record(ip_key)
+        await rate_limit.login_by_email.record(db, email_key)
+        await rate_limit.login_by_ip.record(db, ip_key)
         raise AuthenticationException("Incorrect email or password")
-    rate_limit.login_by_email.reset(email_key)
+    await rate_limit.login_by_email.reset(db, email_key)
     return tokens_for(user)
 
 
@@ -178,10 +178,10 @@ async def forgot_password(
     response, and any email-delivery failure, must never let a caller distinguish a
     known account from an unknown one."""
     email_key, ip_key = payload.email.lower(), _client_ip(request)
-    rate_limit.forgot_by_email.check(email_key)
-    rate_limit.forgot_by_ip.check(ip_key)
-    rate_limit.forgot_by_email.record(email_key)
-    rate_limit.forgot_by_ip.record(ip_key)
+    await rate_limit.forgot_by_email.check(db, email_key)
+    await rate_limit.forgot_by_ip.check(db, ip_key)
+    await rate_limit.forgot_by_email.record(db, email_key)
+    await rate_limit.forgot_by_ip.record(db, ip_key)
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
     if user is not None and await can_sign_in(db, user):
