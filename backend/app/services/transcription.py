@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple
@@ -11,6 +12,8 @@ from app.services.instance_settings import (
     transcription_config,
 )
 
+logger = logging.getLogger(__name__)
+
 # The provider reads the audio format off the file name, so stored audio keeps its real
 # extension. A table, not `mimetypes`: the slim image has no /etc/mime.types, so .ogg and .m4a
 # are unknown there, and where the file exists audio/ogg maps to .oga, not a format providers list.
@@ -20,6 +23,7 @@ AUDIO_TYPES = {".ogg": "audio/ogg", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", "
 class Transcript(NamedTuple):
     text: str
     model: str
+    seconds: float | None = None  # the audio's length, when the provider reports it
 
 
 def audio_suffix(media_reference: str) -> str:
@@ -51,11 +55,17 @@ async def transcribe(
             "Voice notes need a transcription provider: add its API key in the panel (Settings → AI), "
             "or set TRANSCRIPTION_API_KEY"
         )
+    # Whisper models are billed by audio length and report it only in verbose_json; the gpt-4o
+    # transcribe models accept nothing but json.
+    verbose = "whisper" in config.model.lower()
     result = await _client(config.api_key, config.base_url).audio.transcriptions.create(
         file=(filename, audio),
         model=config.model,
         language=language or settings.TRANSCRIPTION_LANGUAGE,
-        response_format="json",
+        response_format="verbose_json" if verbose else "json",
         temperature=0,
     )
-    return Transcript(result.text, config.model)
+    seconds = getattr(result, "duration", None)
+    if verbose and seconds is None:
+        logger.warning("Transcription model %s returned no duration: its cost can't be counted", config.model)
+    return Transcript(result.text, config.model, float(seconds) if seconds is not None else None)
