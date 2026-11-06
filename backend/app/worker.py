@@ -23,6 +23,7 @@ from app.core.logging import configure_logging
 from app.models.report import Report
 from app.models.used_refresh_token import UsedRefreshToken
 from app.repositories.report_repository import PENDING_STATUSES
+from app.services import plans
 from app.services.channels.telegram_updates import (
     polling_enabled,
     register_all_webhooks,
@@ -83,6 +84,14 @@ async def drop_expired_refresh_tokens() -> None:
         await session.commit()
 
 
+async def roll_plan_periods() -> None:
+    async with AsyncSessionLocal() as session:
+        rolled = await plans.advance_periods(session)
+        await session.commit()
+    if rolled:
+        logger.info("Started a new plan period for %s companies", rolled)
+
+
 async def prune_rate_limit_hits() -> None:
     async with AsyncSessionLocal() as session:
         await rate_limit.prune(session)
@@ -99,6 +108,7 @@ async def maintenance() -> None:
     await drop_finished_checkpoints()
     await drop_expired_refresh_tokens()
     await prune_rate_limit_hits()
+    await roll_plan_periods()
     await asyncio.to_thread(drop_expired_drafts)
 
 

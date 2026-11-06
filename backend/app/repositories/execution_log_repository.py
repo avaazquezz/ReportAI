@@ -38,12 +38,15 @@ class ExecutionLogRepository:
             "total_audio_seconds": float(audio_seconds),
         }
 
-    async def total_cost_since(self, since: datetime) -> float:
-        """Platform-wide (no tenant filter) — feeds the global daily spend cap.
-        ponytail: seq scan, fine at demo scale; index created_at if it ever hurts."""
+    async def total_cost_since(self, since: datetime, *, tenant_id: uuid.UUID | None = None) -> float:
+        """One company's spend (its plan's daily cap), or the whole platform's without tenant_id
+        (the global breaker). ponytail: seq scan on the platform-wide sum, fine at demo scale;
+        index created_at if it ever hurts."""
         query = select(func.coalesce(func.sum(ExecutionLog.cost_usd), 0)).where(
             ExecutionLog.created_at >= since
         )
+        if tenant_id is not None:
+            query = query.where(ExecutionLog.tenant_id == tenant_id)
         result = await self.db.execute(query)
         return float(result.scalar_one() or 0)
 

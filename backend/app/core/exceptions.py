@@ -37,3 +37,10 @@ class RateLimitException(ReportAIException):
             detail=detail,
             headers={"Retry-After": str(retry_after_seconds)},
         )
+
+
+class PlanLimitException(ReportAIException):
+    """The company's plan doesn't allow this right now: trial over, quota used, daily cap hit."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=detail)
