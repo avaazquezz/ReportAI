@@ -10,7 +10,8 @@
         "usage": "Uso y coste",
         "settings": "Ajustes",
         "team": "Equipo",
-        "myReports": "Mis informes"
+        "myReports": "Mis informes",
+        "audit": "Registro de actividad"
       },
       "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
       "toggleMenu": "Mostrar u ocultar el menú"
@@ -639,6 +640,61 @@
       "errors": {
         "load": "No se pudo cargar el plan.",
         "save": "No se pudo cambiar el plan."
+      }
+    },
+    "audit": {
+      "help": "Quién hizo qué y cuándo: accesos, cambios en el equipo, los canales y los ajustes. Se guarda un año.",
+      "system": "Sistema",
+      "anonymous": "Sin sesión iniciada",
+      "headers": {
+        "when": "Fecha",
+        "who": "Quién",
+        "what": "Qué",
+        "details": "Detalle"
+      },
+      "errors": {
+        "load": "No se pudo cargar el registro de actividad."
+      },
+      "actions": {
+        "auth": {
+          "login_succeeded": "Inició sesión",
+          "login_failed": "Intento de inicio de sesión fallido",
+          "password_changed": "Cambió su contraseña",
+          "password_reset_requested": "Se pidió restablecer la contraseña",
+          "password_reset": "Restableció la contraseña",
+          "profile_updated": "Cambió su perfil"
+        },
+        "team": {
+          "member_invited": "Invitó a una persona al equipo",
+          "member_updated": "Cambió a una persona del equipo",
+          "invite_resent": "Reenvió una invitación"
+        },
+        "company": {
+          "updated": "Cambió los datos de la empresa",
+          "logo_set": "Subió el logo",
+          "logo_removed": "Quitó el logo"
+        },
+        "instance": {
+          "ai_updated": "Cambió los ajustes de IA",
+          "email_updated": "Cambió el servidor de correo"
+        },
+        "channel": {
+          "created": "Creó un canal",
+          "updated": "Cambió un canal",
+          "invite_created": "Invitó a un remitente",
+          "invite_revoked": "Anuló una invitación de remitente",
+          "sender_enrolled": "Un remitente entró con su invitación"
+        },
+        "setup": {
+          "completed": "Configuró la instalación"
+        },
+        "tenant": {
+          "created": "Dio de alta la empresa",
+          "updated": "Suspendió o reactivó la empresa"
+        },
+        "plan": {
+          "changed": "Cambió el plan"
+        }
       }
     }
   }

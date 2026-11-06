@@ -34,6 +34,7 @@ const navItems = computed(() => {
     { title: t('admin.layout.nav.documentTypes'), to: '/admin/document-types', icon: 'mdi-file-document-outline' },
     { title: t('admin.layout.nav.channels'), to: '/admin/channels', icon: 'mdi-message-processing-outline' },
     { title: t('admin.layout.nav.team'), to: '/admin/team', icon: 'mdi-account-multiple-outline' },
+    { title: t('admin.layout.nav.audit'), to: '/admin/audit', icon: 'mdi-shield-search' },
     { title: t('admin.layout.nav.usage'), to: '/admin/usage', icon: 'mdi-chart-line' },
     settings
   ]
