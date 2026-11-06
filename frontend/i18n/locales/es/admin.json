@@ -214,8 +214,10 @@
       },
       "status": {
         "active": "Activa",
-        "inactive": "Inactiva"
+        "inactive": "Inactiva",
+        "deletionRequested": "Borrado pedido el {date}"
       },
+      "cancelDeletion": "{name} pidió borrar su empresa y sus datos se purgarán al acabar el plazo de gracia. Reactivarla anula el borrado y devuelve el acceso a su equipo.",
       "dialog": {
         "slugHint": "minúsculas, números y guiones",
         "adminNameLabel": "Nombre del admin",

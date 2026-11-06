@@ -214,8 +214,10 @@
       },
       "status": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "deletionRequested": "Deletion requested on {date}"
       },
+      "cancelDeletion": "{name} asked to delete its company, and its data will be purged when the grace period ends. Reactivating it cancels the deletion and gives its team access again.",
       "dialog": {
         "slugHint": "lowercase letters, numbers and hyphens",
         "adminNameLabel": "Admin name",

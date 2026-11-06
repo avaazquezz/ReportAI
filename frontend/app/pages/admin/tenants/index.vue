@@ -86,7 +86,10 @@ async function confirmToggle() {
       @update:options="load"
     >
       <template #item.is_active="{ item }">
-        <v-chip :color="item.is_active ? 'approved' : 'failed'" size="small" variant="tonal">
+        <v-chip v-if="item.deletion_requested_at" color="failed" size="small" variant="tonal">
+          {{ t('admin.tenants.status.deletionRequested', { date: formatDate(item.deletion_requested_at, { year: 'numeric', month: 'short', day: 'numeric' }) }) }}
+        </v-chip>
+        <v-chip v-else :color="item.is_active ? 'approved' : 'failed'" size="small" variant="tonal">
           {{ item.is_active ? t('admin.tenants.status.active') : t('admin.tenants.status.inactive') }}
         </v-chip>
       </template>
@@ -135,7 +138,9 @@ async function confirmToggle() {
       :message="
         pendingTenant?.is_active
           ? t('admin.common.confirmToggle.deactivate', { name: pendingTenant?.name })
-          : t('admin.common.confirmToggle.reactivate', { name: pendingTenant?.name })
+          : pendingTenant?.deletion_requested_at
+            ? t('admin.tenants.cancelDeletion', { name: pendingTenant?.name })
+            : t('admin.common.confirmToggle.reactivate', { name: pendingTenant?.name })
       "
       confirm-color="primary"
       @confirm="confirmToggle"

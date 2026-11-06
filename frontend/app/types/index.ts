@@ -32,6 +32,7 @@ export interface Tenant {
   plan: PlanKey
   plan_status: PlanStatus
   plan_period_end: string | null
+  deletion_requested_at: string | null
   created_at: string
 }
 
