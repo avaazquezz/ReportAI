@@ -129,7 +129,8 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, language: str) 
     if text or not media_reference:
         return text
     audio = await get_channel_adapter(connection).download_media(media_reference)
-    return (await transcription.transcribe(audio, f"reply-{job.id}.ogg", language)).text.strip()
+    filename = f"reply-{job.id}{transcription.audio_suffix(media_reference)}"
+    return (await transcription.transcribe(audio, filename, language)).text.strip()
 
 
 async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection, tenant: Tenant) -> None:

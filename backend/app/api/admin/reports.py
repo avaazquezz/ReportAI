@@ -61,6 +61,7 @@ from app.services.i18n import t
 from app.services.jobs.queue import RUN, enqueue
 from app.services.rendering.report_document import MissingTemplateError, render_report_pdf
 from app.services.sender_invites import sender_labels
+from app.services.transcription import AUDIO_TYPES
 
 router = APIRouter(prefix="/reports", tags=["admin:reports"])
 
@@ -509,7 +510,8 @@ async def report_audio(
     report = await _load(db, report_id, current_user)
     if not report.audio_path:
         raise ResourceNotFoundException("This report has no audio")
-    return FileResponse(report.audio_path, media_type="audio/ogg")
+    media_type = AUDIO_TYPES.get(Path(report.audio_path).suffix.lower(), "application/octet-stream")
+    return FileResponse(report.audio_path, media_type=media_type)
 
 
 @router.get("/{report_id}/photos/{photo_id}")
