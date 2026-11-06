@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,8 +14,16 @@ class TenantCreateRequest(BaseModel):
     admin_full_name: str = Field(min_length=1, max_length=255)
 
 
+PlanKey = Literal["unlimited", "trial", "starter", "pro", "business"]  # services/plans.py PLANS
+PlanStatus = Literal["trialing", "active", "past_due", "canceled"]
+
+
 class TenantUpdateRequest(BaseModel):
-    is_active: bool
+    """Changing `plan` starts a new period from now; changing only `plan_status` keeps it."""
+
+    is_active: bool | None = None
+    plan: PlanKey | None = None
+    plan_status: PlanStatus | None = None
 
 
 class TenantResponse(BaseModel):
@@ -24,6 +33,9 @@ class TenantResponse(BaseModel):
     name: str
     slug: str
     is_active: bool
+    plan: str
+    plan_status: str
+    plan_period_end: datetime | None
     created_at: datetime
 
 

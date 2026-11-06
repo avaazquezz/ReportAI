@@ -8,13 +8,15 @@ from fastapi import APIRouter, Depends, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import require_tenant_admin, require_tenant_member
 from app.core.exceptions import ResourceNotFoundException, ValidationException
 from app.core.scoping import require_tenant_id
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
-from app.schemas.company import CompanyResponse, CompanyUpdateRequest
+from app.schemas.company import CompanyResponse, CompanyUpdateRequest, PlanUsageResponse
+from app.services import plans
 from app.services.branding import InvalidLogoError, store_logo
 
 router = APIRouter(prefix="/company", tags=["admin:company"])
@@ -48,6 +50,21 @@ async def get_company(
     current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db)
 ) -> CompanyResponse:
     return _response(await _tenant(db, current_user))
+
+
+@router.get("/plan")
+async def get_plan(
+    current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db)
+) -> PlanUsageResponse:
+    tenant = await _tenant(db, current_user)
+    return PlanUsageResponse(
+        plan=tenant.plan,
+        status=tenant.plan_status,
+        period_start=tenant.plan_period_start,
+        period_end=tenant.plan_period_end,
+        reports_used=await plans.reports_this_period(db, tenant),
+        reports_limit=None if settings.SINGLE_TENANT else plans.plan_of(tenant).monthly_reports,
+    )
 
 
 @router.patch("")

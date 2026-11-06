@@ -22,6 +22,7 @@ from app.schemas.tenant import (
     TenantUpdateRequest,
 )
 from app.schemas.usage import UsageSummaryResponse
+from app.services import plans
 from app.services.notifications.invites import send_invite
 
 router = APIRouter(
@@ -55,12 +56,7 @@ async def create_tenant(
     # A failed email doesn't roll back the tenant: invite_email_sent=false, retry with /resend-invite.
     invite_sent, _ = await send_invite(db, admin_user)
     return TenantCreateResponse(
-        id=tenant.id,
-        name=tenant.name,
-        slug=tenant.slug,
-        is_active=tenant.is_active,
-        created_at=tenant.created_at,
-        invite_email_sent=invite_sent,
+        **TenantResponse.model_validate(tenant).model_dump(), invite_email_sent=invite_sent
     )
 
 
@@ -93,7 +89,14 @@ async def update_tenant(
     tenant = await repo.get_by_id(tenant_id)
     if tenant is None:
         raise ResourceNotFoundException()
-    tenant = await repo.update(tenant, is_active=payload.is_active)
+    if payload.is_active is not None:
+        tenant.is_active = payload.is_active
+    if payload.plan is not None and payload.plan != tenant.plan:
+        plans.start_plan(tenant, payload.plan, payload.plan_status or "active")
+    elif payload.plan_status is not None:
+        tenant.plan_status = payload.plan_status
+    await db.flush()
+    await db.refresh(tenant)
     return TenantResponse.model_validate(tenant)
 
 

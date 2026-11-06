@@ -13,14 +13,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_tenant_admin
-from app.core.exceptions import ResourceNotFoundException, ValidationException
+from app.core.exceptions import PlanLimitException, ResourceNotFoundException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.document_type import DocumentType
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.repositories.base import BaseRepository
 from app.schemas.document_type import DocumentTypeResponse
+from app.services import plans
 from app.services.branding import Branding
+from app.services.i18n import t
 from app.services.instance_settings import NotConfiguredError
 from app.services.rendering.gotenberg_client import convert_docx_to_pdf
 from app.services.templates import assistant
@@ -64,6 +66,9 @@ async def analyze_example(
 ) -> Draft:
     """Reads a filled-in example and proposes the fields and where each one goes."""
     tenant_id, doc_type, tenant = await _context(db, current_user, document_type_id)
+    # The most expensive single AI call in the product: the plan and the wallet decide first.
+    if refusal := await plans.message_refusal(db, tenant, voice=False):
+        raise PlanLimitException(t(tenant.language, refusal))
     content = await file.read(_MAX_UPLOAD_BYTES + 1)
     if len(content) > _MAX_UPLOAD_BYTES:
         raise ValidationException("The document must be under 15 MB")

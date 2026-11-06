@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from app.schemas.setup import Language, TimezoneField
@@ -16,3 +18,15 @@ class CompanyUpdateRequest(BaseModel):
     language: Language
     timezone: TimezoneField
     brand_color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+
+
+class PlanUsageResponse(BaseModel):
+    """What the company may use this period and how much it has. Self-host has no plans:
+    `plan` is "unlimited" and `reports_limit` None."""
+
+    plan: str
+    status: str
+    period_start: datetime | None
+    period_end: datetime | None
+    reports_used: int
+    reports_limit: int | None

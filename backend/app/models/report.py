@@ -13,6 +13,7 @@ class Report(Base):
     __tablename__ = "reports"
     __table_args__ = (
         Index("ix_reports_tenant_id", "tenant_id"),
+        Index("ix_reports_tenant_id_created_at", "tenant_id", "created_at"),  # the plan's quota count
         # A sender has at most one report in flight or waiting on them.
         Index(
             "uq_reports_one_active_per_sender",
