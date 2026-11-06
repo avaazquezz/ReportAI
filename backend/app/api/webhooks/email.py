@@ -4,9 +4,13 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# Not fastapi.UploadFile: that is a subclass, and request.form() hands back the starlette class,
+# so an isinstance check against fastapi's never matched and every audio attachment was dropped.
+from starlette.datastructures import UploadFile
 
 from app.core.config import settings
 from app.core.database import get_db
