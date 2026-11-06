@@ -26,13 +26,12 @@ async def telegram_webhook(
         raise ResourceNotFoundException("Unknown Telegram connection")
 
     # Telegram echoes the secret registered via setWebhook on every update — the
-    # equivalent of the HMAC checks the WhatsApp and Mailgun webhooks already do.
-    # Enforced only when the connection has one, so pre-existing connections keep working.
-    expected_secret = connection.credentials.get("secret_token")
-    if expected_secret:
-        provided = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
-        if not hmac.compare_digest(provided, expected_secret):
-            raise AuthenticationException("Invalid webhook secret")
+    # equivalent of the HMAC checks the WhatsApp and Mailgun webhooks already do. A connection
+    # without one is refused too: the worker gives it a secret and re-registers it at startup.
+    expected_secret = connection.credentials.get("secret_token") or ""
+    provided = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not expected_secret or not hmac.compare_digest(provided, expected_secret):
+        raise AuthenticationException("Invalid webhook secret")
 
     payload: dict[str, Any] = await request.json()
     if not await ingest_update(db, connection, payload):
