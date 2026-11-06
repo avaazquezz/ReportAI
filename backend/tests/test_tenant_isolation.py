@@ -200,7 +200,7 @@ async def test_another_company_gets_404_and_changes_nothing(
     assert await _snapshot(db, acme["tenant"]) == before
 
 
-LISTS = ["/reports", "/reports/export.csv", "/channels", "/team", "/document-types", "/dashboard", "/usage/summary"]
+LISTS = ["/reports", "/reports/export.csv", "/channels", "/team", "/document-types", "/dashboard", "/usage/summary", "/audit"]
 
 
 @pytest.mark.parametrize("path", LISTS)
