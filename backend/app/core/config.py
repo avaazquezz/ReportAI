@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     UPDATE_CHECK_ENABLED: bool = True
     UPDATE_REPOSITORY: str = "avaazquezz/ReportAI"
 
+    # ── Error tracking: unhandled errors and ERROR log lines go to this Sentry DSN, without bot
+    #    tokens or email addresses. Empty = off, so an installation sends nothing unless its
+    #    administrator sets one. ─────────────────────────────────────────────────────────────
+    SENTRY_DSN: str = ""
+
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
 

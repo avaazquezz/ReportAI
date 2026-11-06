@@ -22,11 +22,13 @@ from app.api.webhooks import telegram as telegram_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.error_tracking import init_error_tracking
 from app.core.logging import configure_logging
 from app.services.agent.tools.pricing import require_priced_model_for_spend_cap
 from app.services.setup import needs_setup
 
 configure_logging()
+init_error_tracking("api")
 logger = logging.getLogger(__name__)
 
 

@@ -18,6 +18,7 @@ from sqlalchemy import delete, text, update
 from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.error_tracking import init_error_tracking
 from app.core.langgraph_checkpointer import close_checkpointer, get_checkpointer, init_checkpointer
 from app.core.logging import configure_logging
 from app.models.report import Report
@@ -114,6 +115,7 @@ async def maintenance() -> None:
 
 async def main() -> None:
     configure_logging()
+    init_error_tracking("worker")
     worker_id = f"{socket.gethostname()}-{os.getpid()}"
     await init_checkpointer()
 
