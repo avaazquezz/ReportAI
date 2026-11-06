@@ -36,6 +36,7 @@ class TenantResponse(BaseModel):
     plan: str
     plan_status: str
     plan_period_end: datetime | None
+    deletion_requested_at: datetime | None  # set: blocked and purged 30 days later unless reactivated
     created_at: datetime
 
 

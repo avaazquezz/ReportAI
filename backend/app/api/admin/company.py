@@ -2,21 +2,30 @@
 look (logo and colour) on the emails and documents ReportAI sends for it."""
 
 import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import require_company_user, require_tenant_admin, require_tenant_member
 from app.core.exceptions import ResourceNotFoundException, ValidationException
 from app.core.scoping import require_tenant_id
+from app.core.security import verify_password
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
-from app.schemas.company import CompanyResponse, CompanyUpdateRequest, PlanUsageResponse
-from app.services import audit, plans
+from app.schemas.company import (
+    CompanyDeletionRequest,
+    CompanyDeletionResponse,
+    CompanyResponse,
+    CompanyUpdateRequest,
+    PlanUsageResponse,
+)
+from app.services import audit, data_lifecycle, plans
 from app.services.branding import InvalidLogoError, store_logo
 
 router = APIRouter(prefix="/company", tags=["admin:company"])
@@ -73,6 +82,35 @@ async def get_plan(
         reports_used=await plans.reports_this_period(db, tenant),
         reports_limit=None if settings.SINGLE_TENANT else plans.plan_of(tenant).monthly_reports,
     )
+
+
+@router.delete("", status_code=202)
+async def delete_company(
+    payload: CompanyDeletionRequest,
+    request: Request,
+    current_user: TenantUser = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+) -> CompanyDeletionResponse:
+    """Blocks the company at once (nobody in it can sign in or send anything) and purges all its
+    data when the grace period ends; until then, reactivating it (support) cancels the deletion.
+    An installation's only company is deleted by uninstalling, not from here."""
+    if settings.SINGLE_TENANT:
+        raise ResourceNotFoundException()
+    tenant = await _tenant(db, current_user)
+    # The password stands between a stolen session and the company's data: guessing it here
+    # spends the same attempts as the login form.
+    email_key = current_user.email.lower()
+    await rate_limit.login_by_email.check(db, email_key)
+    if not verify_password(payload.password, current_user.hashed_password):
+        await rate_limit.login_by_email.record(db, email_key)
+        raise ValidationException("That password is wrong")
+    if payload.company_name.strip() != tenant.name.strip():
+        raise ValidationException("Type the company's name exactly as it appears to confirm")
+    tenant.is_active = False
+    tenant.deletion_requested_at = datetime.now(UTC)
+    await audit.record(db, "company.deletion_requested", actor=current_user, target=tenant.id, request=request)
+    await db.flush()
+    return CompanyDeletionResponse(purge_after=tenant.deletion_requested_at + data_lifecycle.DELETION_GRACE)
 
 
 @router.patch("")

@@ -103,6 +103,9 @@ async def update_tenant(
     was_active, old_plan, old_status = tenant.is_active, tenant.plan, tenant.plan_status
     if payload.is_active is not None:
         tenant.is_active = payload.is_active
+    cancelled_deletion = tenant.is_active and tenant.deletion_requested_at is not None
+    if cancelled_deletion:  # how a company that asked to be deleted changes its mind: via support
+        tenant.deletion_requested_at = None
     if payload.plan is not None and payload.plan != tenant.plan:
         plans.start_plan(tenant, payload.plan, payload.plan_status or "active")
     elif payload.plan_status is not None:
@@ -112,6 +115,10 @@ async def update_tenant(
         await audit.record(
             db, "tenant.updated", actor=current_user, tenant_id=tenant.id, target=tenant.id, request=request,
             changes={"is_active": {"from": was_active, "to": tenant.is_active}},
+        )
+    if cancelled_deletion:
+        await audit.record(
+            db, "company.deletion_cancelled", actor=current_user, tenant_id=tenant.id, target=tenant.id, request=request
         )
     if (tenant.plan, tenant.plan_status) != (old_plan, old_status):
         await audit.record(

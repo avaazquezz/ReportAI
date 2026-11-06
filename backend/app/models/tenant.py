@@ -32,6 +32,9 @@ class Tenant(Base):
     plan_status: Mapped[str] = mapped_column(String(16), nullable=False, default="active", server_default="active")
     plan_period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     plan_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Its admin asked to delete it: blocked since, purged with all its data after a grace period
+    # (services/data_lifecycle.py). Reactivating the company cancels the request.
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
