@@ -189,12 +189,14 @@ async def export_company(
     """Everything ReportAI holds for the company, as one zip (data portability)."""
     tenant = await _tenant(db, current_user)
     await rate_limit.export_by_tenant.check(db, str(tenant.id))
-    await rate_limit.export_by_tenant.record(db, str(tenant.id))
-    await audit.record(db, "company.exported", actor=current_user, target=tenant.id, request=request)
     now = datetime.now(ZoneInfo(tenant.timezone))
     # ponytail: built in the request; a company with gigabytes of audio will hit proxy
     # timeouts — move to a job that emails a download link when that happens.
     archive = await export.build(db, tenant, now)
+    # Counted once built: an export that failed half-way can be retried at once. Two clicks at the
+    # same instant may both build one; harmless.
+    await audit.record(db, "company.exported", actor=current_user, target=tenant.id, request=request)
+    await rate_limit.export_by_tenant.record(db, str(tenant.id))  # commits the event with it
     return FileResponse(
         archive,
         filename=f"reportai-export-{tenant.slug}-{now.date().isoformat()}.zip",

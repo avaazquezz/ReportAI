@@ -118,6 +118,8 @@ async def test_the_admin_downloads_everything_the_company_holds(
 ) -> None:
     monkeypatch.setattr(settings, "SINGLE_TENANT", single_tenant)
     company = await _company(db, tmp_path / "garcia")
+    db.add(AuditEvent(tenant_id=company.tenant.id, actor_id=company.admin.id, action="auth.login_succeeded"))
+    await db.commit()
 
     response = await client.get("/company/export", headers=_headers(company.admin))
 
@@ -168,7 +170,8 @@ async def test_the_admin_downloads_everything_the_company_holds(
 
     [event] = await db.scalars(select(AuditEvent).where(AuditEvent.action == "company.exported"))
     assert (event.actor_id, event.tenant_id, event.target) == (company.admin.id, company.tenant.id, str(company.tenant.id))
-    assert [e["action"] for e in _json(files, "audit_events.json")] == ["company.exported"]
+    # The log as it stood: the export's own event is recorded once the zip is built.
+    assert [e["action"] for e in _json(files, "audit_events.json")] == ["auth.login_succeeded"]
 
 
 async def test_the_export_holds_no_secret_and_nothing_of_another_company(
@@ -199,6 +202,22 @@ async def test_a_second_export_within_the_hour_is_refused(client: AsyncClient, d
 
     assert (first.status_code, again.status_code, another_company.status_code) == (200, 429, 200)
     assert 0 < int(again.headers["retry-after"]) <= 3600
+
+
+async def test_an_export_that_fails_can_be_retried_at_once(
+    client: AsyncClient, db: AsyncSession, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    company = await _company(db, tmp_path / "garcia")
+
+    async def disk_full(*_: object) -> Path:
+        raise OSError("No space left on device")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("app.services.export.build", disk_full)
+        with pytest.raises(OSError):
+            await client.get("/company/export", headers=_headers(company.admin))
+
+    assert (await client.get("/company/export", headers=_headers(company.admin))).status_code == 200
 
 
 @pytest.mark.parametrize("role", ["approver", "viewer", "technician"])
