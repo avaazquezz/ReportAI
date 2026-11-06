@@ -33,8 +33,11 @@ class ReportFilters:
     created_from: datetime | None = None
     created_to: datetime | None = None
     q: str | None = None
+    requester_user_id: uuid.UUID | None = None  # set for a technician: only their own reports
 
     def apply(self, query: _Query) -> _Query:
+        if self.requester_user_id:
+            query = query.where(Report.requester_user_id == self.requester_user_id)
         if self.status:
             query = query.where(Report.status == self.status)
         if self.document_type_id:

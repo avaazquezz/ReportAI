@@ -15,7 +15,8 @@ class ReportResponse(BaseModel):
     status: str
     requester_channel: str
     requester_identifier: str
-    requester_name: str | None = None  # who the sender's invitation was for, when they joined by one
+    requester_name: str | None = None  # the signed-in person, or who a chat sender's invitation was for
+    requester_user_id: uuid.UUID | None = None
     error_detail: str | None
     download_url: str | None
     created_at: datetime

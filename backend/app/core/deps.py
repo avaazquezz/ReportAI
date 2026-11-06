@@ -70,12 +70,25 @@ async def get_current_user(
 # What a company's people can be: its admin runs everything; an approver reviews, corrects and
 # sends reports; a viewer only reads them.
 TENANT_ROLES = ("tenant_admin", "approver", "viewer")
+# A field technician captures reports and reads their own, nothing else. Deliberately not in
+# TENANT_ROLES: every route guarded by the panel roles refuses them without having to say so.
+TECHNICIAN = "technician"
 
 
 async def require_tenant_member(
     current_user: TenantUser = Depends(get_current_user),
 ) -> TenantUser:
     if current_user.role not in {*TENANT_ROLES, "super_admin"}:
+        raise AuthorizationException("Not a member of a company")
+    return current_user
+
+
+async def require_company_user(
+    current_user: TenantUser = Depends(get_current_user),
+) -> TenantUser:
+    """Anyone in a company, technicians included. A route that takes this must still limit a
+    technician to what is theirs (see `own_reports_only` in api/admin/reports.py)."""
+    if current_user.role not in {*TENANT_ROLES, TECHNICIAN, "super_admin"}:
         raise AuthorizationException("Not a member of a company")
     return current_user
 

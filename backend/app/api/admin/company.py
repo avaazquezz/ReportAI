@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import require_tenant_admin, require_tenant_member
+from app.core.deps import require_company_user, require_tenant_admin, require_tenant_member
 from app.core.exceptions import ResourceNotFoundException, ValidationException
 from app.core.scoping import require_tenant_id
 from app.models.tenant import Tenant
@@ -47,7 +47,7 @@ def _forget(path: str | None) -> None:
 
 @router.get("")
 async def get_company(
-    current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db)
 ) -> CompanyResponse:
     return _response(await _tenant(db, current_user))
 
@@ -113,7 +113,7 @@ async def delete_logo(
 
 @router.get("/logo")
 async def get_logo(
-    current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db)
 ) -> FileResponse:
     tenant = await _tenant(db, current_user)
     if not tenant.logo_path or not Path(tenant.logo_path).exists():

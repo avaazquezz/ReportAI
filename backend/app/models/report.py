@@ -14,6 +14,7 @@ class Report(Base):
     __table_args__ = (
         Index("ix_reports_tenant_id", "tenant_id"),
         Index("ix_reports_tenant_id_created_at", "tenant_id", "created_at"),  # the plan's quota count
+        Index("ix_reports_tenant_id_requester_user_id", "tenant_id", "requester_user_id", "created_at"),
         # A sender has at most one report in flight or waiting on them.
         Index(
             "uq_reports_one_active_per_sender",
@@ -41,6 +42,11 @@ class Report(Base):
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
     requester_channel: Mapped[str] = mapped_column(String(50), nullable=False)
     requester_identifier: Mapped[str] = mapped_column(String(255), nullable=False)
+    # The signed-in person who captured it (a technician on the web app); NULL for chat senders,
+    # who are known only by their channel id.
+    requester_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenant_users.id", ondelete="SET NULL"), nullable=True
+    )
     file_path: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     # What the panel shows for review: the text the fields were extracted from (a
     # transcript for voice notes), the audio, the fields and the quote backing each one.
