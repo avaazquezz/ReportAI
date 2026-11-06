@@ -19,6 +19,18 @@ export const useAuthStore = defineStore('auth', {
       await this.applySession(tokens)
     },
 
+    // A technician's way in: the emailed link's token, or its code typed in the installed app.
+    async magicSignIn(body: { token: string } | { email: string; code: string }) {
+      const api = useApi()
+      const tokens = await api<TokenResponse>('/auth/magic', { method: 'POST', body })
+      await this.applySession(tokens)
+    },
+
+    async requestMagicLink(email: string) {
+      const api = useApi()
+      await api('/auth/magic-link', { method: 'POST', body: { email } })
+    },
+
     async demoLogin() {
       const api = useApi()
       const tokens = await api<TokenResponse>('/auth/demo-login', { method: 'POST' })

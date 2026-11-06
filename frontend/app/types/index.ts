@@ -236,7 +236,7 @@ export interface UsageSummary {
 
 // ── Fase 3: one-company installations ────────────────────────────────────────────────
 
-export type TenantRole = 'tenant_admin' | 'approver' | 'viewer'
+export type TenantRole = 'tenant_admin' | 'approver' | 'viewer' | 'technician'
 
 export interface SetupStatus {
   single_tenant: boolean

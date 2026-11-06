@@ -501,17 +501,21 @@
       "roleHelp": {
         "tenant_admin": "Everything: templates, channels, team and settings",
         "approver": "Reviews, corrects, approves and resends reports",
-        "viewer": "Only reads reports"
+        "viewer": "Only reads reports",
+        "technician": "Prepares reports from their phone and sees only their own. Signs in with an emailed link, no password."
       },
       "toast": {
         "invited": "Invitation sent to {email}.",
-        "roleChanged": "{name}'s role updated."
+        "roleChanged": "{name}'s role updated.",
+        "signedOut": "{name} has been signed out everywhere"
       },
       "errors": {
         "load": "Couldn't load the team.",
         "invite": "Couldn't send the invitation.",
-        "update": "Couldn't save the change."
-      }
+        "update": "Couldn't save the change.",
+        "signOut": "Couldn't sign them out."
+      },
+      "signOut": "Sign out everywhere"
     },
     "profile": {
       "title": "My profile",
@@ -664,12 +668,15 @@
           "password_changed": "Changed their password",
           "password_reset_requested": "A password reset was requested",
           "password_reset": "Reset the password",
-          "profile_updated": "Updated their profile"
+          "profile_updated": "Updated their profile",
+          "magic_link_requested": "A sign-in link was sent",
+          "magic_sign_in": "Signed in with an emailed link"
         },
         "team": {
           "member_invited": "Invited a person to the team",
           "member_updated": "Changed a team member",
-          "invite_resent": "Resent an invitation"
+          "invite_resent": "Resent an invitation",
+          "signed_out": "Signed a person out everywhere"
         },
         "company": {
           "updated": "Changed the company's details",

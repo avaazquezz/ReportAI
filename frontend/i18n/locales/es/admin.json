@@ -501,17 +501,21 @@
       "roleHelp": {
         "tenant_admin": "Todo: plantillas, canales, equipo y ajustes",
         "approver": "Revisa, corrige, aprueba y reenvía informes",
-        "viewer": "Solo consulta los informes"
+        "viewer": "Solo consulta los informes",
+        "technician": "Prepara informes desde el móvil y ve solo los suyos. Entra con un enlace por email, sin contraseña."
       },
       "toast": {
         "invited": "Invitación enviada a {email}.",
-        "roleChanged": "Rol de {name} actualizado."
+        "roleChanged": "Rol de {name} actualizado.",
+        "signedOut": "Se han cerrado las sesiones de {name}"
       },
       "errors": {
         "load": "No se pudo cargar el equipo.",
         "invite": "No se pudo enviar la invitación.",
-        "update": "No se pudo guardar el cambio."
-      }
+        "update": "No se pudo guardar el cambio.",
+        "signOut": "No se pudieron cerrar las sesiones."
+      },
+      "signOut": "Cerrar sesiones"
     },
     "profile": {
       "title": "Mi perfil",
@@ -664,12 +668,15 @@
           "password_changed": "Cambió su contraseña",
           "password_reset_requested": "Se pidió restablecer la contraseña",
           "password_reset": "Restableció la contraseña",
-          "profile_updated": "Cambió su perfil"
+          "profile_updated": "Cambió su perfil",
+          "magic_link_requested": "Se envió un enlace para entrar",
+          "magic_sign_in": "Entró con un enlace por email"
         },
         "team": {
           "member_invited": "Invitó a una persona al equipo",
           "member_updated": "Cambió a una persona del equipo",
-          "invite_resent": "Reenvió una invitación"
+          "invite_resent": "Reenvió una invitación",
+          "signed_out": "Cerró todas las sesiones de una persona"
         },
         "company": {
           "updated": "Cambió los datos de la empresa",
