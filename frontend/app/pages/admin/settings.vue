@@ -32,6 +32,23 @@ const tabs = computed(() => [
 ])
 const tab = ref(String(route.query.tab ?? '') || tabs.value[0]?.value)
 watch(tab, (value) => navigateTo({ query: { tab: value } }, { replace: true }))
+
+const api = useApi()
+const { show } = useSnackbar()
+const exporting = ref(false)
+
+async function exportData() {
+  exporting.value = true
+  try {
+    const blob = await api<Blob>('/company/export', { responseType: 'blob' })
+    saveBlob(blob, `reportai-export-${new Date().toISOString().slice(0, 10)}.zip`)
+  } catch (err) {
+    const status = (err as { response?: Response }).response?.status
+    show(t(status === 429 ? 'admin.settings.export.tooSoon' : 'admin.settings.export.error'), 'error')
+  } finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -44,7 +61,17 @@ watch(tab, (value) => navigateTo({ query: { tab: value } }, { replace: true }))
       <v-divider />
       <v-card-text class="pa-6">
         <!-- No v-window: its slide animation stalled half-way while each tab loaded its data. -->
-        <SettingsCompanySettings v-if="tab === 'company'" />
+        <template v-if="tab === 'company'">
+          <SettingsCompanySettings />
+          <template v-if="isAdmin">
+            <v-divider class="my-6" />
+            <h3 class="font-display text-lg font-bold">{{ t('admin.settings.export.title') }}</h3>
+            <p class="mb-4 text-sm text-ink-900/70">{{ t('admin.settings.export.hint') }}</p>
+            <v-btn variant="tonal" color="primary" prepend-icon="mdi-download" :loading="exporting" @click="exportData">
+              {{ t('admin.settings.export.action') }}
+            </v-btn>
+          </template>
+        </template>
         <SettingsAiSettings v-else-if="tab === 'ai'" />
         <SettingsEmailSettings v-else-if="tab === 'email'" />
         <SettingsUpdatesPanel v-else-if="tab === 'updates'" />

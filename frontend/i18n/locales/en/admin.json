@@ -450,6 +450,13 @@
           "logo": "Couldn't update the logo."
         }
       },
+      "export": {
+        "title": "Export data",
+        "hint": "Download as one zip everything ReportAI holds for your company: its details, the team, the channels, the document types with their templates, the reports with their documents, audio and photos, and the audit log.",
+        "action": "Export data",
+        "tooSoon": "The data can be exported once an hour. Try again later.",
+        "error": "Couldn't export the data."
+      },
       "ai": {
         "openaiCompatible": "OpenAI-compatible (OpenAI, DeepSeek, Mistral, Ollama…)",
         "effortDefault": "The model's default",
@@ -683,7 +690,8 @@
         "company": {
           "updated": "Changed the company's details",
           "logo_set": "Uploaded the logo",
-          "logo_removed": "Removed the logo"
+          "logo_removed": "Removed the logo",
+          "exported": "Exported the company's data"
         },
         "instance": {
           "ai_updated": "Changed the AI settings",
