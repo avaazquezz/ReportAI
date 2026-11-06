@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import get_current_user, is_demo_user
+from app.core.deps import can_sign_in, get_current_user, is_demo_user
 from app.core.exceptions import (
     AuthenticationException,
     ResourceNotFoundException,
@@ -95,7 +95,7 @@ async def login(
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
 
-    if user is None or not user.is_active or not verify_password(payload.password, user.hashed_password):
+    if user is None or not verify_password(payload.password, user.hashed_password) or not await can_sign_in(db, user):
         rate_limit.login_by_email.record(email_key)
         rate_limit.login_by_ip.record(ip_key)
         raise AuthenticationException("Incorrect email or password")
@@ -113,7 +113,7 @@ async def demo_login(db: AsyncSession = Depends(get_db)) -> TokenResponse:
         select(TenantUser).where(TenantUser.email == settings.DEMO_USER_EMAIL)
     )
     user = result.scalar_one_or_none()
-    if user is None or not user.is_active:
+    if user is None or not await can_sign_in(db, user):
         raise ResourceNotFoundException()
     return tokens_for(user)
 
@@ -125,7 +125,7 @@ async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -
     claims = await _use_refresh_token(db, payload.refresh_token)
     user = await db.get(TenantUser, uuid.UUID(claims["sub"])) if claims else None
     # A token issued before the password was reset (or the account changed) ends with it.
-    if user is None or not user.is_active or claims is None or claims.get("ver", 0) != user.token_version:
+    if user is None or claims is None or claims.get("ver", 0) != user.token_version or not await can_sign_in(db, user):
         raise AuthenticationException("Session expired, please sign in again")
     return tokens_for(user)
 
@@ -184,7 +184,7 @@ async def forgot_password(
     rate_limit.forgot_by_ip.record(ip_key)
     result = await db.execute(select(TenantUser).where(TenantUser.email == payload.email))
     user = result.scalar_one_or_none()
-    if user is not None and user.is_active:
+    if user is not None and await can_sign_in(db, user):
         token = await issue_reset_token(db, user.id)
         reset_link = f"{settings.FRONTEND_ORIGIN}/reset-password?token={token}"
         tenant = await db.get(Tenant, user.tenant_id) if user.tenant_id else None
