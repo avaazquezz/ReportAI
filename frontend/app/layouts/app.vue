@@ -11,7 +11,7 @@ useHead({
 })
 const { state: snackbar } = useSnackbar()
 
-const { isAdmin, isSuperAdmin, isInstanceAdmin } = useRole()
+const { isAdmin, isMember, isSuperAdmin, isInstanceAdmin } = useRole()
 
 const navItems = computed(() => {
   const settings = { title: t('admin.layout.nav.settings'), to: '/admin/settings', icon: 'mdi-cog-outline' }
@@ -43,8 +43,12 @@ const roleLabel = computed(() => {
 
 // A security advisory that affects this release is shown on every page to whoever can update it.
 const { status: updates, load: loadUpdates } = useUpdates()
+// What the company's plan says about right now (trial days left, quota used up...), on every page.
+const { notice: planNotice, load: loadPlan } = usePlan()
 onMounted(() => {
   if (isInstanceAdmin.value) loadUpdates()
+  // Only a notice: if it can't be loaded the page works the same, so it just doesn't show.
+  if (isMember.value) loadPlan().catch(() => {})
 })
 
 const { mobile } = useDisplay()
@@ -97,6 +101,18 @@ function toggleDrawer() {
           class="mb-6"
         >
           {{ t('admin.layout.demoBanner') }}
+        </v-alert>
+        <v-alert
+          v-if="planNotice"
+          :type="planNotice.type"
+          variant="tonal"
+          density="compact"
+          class="mb-6"
+        >
+          {{ t(planNotice.key, planNotice.params ?? {}) }}
+          <template v-if="isAdmin" #append>
+            <v-btn variant="text" to="/admin/usage">{{ t('admin.plan.seePlan') }}</v-btn>
+          </template>
         </v-alert>
         <v-alert
           v-if="isInstanceAdmin && updates?.advisories.length"

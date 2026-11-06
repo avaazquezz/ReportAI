@@ -7,6 +7,7 @@ const { t } = useI18n()
 <template>
   <div>
     <h1 class="mb-6 font-display text-2xl font-bold text-ink-900">{{ t('admin.layout.nav.usage') }}</h1>
+    <AdminPlanCard class="mb-6" />
     <AdminUsageSummary />
   </div>
 </template>

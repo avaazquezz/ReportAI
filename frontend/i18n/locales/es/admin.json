@@ -601,6 +601,43 @@
         "load": "No se pudieron cargar las plantillas.",
         "install": "No se pudo crear el tipo de documento."
       }
+    },
+    "plan": {
+      "names": {
+        "unlimited": "Ilimitado",
+        "trial": "Prueba",
+        "starter": "Starter",
+        "pro": "Pro",
+        "business": "Business"
+      },
+      "status": {
+        "trialing": "En prueba",
+        "active": "Activo",
+        "past_due": "Pago pendiente",
+        "canceled": "Cancelado"
+      },
+      "notice": {
+        "trialDaysLeft": "Te quedan {days} días de prueba gratuita.",
+        "trialEnded": "La prueba gratuita ha terminado: no se preparan informes nuevos hasta elegir un plan.",
+        "quotaNear": "Llevas {used} de los {limit} informes de tu plan este mes.",
+        "quotaReached": "Has usado los {limit} informes de tu plan este mes: no se preparan informes nuevos hasta el próximo periodo o hasta ampliar el plan.",
+        "pastDue": "Hay un pago pendiente del plan. El servicio sigue activo mientras se resuelve.",
+        "inactive": "El plan no está activo: no se preparan informes."
+      },
+      "seePlan": "Ver el plan",
+      "trialUntil": "Prueba hasta el {date}",
+      "renewsOn": "El periodo se renueva el {date}",
+      "reportsUsed": "{used} de {limit} informes este periodo",
+      "noQuota": "{used} informes este periodo, sin límite",
+      "planLabel": "Plan",
+      "planHint": "Cambiar de plan empieza un periodo nuevo desde hoy",
+      "statusLabel": "Estado del plan",
+      "periodEnd": "Fin del periodo: {date}",
+      "toastSaved": "Plan actualizado",
+      "errors": {
+        "load": "No se pudo cargar el plan.",
+        "save": "No se pudo cambiar el plan."
+      }
     }
   }
 }
