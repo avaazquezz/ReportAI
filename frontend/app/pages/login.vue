@@ -3,6 +3,7 @@ definePageMeta({ layout: 'auth', titleKey: 'auth.login.title' })
 
 const authStore = useAuthStore()
 const { t } = useI18n()
+const { status } = useInstance()
 
 const email = ref('')
 const password = ref('')
@@ -62,6 +63,13 @@ async function onSubmit() {
       </NuxtLink>
       <NuxtLink to="/magic" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-600">
         {{ t('auth.login.technician') }}
+      </NuxtLink>
+      <NuxtLink
+        v-if="status?.signup_enabled"
+        to="/signup"
+        class="block text-center font-body text-sm font-medium text-capture-600 hover:underline"
+      >
+        {{ t('auth.login.signup') }}
       </NuxtLink>
     </form>
   </div>
