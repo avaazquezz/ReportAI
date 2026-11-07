@@ -60,11 +60,19 @@ export function useReports() {
   const preview = (id: string, fields: Record<string, unknown>) =>
     api<Blob>(`/reports/${id}/preview`, { method: 'POST', body: { fields }, responseType: 'blob' })
 
+  // What to change in a draft made in the app, said or typed: it is extracted again with it.
+  function reply(id: string, answer: { text: string | null; audio: Blob | null }) {
+    const form = new FormData()
+    if (answer.text) form.append('text', answer.text)
+    if (answer.audio) form.append('audio', answer.audio, `reply.${answer.audio.type.includes('mp4') ? 'm4a' : 'webm'}`)
+    return api<ReportDetail>(`/reports/${id}/reply`, { method: 'POST', body: form })
+  }
+
   const resend = (id: string, target: { delivery_id?: string; email?: string } = {}) =>
     api<ReportDetail>(`/reports/${id}/resend`, { method: 'POST', body: target })
 
   // Audio, photos and the PDF need the bearer token, so they are fetched, not linked.
   const fetchBlob = (url: string) => api<Blob>(url, { responseType: 'blob' })
 
-  return { items, total, loading, error, fetchList, exportCsv, getById, approve, reject, retry, editFields, preview, resend, fetchBlob }
+  return { items, total, loading, error, fetchList, exportCsv, getById, approve, reject, retry, editFields, preview, resend, reply, fetchBlob }
 }

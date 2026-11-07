@@ -11,7 +11,7 @@ useHead({
 })
 const { state: snackbar } = useSnackbar()
 
-const { isAdmin, isMember, isTechnician, isSuperAdmin, isInstanceAdmin } = useRole()
+const { isAdmin, isMember, isTechnician, isSuperAdmin, isInstanceAdmin, canCapture } = useRole()
 
 const navItems = computed(() => {
   const settings = { title: t('admin.layout.nav.settings'), to: '/admin/settings', icon: 'mdi-cog-outline' }
@@ -21,11 +21,13 @@ const navItems = computed(() => {
       ...(isInstanceAdmin.value ? [settings] : [])
     ]
   }
+  const capture = { title: t('admin.layout.nav.capture'), to: '/capture', icon: 'mdi-microphone-outline' }
   if (isTechnician.value) {
-    return [{ title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }]
+    return [capture, { title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }]
   }
   const items = [
     { title: t('admin.dashboard.title'), to: '/dashboard', icon: 'mdi-home-outline' },
+    ...(canCapture.value ? [capture] : []),
     { title: t('admin.layout.nav.reports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }
   ]
   if (!isAdmin.value) return items
@@ -90,7 +92,8 @@ function toggleDrawer() {
         </v-btn>
       </v-app-bar-title>
       <v-spacer />
-      <v-chip class="mr-4" size="small" variant="tonal">{{ roleLabel }}</v-chip>
+      <!-- On a phone the name needs the room more than the role does (CSS, not useDisplay: no hydration mismatch). -->
+      <v-chip class="mr-4 d-none d-sm-flex" size="small" variant="tonal">{{ roleLabel }}</v-chip>
       <LanguageSwitcher class="mr-4" />
       <v-btn variant="text" @click="authStore.logout()">{{ t('admin.layout.logout') }}</v-btn>
     </v-app-bar>
