@@ -242,6 +242,7 @@ export type TenantRole = 'tenant_admin' | 'approver' | 'viewer' | 'technician'
 export interface SetupStatus {
   single_tenant: boolean
   needs_setup: boolean
+  signup_enabled: boolean
 }
 
 export interface CheckResult {
