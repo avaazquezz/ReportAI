@@ -66,12 +66,15 @@ async def plan_deliveries(
     session: AsyncSession, report_id: uuid.UUID, *, channel_type: str, sender_id: str, emails: list[str]
 ) -> None:
     """Adds a row for each copy the report must reach; copies already planned are left as they are."""
-    copies = [(CHANNEL, sender_id)] + [
+    # Whoever captured it in the app downloads it there: no copy goes back on that channel.
+    copies = ([] if channel_type == "web" else [(CHANNEL, sender_id)]) + [
         (EMAIL, email)
         for email in dict.fromkeys(emails)
         # Someone who wrote to the bot by email already gets the PDF in their own thread.
         if not (channel_type == "email" and email.lower() == sender_id.lower())
     ]
+    if not copies:
+        return
     await session.execute(
         pg_insert(Delivery)
         .values([{"report_id": report_id, "kind": kind, "destination": to} for kind, to in copies])

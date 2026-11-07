@@ -119,3 +119,8 @@ def test_both_allowed_corrections_are_honoured_then_the_limit_applies() -> None:
 def test_panel_edits_that_do_not_fit_the_schema_go_back_to_the_person() -> None:
     state = _base_state(intent="ask", last_validation_error="not a date")
     assert _route_after_approval(state) == "ask_what_to_correct"
+
+
+def test_in_the_app_missing_fields_go_to_the_review_form_not_a_chat_question() -> None:
+    state = _base_state(channel_type="web", missing_fields=["visit_date"])
+    assert _route_after_completeness(state) == "human_approval_prompt"

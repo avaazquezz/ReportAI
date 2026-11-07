@@ -108,6 +108,15 @@ async def test_someone_who_wrote_by_email_is_not_sent_a_second_copy(db: AsyncSes
     assert (await _deliveries(db, report))["ana@acme.test"].kind == "channel"
 
 
+async def test_whoever_used_the_app_gets_no_copy_back_on_it(db: AsyncSession, tmp_path: Path) -> None:
+    report = await _report(db, tmp_path, channel_type="web", sender=str(uuid.uuid4()))
+
+    await _plan(db, report, [])
+    assert await _deliveries(db, report) == {}
+    await _plan(db, report, ["jefe@acme.test"])
+    assert {(d.kind, d.destination) for d in (await _deliveries(db, report)).values()} == {("email", "jefe@acme.test")}
+
+
 async def test_every_copy_is_sent_in_the_tenants_language_and_recorded(
     db: AsyncSession, own_sessions: None, tmp_path: Path, channel: AsyncMock, smtp: AsyncMock
 ) -> None:
