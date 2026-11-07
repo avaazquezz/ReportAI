@@ -130,7 +130,7 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant)
         return job.payload
     text = (job.payload.get("text") or "").strip()
     media_reference = job.payload.get("media_reference")
-    if text or not media_reference:
+    if not media_reference:
         return text
     audio = await get_channel_adapter(connection).download_media(media_reference)
     filename = f"reply-{job.id}{transcription.audio_suffix(media_reference)}"
@@ -145,7 +145,8 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant)
         usage=transcription_usage(transcript),
         latency_ms=int((time.monotonic() - start) * 1000),
     )
-    return transcript.text.strip()
+    # Said and typed together (a correction in the app): both reach the graph.
+    return "\n\n".join(part for part in (transcript.text.strip(), text) if part)
 
 
 async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection, tenant: Tenant) -> None:
