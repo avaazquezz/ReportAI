@@ -34,6 +34,8 @@ class TenantUser(Base):
     # Every token carries the version it was issued under; bumping it ends every session the
     # person has open (a password reset, a deactivation, a change of role).
     token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # When the person proved the address is theirs (a link or code sent there was used).
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

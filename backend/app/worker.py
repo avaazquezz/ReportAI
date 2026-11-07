@@ -15,13 +15,16 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, text, update
 
+from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.error_tracking import init_error_tracking
 from app.core.langgraph_checkpointer import close_checkpointer, get_checkpointer, init_checkpointer
 from app.core.logging import configure_logging
 from app.models.report import Report
 from app.models.used_refresh_token import UsedRefreshToken
 from app.repositories.report_repository import PENDING_STATUSES
+from app.services import audit, data_lifecycle, plans
 from app.services.channels.telegram_updates import (
     polling_enabled,
     register_all_webhooks,
@@ -82,6 +85,43 @@ async def drop_expired_refresh_tokens() -> None:
         await session.commit()
 
 
+async def roll_plan_periods() -> None:
+    async with AsyncSessionLocal() as session:
+        rolled = await plans.advance_periods(session)
+        await session.commit()
+    if rolled:
+        logger.info("Started a new plan period for %s companies", rolled)
+
+
+async def prune_rate_limit_hits() -> None:
+    async with AsyncSessionLocal() as session:
+        await rate_limit.prune(session)
+        await session.commit()
+
+
+async def prune_audit_events() -> None:
+    async with AsyncSessionLocal() as session:
+        await audit.prune(session)
+        await session.commit()
+
+
+async def purge_deleted_companies() -> None:
+    async with AsyncSessionLocal() as session:
+        purged = await data_lifecycle.purge_due_tenants(session)
+    for tenant_id in purged:
+        logger.info("Purged company %s at the end of its deletion grace period", tenant_id)
+
+
+async def apply_retention() -> None:
+    async with AsyncSessionLocal() as session:
+        dropped = await data_lifecycle.drop_expired_audio(session)
+        await data_lifecycle.prune_inbound_ids(session)
+        await session.commit()
+    if dropped:
+        logger.info("Deleted %s voice notes past their retention", dropped)
+    await asyncio.to_thread(data_lifecycle.drop_stale_inbound_files)
+
+
 async def maintenance() -> None:
     for job_id, report_id in await fail_abandoned():
         logger.error("Job %s was abandoned by a dead worker with no attempts left", job_id)
@@ -91,11 +131,17 @@ async def maintenance() -> None:
         logger.info("Cancelled %s reports that waited too long for an answer", cancelled)
     await drop_finished_checkpoints()
     await drop_expired_refresh_tokens()
+    await prune_rate_limit_hits()
+    await prune_audit_events()
+    await roll_plan_periods()
     await asyncio.to_thread(drop_expired_drafts)
+    await purge_deleted_companies()
+    await apply_retention()
 
 
 async def main() -> None:
     configure_logging()
+    init_error_tracking("worker")
     worker_id = f"{socket.gethostname()}-{os.getpid()}"
     await init_checkpointer()
 

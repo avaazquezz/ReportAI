@@ -7,6 +7,7 @@ applied or it expires; nothing touches the document type before "apply"."""
 
 import re
 import shutil
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -17,9 +18,11 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.core.config import settings
 from app.schemas.document_type import ColumnSpec, ColumnType, FieldSchemaEntry
+from app.services.agent.tools.pricing import usage_of
 from app.services.branding import TEMPLATE_VARIABLE, Branding
 from app.services.i18n import LANGUAGE_NAMES, normalize_language
 from app.services.llm import structured_completion
+from app.services.observability.execution_log import write_execution_log
 from app.services.rendering.docx_render import fill_template
 from app.services.templates.docx_tagging import (
     Block,
@@ -290,12 +293,22 @@ async def create_draft(
     if already_tagged:
         proposal = _from_tags(str(original), [b.text for b in blocks])
     else:
+        start = time.monotonic()
         result = await structured_completion(
             system=_SYSTEM,
             user=_prompt(blocks, tables, language),
             model_cls=Proposal,
             tool_name="propose_template",
             max_tokens=16_000,
+        )
+        # Logged as soon as it is paid for, before anything below can fail.
+        await write_execution_log(
+            tenant_id=tenant_id,
+            report_id=None,
+            step="template_assistant",
+            status="success",
+            usage=usage_of(result),
+            latency_ms=int((time.monotonic() - start) * 1000),
         )
         proposal = _clean(_parse(result.data), block_texts, table_rows)
 

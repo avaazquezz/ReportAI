@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import computed_field
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # A technician's phone stays signed in this long after each use (refresh tokens rotate):
+    # signing in again in front of a site, gloves on, is what the field app must spare them.
+    TECHNICIAN_REFRESH_DAYS: int = 30
 
     # ── Secrets at rest (app.core.crypto). Any long random string; empty = derived from
     #    SECRET_KEY (older installations). Changing it makes stored secrets unreadable. ──
@@ -30,12 +33,20 @@ class Settings(BaseSettings):
     # its admin also runs the installation's settings. false = this server hosts several
     # companies under a super admin (the public demo).
     SINGLE_TENANT: bool = False
+    # Anyone may create a company on a free trial at /signup (the hosted service, once its legal
+    # texts are out). A one-company installation has no use for it: both on refuses to start.
+    SIGNUP_ENABLED: bool = False
 
     # ── Release this installation runs (baked into the image at build time; "dev" from a
     #    checkout) and where newer releases and security advisories are published. ──────
     REPORTAI_VERSION: str = "dev"
     UPDATE_CHECK_ENABLED: bool = True
     UPDATE_REPOSITORY: str = "avaazquezz/ReportAI"
+
+    # ── Error tracking: unhandled errors and ERROR log lines go to this Sentry DSN, without bot
+    #    tokens or email addresses. Empty = off, so an installation sends nothing unless its
+    #    administrator sets one. ─────────────────────────────────────────────────────────────
+    SENTRY_DSN: str = ""
 
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
@@ -50,6 +61,9 @@ class Settings(BaseSettings):
 
     # ── Agent pipeline ───────────────────────────────────────────────────
     DOCUMENT_STORAGE_PATH: str = "storage"
+    # Voice notes are deleted this many days after they arrive (the transcript stays with the
+    # report). 0 = kept for good, as installations always have; the hosted service sets 90.
+    AUDIO_RETENTION_DAYS: int = 0
     MAX_DOCTYPE_SELECTION_ATTEMPTS: int = 3
     MAX_VALIDATION_RETRIES: int = 3
     MAX_CORRECTION_RETRIES: int = 2
@@ -123,6 +137,12 @@ class Settings(BaseSettings):
     MAILGUN_API_KEY: str = ""
     MAILGUN_SIGNING_KEY: str = ""
     MAILGUN_INBOUND_DOMAIN: str = ""
+
+    @model_validator(mode="after")
+    def _signup_needs_several_companies(self) -> "Settings":
+        if self.SIGNUP_ENABLED and self.SINGLE_TENANT:
+            raise ValueError("SIGNUP_ENABLED=true needs SINGLE_TENANT=false: a one-company installation has no signup")
+        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property

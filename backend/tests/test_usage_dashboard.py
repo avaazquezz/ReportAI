@@ -107,6 +107,25 @@ async def test_usage_summary_computes_exact_aggregates(client: AsyncClient, db: 
     assert body["total_reports"] == 2
 
 
+async def test_usage_summary_totals_tokens_and_audio_minutes(client: AsyncClient, db: AsyncSession) -> None:
+    user = await _create_tenant_admin(db)
+    token = await _login(client, user.email)
+    db.add_all(
+        [
+            ExecutionLog(tenant_id=user.tenant_id, step="extract", status="success", input_tokens=1200, output_tokens=300),
+            ExecutionLog(tenant_id=user.tenant_id, step="template_assistant", status="success", input_tokens=40, output_tokens=3),
+            ExecutionLog(tenant_id=user.tenant_id, step="transcribe", status="success", audio_seconds=90.0),
+            ExecutionLog(tenant_id=user.tenant_id, step="transcribe_reply", status="success", audio_seconds=30.0),
+            ExecutionLog(tenant_id=user.tenant_id, step="render", status="success"),  # no AI: adds nothing
+        ]
+    )
+    await db.commit()
+
+    body = (await client.get("/usage/summary?days=30", headers={"Authorization": f"Bearer {token}"})).json()
+
+    assert (body["total_input_tokens"], body["total_output_tokens"], body["total_audio_minutes"]) == (1240, 303, 2.0)
+
+
 async def test_usage_summary_excludes_entries_outside_window(client: AsyncClient, db: AsyncSession) -> None:
     user = await _create_tenant_admin(db)
     token = await _login(client, user.email)

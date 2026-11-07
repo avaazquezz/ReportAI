@@ -9,14 +9,13 @@ from app.core.database import AsyncSessionLocal
 from app.models.report_attachment import ReportAttachment
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.persistence import save_report
-from app.services.agent.state import AgentState, ToolUsage
+from app.services.agent.state import AgentState
 from app.services.agent.summary import build_summary, chunk_text
 from app.services.agent.tools.extraction_schema import merge_edits
 from app.services.agent.tools.intent import classify_reply
-from app.services.agent.tools.pricing import estimate_cost_usd
+from app.services.agent.tools.pricing import usage_of
 from app.services.channels.base import Button
 from app.services.i18n import t
-from app.services.llm import LLMResult
 from app.services.observability.execution_log import observed_node
 
 logger = logging.getLogger(__name__)
@@ -74,15 +73,6 @@ async def await_human_approval_node(state: AgentState) -> AgentState:
     return state.model_copy(update={"pending_user_reply": reply})
 
 
-def _usage(result: LLMResult | None) -> ToolUsage | None:
-    if result is None:
-        return None
-    return ToolUsage(
-        model_used=result.model,
-        cost_usd=estimate_cost_usd(result.model, result.input_tokens, result.output_tokens),
-    )
-
-
 def _apply_edited_fields(state: AgentState, edited: dict[str, Any]) -> AgentState:
     """Fields a person corrected in the panel replace the extracted ones — validated like any
     extraction, and their evidence dropped: the quote no longer backs what is now there."""
@@ -95,7 +85,6 @@ def _apply_edited_fields(state: AgentState, edited: dict[str, Any]) -> AgentStat
 @observed_node("classify_approval_reply")
 async def classify_approval_reply_node(state: AgentState) -> AgentState:
     reply = state.pending_user_reply
-    usage = None
 
     if isinstance(reply, dict):  # a button, or the panel
         action = reply.get("action", "confirm")
@@ -110,8 +99,7 @@ async def classify_approval_reply_node(state: AgentState) -> AgentState:
 
     text = (reply or "").strip()
     intent, result = await classify_reply(text)
-    usage = _usage(result)
-    update: dict[str, Any] = {"intent": intent, "last_tool_usage": usage}
+    update: dict[str, Any] = {"intent": intent, "last_tool_usage": usage_of(result) if result else None}
     if intent == "correct":
         update |= {"correction_text": text, "correction_attempts": state.correction_attempts + 1}
     else:

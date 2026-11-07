@@ -5,6 +5,7 @@ from pathlib import Path
 import aiosmtplib
 from aiosmtplib.errors import SMTPConnectError, SMTPServerDisconnected, SMTPTimeoutError
 
+from app.core.config import settings
 from app.services.agent.tools.retry import retry_async
 from app.services.branding import Branding, email_html
 from app.services.instance_settings import NotConfiguredError, SMTPConfig, smtp_config
@@ -34,8 +35,16 @@ def new_message(
     """Plain text always; with `branding`, also an HTML version in the company's colours with its
     logo embedded (an embedded image shows without the reader allowing remote content)."""
     message = EmailMessage()
-    # The company's name as the sender's: "Reformas García <informes@…>", not a bare address.
-    message["From"] = formataddr((branding.name, config.from_address)) if branding else config.from_address
+    if branding is None:
+        message["From"] = config.from_address
+    else:
+        # The company's name as the sender's: "Reformas García <informes@…>", not a bare address. Hosting
+        # several companies, all of them send from the platform's address: "via ReportAI" says so, and keeps
+        # one company from passing itself off as another brand. Replies still reach the company.
+        name = branding.name if settings.SINGLE_TENANT else f"{branding.name} via ReportAI"
+        message["From"] = formataddr((name, config.from_address))
+        if branding.reply_to:
+            message["Reply-To"] = branding.reply_to
     message["To"] = ", ".join(to)
     message["Subject"] = subject
     for name, value in (headers or {}).items():

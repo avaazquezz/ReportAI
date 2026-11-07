@@ -1,63 +1,76 @@
 import math
-import time
-from collections import defaultdict, deque
+from datetime import timedelta
+
+from sqlalchemy import delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import RateLimitException
+from app.models.rate_limit_hit import RateLimitHit
+
+# Rows older than this are useless: no window below is longer. The worker prunes them.
+KEEP_HITS_FOR = timedelta(days=1)
 
 
 class AttemptLimiter:
-    """Sliding-window counter of attempts per key, kept in this process's memory.
+    """Sliding-window count of attempts per key, in Postgres: every API worker and every restart
+    shares it, so the limit is the configured one, not a multiple of it.
 
-    # ponytail: per-process, so with `--workers 2` the effective limit is up to twice the
-    # configured one, and it resets on restart. Move the counters to Postgres if brute force
-    # against a real installation ever shows up in the logs.
+    # ponytail: check and record are separate statements, so a burst of simultaneous attempts
+    # can overshoot the limit by a few. A per-key advisory lock closes that if it ever matters.
     """
 
-    _PURGE_ABOVE_KEYS = 10_000  # bounds memory against an attacker spraying distinct keys
-
-    def __init__(self, max_attempts: int, window_seconds: float) -> None:
+    def __init__(self, name: str, max_attempts: int, window_seconds: int) -> None:
+        self.name = name
         self.max_attempts = max_attempts
-        self.window_seconds = window_seconds
-        self._attempts: defaultdict[str, deque[float]] = defaultdict(deque)
+        self.window = timedelta(seconds=window_seconds)
 
-    def _recent(self, key: str) -> deque[float]:
-        attempts = self._attempts[key]
-        cutoff = time.monotonic() - self.window_seconds
-        while attempts and attempts[0] <= cutoff:
-            attempts.popleft()
-        return attempts
+    def _key(self, key: str) -> str:
+        return f"{self.name}:{key}"
 
-    def check(self, key: str) -> None:
+    async def check(self, db: AsyncSession, key: str) -> None:
         """Raise RateLimitException if `key` already used up its attempts in the window."""
-        attempts = self._recent(key)
-        if len(attempts) >= self.max_attempts:
-            retry_after = math.ceil(attempts[0] + self.window_seconds - time.monotonic())
-            raise RateLimitException(max(retry_after, 1))
+        count, oldest_left = (
+            await db.execute(
+                select(
+                    func.count(),
+                    func.extract("epoch", func.min(RateLimitHit.at) + self.window - func.now()),
+                ).where(RateLimitHit.key == self._key(key), RateLimitHit.at > func.now() - self.window)
+            )
+        ).one()
+        if count >= self.max_attempts:
+            raise RateLimitException(max(math.ceil(oldest_left), 1))
 
-    def record(self, key: str) -> None:
-        if len(self._attempts) > self._PURGE_ABOVE_KEYS:
-            for stale in [k for k in self._attempts if not self._recent(k)]:
-                del self._attempts[stale]
-        self._recent(key).append(time.monotonic())
+    async def record(self, db: AsyncSession, key: str) -> None:
+        """Counts one attempt and commits at once: the request usually fails right after, and
+        its rollback must not take the attempt with it."""
+        db.add(RateLimitHit(key=self._key(key)))
+        await db.commit()
 
-    def reset(self, key: str) -> None:
-        self._attempts.pop(key, None)
-
-    def clear(self) -> None:
-        self._attempts.clear()
+    async def reset(self, db: AsyncSession, key: str) -> None:
+        await db.execute(delete(RateLimitHit).where(RateLimitHit.key == self._key(key)))
 
 
 # Failed logins: per account (stops guessing one password list) and per IP (stops spraying
 # one password over many accounts). Reset on a successful login.
-login_by_email = AttemptLimiter(max_attempts=5, window_seconds=15 * 60)
-login_by_ip = AttemptLimiter(max_attempts=30, window_seconds=15 * 60)
+login_by_email = AttemptLimiter("login_email", max_attempts=5, window_seconds=15 * 60)
+login_by_ip = AttemptLimiter("login_ip", max_attempts=30, window_seconds=15 * 60)
 # Every password-reset request counts — each one sends an email.
-forgot_by_email = AttemptLimiter(max_attempts=5, window_seconds=60 * 60)
-forgot_by_ip = AttemptLimiter(max_attempts=20, window_seconds=60 * 60)
+forgot_by_email = AttemptLimiter("forgot_email", max_attempts=5, window_seconds=60 * 60)
+forgot_by_ip = AttemptLimiter("forgot_ip", max_attempts=20, window_seconds=60 * 60)
 # Wrong setup codes: the code is long enough not to be guessed, this just keeps it that way.
-setup_code_by_ip = AttemptLimiter(max_attempts=10, window_seconds=15 * 60)
+setup_code_by_ip = AttemptLimiter("setup_code_ip", max_attempts=10, window_seconds=15 * 60)
+# Technicians' sign-in links: each request sends an email, like a reset.
+magic_link_by_email = AttemptLimiter("magic_link_email", max_attempts=5, window_seconds=60 * 60)
+magic_link_by_ip = AttemptLimiter("magic_link_ip", max_attempts=20, window_seconds=60 * 60)
+# Wrong typed codes: 5 and the outstanding code dies with them (8 characters, 31 symbols each).
+MAGIC_CODE_ATTEMPTS = 5
+magic_code_by_email = AttemptLimiter("magic_code_email", max_attempts=MAGIC_CODE_ATTEMPTS, window_seconds=15 * 60)
+# Each signup emails an address nobody has proven yet: few per address, few per sender.
+signup_by_email = AttemptLimiter("signup_email", max_attempts=3, window_seconds=60 * 60)
+signup_by_ip = AttemptLimiter("signup_ip", max_attempts=5, window_seconds=60 * 60)
+# A company's data export reads every file it has: once an hour is plenty for portability.
+export_by_tenant = AttemptLimiter("export_tenant", max_attempts=1, window_seconds=60 * 60)
 
 
-def clear_all() -> None:
-    for limiter in (login_by_email, login_by_ip, forgot_by_email, forgot_by_ip, setup_code_by_ip):
-        limiter.clear()
+async def prune(db: AsyncSession) -> None:
+    await db.execute(delete(RateLimitHit).where(RateLimitHit.at < func.now() - KEEP_HITS_FOR))

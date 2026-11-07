@@ -34,8 +34,8 @@ def create_access_token(data: dict[str, Any]) -> str:
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def create_refresh_token(data: dict[str, Any]) -> str:
-    payload = _build_payload(data, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS))
+def create_refresh_token(data: dict[str, Any], days: int | None = None) -> str:
+    payload = _build_payload(data, timedelta(days=days or settings.REFRESH_TOKEN_EXPIRE_DAYS))
     payload["type"] = "refresh"
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 

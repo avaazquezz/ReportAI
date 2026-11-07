@@ -1,5 +1,6 @@
 # Import every model so Base.metadata is fully populated for Alembic
 # autogenerate diffing and for Base.metadata.create_all in tests.
+from app.models.audit_event import AuditEvent  # noqa: F401
 from app.models.channel_connection import ChannelConnection  # noqa: F401
 from app.models.delivery import Delivery  # noqa: F401
 from app.models.document_template import DocumentTemplate  # noqa: F401
@@ -9,6 +10,7 @@ from app.models.inbound_message import InboundMessage  # noqa: F401
 from app.models.instance_setting import InstanceSetting  # noqa: F401
 from app.models.job import Job  # noqa: F401
 from app.models.password_reset_token import PasswordResetToken  # noqa: F401
+from app.models.rate_limit_hit import RateLimitHit  # noqa: F401
 from app.models.report import Report  # noqa: F401
 from app.models.report_attachment import ReportAttachment  # noqa: F401
 from app.models.report_revision import ReportRevision  # noqa: F401

@@ -9,7 +9,9 @@
         "reports": "Informes",
         "usage": "Uso y coste",
         "settings": "Ajustes",
-        "team": "Equipo"
+        "team": "Equipo",
+        "myReports": "Mis informes",
+        "audit": "Registro de actividad"
       },
       "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
       "toggleMenu": "Mostrar u ocultar el menú"
@@ -212,8 +214,10 @@
       },
       "status": {
         "active": "Activa",
-        "inactive": "Inactiva"
+        "inactive": "Inactiva",
+        "deletionRequested": "Borrado pedido el {date}"
       },
+      "cancelDeletion": "{name} pidió borrar su empresa y sus datos se purgarán al acabar el plazo de gracia. Reactivarla anula el borrado y devuelve el acceso a su equipo.",
       "dialog": {
         "slugHint": "minúsculas, números y guiones",
         "adminNameLabel": "Nombre del admin",
@@ -369,6 +373,9 @@
       "costLabel": "Coste (30 días)",
       "reportsGeneratedLabel": "Informes generados",
       "avgLatencyLabel": "Latencia media",
+      "inputTokensLabel": "Tokens de entrada",
+      "outputTokensLabel": "Tokens de salida",
+      "audioMinutesLabel": "Minutos de audio transcritos",
       "dailyCostTitle": "Coste diario",
       "noActivity": "Sin actividad en este periodo.",
       "byStatusTitle": "Informes por estado",
@@ -391,7 +398,8 @@
       "tenant_admin": "Administrador",
       "approver": "Aprobador",
       "viewer": "Solo lectura",
-      "super_admin": "Super admin"
+      "super_admin": "Super admin",
+      "technician": "Técnico de campo"
     },
     "updates": {
       "securityTitle": "Actualización de seguridad pendiente",
@@ -427,6 +435,8 @@
         "timezone": "Zona horaria",
         "color": "Color de marca",
         "colorHint": "Se usa en los emails que envía ReportAI",
+        "replyTo": "Email para respuestas",
+        "replyToHint": "Las respuestas a los emails que ReportAI envía por tu empresa llegan aquí. Vacío: llegan a la dirección que los envía.",
         "logo": "Logo",
         "logoHint": "Sale en los emails y, si la plantilla lo incluye ({tag}), en los documentos.",
         "noLogo": "Sin logo",
@@ -439,6 +449,27 @@
           "save": "No se pudieron guardar los cambios.",
           "logo": "No se pudo actualizar el logo."
         }
+      },
+      "export": {
+        "title": "Exportar datos",
+        "hint": "Descarga en un zip todo lo que ReportAI guarda de tu empresa: sus datos, el equipo, los canales, los tipos de documento con sus plantillas, los informes con sus documentos, audios y fotos, y el registro de auditoría.",
+        "action": "Exportar datos",
+        "tooSoon": "Solo se pueden exportar los datos una vez por hora. Vuelve a intentarlo más tarde.",
+        "error": "No se pudieron exportar los datos."
+      },
+      "delete": {
+        "title": "Borrar la empresa",
+        "hint": "Bloquea al momento el acceso de todo el equipo y, 30 días después, borra para siempre todos los datos de la empresa: informes, audios, fotos, plantillas y equipo. Exporta antes tus datos si los vas a necesitar.",
+        "action": "Borrar la empresa",
+        "warning": "Nadie de la empresa podrá entrar ni enviar informes desde ahora. Pasados 30 días, todos sus datos se borrarán sin vuelta atrás.",
+        "nameLabel": "Escribe «{name}» para confirmar",
+        "passwordLabel": "Tu contraseña",
+        "wrongPassword": "La contraseña no es correcta.",
+        "tooManyAttempts": "Demasiados intentos. Espera unos minutos.",
+        "error": "No se pudo borrar la empresa.",
+        "doneTitle": "Empresa bloqueada",
+        "done": "Tus datos se borrarán para siempre el {date}. Si cambias de opinión antes, escribe a {email}.",
+        "signOut": "Salir"
       },
       "ai": {
         "openaiCompatible": "Compatible con OpenAI (OpenAI, DeepSeek, Mistral, Ollama…)",
@@ -493,17 +524,21 @@
       "roleHelp": {
         "tenant_admin": "Todo: plantillas, canales, equipo y ajustes",
         "approver": "Revisa, corrige, aprueba y reenvía informes",
-        "viewer": "Solo consulta los informes"
+        "viewer": "Solo consulta los informes",
+        "technician": "Prepara informes desde el móvil y ve solo los suyos. Entra con un enlace por email, sin contraseña."
       },
       "toast": {
         "invited": "Invitación enviada a {email}.",
-        "roleChanged": "Rol de {name} actualizado."
+        "roleChanged": "Rol de {name} actualizado.",
+        "signedOut": "Se han cerrado las sesiones de {name}"
       },
       "errors": {
         "load": "No se pudo cargar el equipo.",
         "invite": "No se pudo enviar la invitación.",
-        "update": "No se pudo guardar el cambio."
-      }
+        "update": "No se pudo guardar el cambio.",
+        "signOut": "No se pudieron cerrar las sesiones."
+      },
+      "signOut": "Cerrar sesiones"
     },
     "profile": {
       "title": "Mi perfil",
@@ -597,6 +632,105 @@
       "errors": {
         "load": "No se pudieron cargar las plantillas.",
         "install": "No se pudo crear el tipo de documento."
+      }
+    },
+    "plan": {
+      "names": {
+        "unlimited": "Ilimitado",
+        "trial": "Prueba",
+        "starter": "Starter",
+        "pro": "Pro",
+        "business": "Business"
+      },
+      "status": {
+        "trialing": "En prueba",
+        "active": "Activo",
+        "past_due": "Pago pendiente",
+        "canceled": "Cancelado"
+      },
+      "notice": {
+        "trialDaysLeft": "Te quedan {days} días de prueba gratuita.",
+        "trialEnded": "La prueba gratuita ha terminado: no se preparan informes nuevos hasta elegir un plan.",
+        "quotaNear": "Llevas {used} de los {limit} informes de tu plan este mes.",
+        "quotaReached": "Has usado los {limit} informes de tu plan este mes: no se preparan informes nuevos hasta el próximo periodo o hasta ampliar el plan.",
+        "pastDue": "Hay un pago pendiente del plan. El servicio sigue activo mientras se resuelve.",
+        "inactive": "El plan no está activo: no se preparan informes."
+      },
+      "seePlan": "Ver el plan",
+      "trialUntil": "Prueba hasta el {date}",
+      "renewsOn": "El periodo se renueva el {date}",
+      "reportsUsed": "{used} de {limit} informes este periodo",
+      "noQuota": "{used} informes este periodo, sin límite",
+      "planLabel": "Plan",
+      "planHint": "Cambiar de plan empieza un periodo nuevo desde hoy",
+      "statusLabel": "Estado del plan",
+      "periodEnd": "Fin del periodo: {date}",
+      "toastSaved": "Plan actualizado",
+      "errors": {
+        "load": "No se pudo cargar el plan.",
+        "save": "No se pudo cambiar el plan."
+      }
+    },
+    "audit": {
+      "help": "Quién hizo qué y cuándo: accesos, cambios en el equipo, los canales y los ajustes. Se guarda un año.",
+      "system": "Sistema",
+      "anonymous": "Sin sesión iniciada",
+      "headers": {
+        "when": "Fecha",
+        "who": "Quién",
+        "what": "Qué",
+        "details": "Detalle"
+      },
+      "errors": {
+        "load": "No se pudo cargar el registro de actividad."
+      },
+      "actions": {
+        "auth": {
+          "login_succeeded": "Inició sesión",
+          "login_failed": "Intento de inicio de sesión fallido",
+          "password_changed": "Cambió su contraseña",
+          "password_reset_requested": "Se pidió restablecer la contraseña",
+          "password_reset": "Restableció la contraseña",
+          "profile_updated": "Cambió su perfil",
+          "magic_link_requested": "Se envió un enlace para entrar",
+          "magic_sign_in": "Entró con un enlace por email"
+        },
+        "team": {
+          "member_invited": "Invitó a una persona al equipo",
+          "member_updated": "Cambió a una persona del equipo",
+          "invite_resent": "Reenvió una invitación",
+          "signed_out": "Cerró todas las sesiones de una persona"
+        },
+        "company": {
+          "updated": "Cambió los datos de la empresa",
+          "logo_set": "Subió el logo",
+          "logo_removed": "Quitó el logo",
+          "exported": "Exportó los datos de la empresa",
+          "deletion_requested": "Pidió borrar la empresa",
+          "deletion_cancelled": "Anuló el borrado de la empresa"
+        },
+        "instance": {
+          "ai_updated": "Cambió los ajustes de IA",
+          "email_updated": "Cambió el servidor de correo"
+        },
+        "channel": {
+          "created": "Creó un canal",
+          "updated": "Cambió un canal",
+          "invite_created": "Invitó a un remitente",
+          "invite_revoked": "Anuló una invitación de remitente",
+          "sender_enrolled": "Un remitente entró con su invitación"
+        },
+        "setup": {
+          "completed": "Configuró la instalación"
+        },
+        "tenant": {
+          "created": "Dio de alta la empresa",
+          "updated": "Suspendió o reactivó la empresa",
+          "purged": "Se purgaron todos los datos de una empresa"
+        },
+        "plan": {
+          "changed": "Cambió el plan"
+        }
       }
     }
   }

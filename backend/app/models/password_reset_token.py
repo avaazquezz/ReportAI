@@ -22,6 +22,11 @@ class PasswordResetToken(Base):
         UUID(as_uuid=True), ForeignKey("tenant_users.id", ondelete="CASCADE"), nullable=False
     )
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    # "reset" sets a password (resets and panel invitations); "magic" signs a technician in. One
+    # never works as the other.
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False, default="reset", server_default="reset")
+    # A magic link's typed twin: the installed iPhone app can't receive the link, only the code.
+    code_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

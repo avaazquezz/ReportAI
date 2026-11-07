@@ -11,7 +11,7 @@ useHead({
 })
 const { state: snackbar } = useSnackbar()
 
-const { isAdmin, isSuperAdmin, isInstanceAdmin } = useRole()
+const { isAdmin, isMember, isTechnician, isSuperAdmin, isInstanceAdmin } = useRole()
 
 const navItems = computed(() => {
   const settings = { title: t('admin.layout.nav.settings'), to: '/admin/settings', icon: 'mdi-cog-outline' }
@@ -20,6 +20,9 @@ const navItems = computed(() => {
       { title: t('admin.layout.nav.tenants'), to: '/admin/tenants', icon: 'mdi-domain' },
       ...(isInstanceAdmin.value ? [settings] : [])
     ]
+  }
+  if (isTechnician.value) {
+    return [{ title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }]
   }
   const items = [
     { title: t('admin.dashboard.title'), to: '/dashboard', icon: 'mdi-home-outline' },
@@ -31,6 +34,7 @@ const navItems = computed(() => {
     { title: t('admin.layout.nav.documentTypes'), to: '/admin/document-types', icon: 'mdi-file-document-outline' },
     { title: t('admin.layout.nav.channels'), to: '/admin/channels', icon: 'mdi-message-processing-outline' },
     { title: t('admin.layout.nav.team'), to: '/admin/team', icon: 'mdi-account-multiple-outline' },
+    { title: t('admin.layout.nav.audit'), to: '/admin/audit', icon: 'mdi-shield-search' },
     { title: t('admin.layout.nav.usage'), to: '/admin/usage', icon: 'mdi-chart-line' },
     settings
   ]
@@ -43,8 +47,12 @@ const roleLabel = computed(() => {
 
 // A security advisory that affects this release is shown on every page to whoever can update it.
 const { status: updates, load: loadUpdates } = useUpdates()
+// What the company's plan says about right now (trial days left, quota used up...), on every page.
+const { notice: planNotice, load: loadPlan } = usePlan()
 onMounted(() => {
   if (isInstanceAdmin.value) loadUpdates()
+  // Only a notice: if it can't be loaded the page works the same, so it just doesn't show.
+  if (isMember.value) loadPlan().catch(() => {})
 })
 
 const { mobile } = useDisplay()
@@ -97,6 +105,18 @@ function toggleDrawer() {
           class="mb-6"
         >
           {{ t('admin.layout.demoBanner') }}
+        </v-alert>
+        <v-alert
+          v-if="planNotice"
+          :type="planNotice.type"
+          variant="tonal"
+          density="compact"
+          class="mb-6"
+        >
+          {{ t(planNotice.key, planNotice.params ?? {}) }}
+          <template v-if="isAdmin" #append>
+            <v-btn variant="text" to="/admin/usage">{{ t('admin.plan.seePlan') }}</v-btn>
+          </template>
         </v-alert>
         <v-alert
           v-if="isInstanceAdmin && updates?.advisories.length"

@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.security import hash_password
 from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
+from app.models.execution_log import ExecutionLog
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.services.llm import LLMResult
@@ -74,7 +75,8 @@ def _storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def model(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
+def model(monkeypatch: pytest.MonkeyPatch, own_sessions: None) -> AsyncMock:
+    # own_sessions: the call is metered in execution_logs through a session of its own.
     ask = AsyncMock(return_value=LLMResult(MODEL_ANSWER, 100, 100, "claude-sonnet-5"))
     monkeypatch.setattr(assistant, "structured_completion", ask)
     return ask
@@ -121,6 +123,19 @@ async def test_the_proposal_keeps_only_what_can_be_done(client: AsyncClient, db:
     assert [f["name"] for f in draft["proposal"]["fields"]] == ["cliente", "fecha", "materiales"]
     assert [v["text"] for v in draft["proposal"]["values"]] == ["Comunidad Calle Mayor 12", "14/09/2026"]
     assert draft["blocks"]["b1"] == "Cliente: Comunidad Calle Mayor 12" and draft["already_tagged"] is False
+
+
+async def test_the_proposal_is_metered_for_the_company_without_a_report(
+    client: AsyncClient, db: AsyncSession, model: AsyncMock
+) -> None:
+    doc_type, headers = await _setup(client, db)
+
+    await _upload(client, doc_type, headers, _example())
+
+    [row] = (await db.execute(select(ExecutionLog))).scalars().all()
+    assert (row.step, row.tenant_id, row.report_id) == ("template_assistant", doc_type.tenant_id, None)
+    assert (row.model_used, row.input_tokens, row.output_tokens) == ("claude-sonnet-5", 100, 100)
+    assert float(row.cost_usd or 0) == pytest.approx(100 * 2 / 1e6 + 100 * 10 / 1e6)
 
 
 async def test_a_preview_renders_without_saving_anything(

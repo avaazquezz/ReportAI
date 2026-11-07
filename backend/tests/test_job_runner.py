@@ -8,9 +8,11 @@ from unittest.mock import AsyncMock
 
 import pytest
 from langgraph.types import Command
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.channel_connection import ChannelConnection
+from app.models.execution_log import ExecutionLog
 from app.models.job import Job
 from app.models.report import Report
 from app.models.tenant import Tenant
@@ -165,6 +167,24 @@ async def test_a_voice_reply_is_transcribed_before_the_graph_sees_it(
     adapter.download_media.assert_awaited_once_with("voice-9")
     assert graph.ainvoke.await_args.args[0] == Command(resume="la fecha era el martes")
     assert transcribe.await_args.args[2] == "es"  # in the company's language
+
+
+async def test_a_voice_reply_is_metered_for_its_report(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph(paused=True))
+    adapter.download_media.return_value = b"opus"
+    transcribe = AsyncMock(return_value=Transcript("vale", "whisper-large-v3-turbo", 30.0))
+    monkeypatch.setattr(runner.transcription, "transcribe", transcribe)
+
+    await execute(_job(report, RESUME, {"text": None, "media_reference": "voice-9"}))
+
+    [row] = (await db.execute(select(ExecutionLog))).scalars().all()
+    assert (row.step, row.status, row.tenant_id, row.report_id) == ("transcribe_reply", "success", report.tenant_id, report.id)
+    assert float(row.audio_seconds or 0) == 30.0
+    assert float(row.cost_usd or 0) == pytest.approx(30 / 3600 * 0.04, abs=1e-6)
+    assert transcribe.await_args.args[1].endswith(".ogg")  # a Telegram voice note is OGG Opus
 
 
 async def test_a_resume_for_a_report_that_is_no_longer_paused_is_a_no_op(

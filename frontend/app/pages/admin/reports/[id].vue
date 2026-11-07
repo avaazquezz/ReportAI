@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FieldValue, ReportDelivery, ReportDetail } from '~/types'
 
-definePageMeta({ middleware: ['auth', 'require-tenant-member'], layout: 'app', titleKey: 'admin.reports.detail.title' })
+definePageMeta({ middleware: ['auth', 'require-company-user'], layout: 'app', titleKey: 'admin.reports.detail.title' })
 
 const { t, te } = useI18n()
 const route = useRoute()

@@ -10,6 +10,7 @@ pollers of one bot make Telegram answer 409 to both."""
 import asyncio
 import contextlib
 import logging
+import secrets
 import uuid
 from typing import Any
 
@@ -166,7 +167,10 @@ async def run_pollers(stopping: asyncio.Event) -> None:
 
 async def register_all_webhooks() -> None:
     """With a public address, (re)points every active bot at it: a domain added or changed after
-    the bots were saved needs no manual step. setWebhook is idempotent."""
+    the bots were saved needs no manual step. setWebhook is idempotent.
+
+    The webhook refuses updates without the secret, so a bot saved before secrets existed gets
+    one here and is re-registered with it: Telegram retries the refused updates meanwhile."""
     async with AsyncSessionLocal() as session:
         connections = (
             await session.scalars(
@@ -175,9 +179,11 @@ async def register_all_webhooks() -> None:
                 )
             )
         ).all()
+        for connection in connections:
+            if not connection.credentials.get("secret_token"):
+                connection.credentials = {**connection.credentials, "secret_token": secrets.token_urlsafe(32)}
+        await session.commit()
     for connection in connections:
-        if not connection.credentials.get("secret_token"):
-            continue  # older connections get a secret when they are saved again
         try:
             await register_telegram_webhook(connection.id, connection.credentials)
         except ValidationException as exc:
