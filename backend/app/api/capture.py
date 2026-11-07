@@ -10,12 +10,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, Header, UploadFile
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_capturer
 from app.core.exceptions import ConflictException, PlanLimitException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
+from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.models.tenant import Tenant
@@ -37,6 +39,12 @@ class CaptureResponse(BaseModel):
     status: str
 
 
+class CaptureDocumentType(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str | None
+
+
 def _replay(report: Report, user: TenantUser) -> CaptureResponse:
     """The same capture sent again (the app retries until it hears back): the report it made."""
     if report.tenant_id != user.tenant_id or report.requester_user_id != user.id:
@@ -47,6 +55,22 @@ def _replay(report: Report, user: TenantUser) -> CaptureResponse:
 def _check_photo(raw: bytes) -> None:
     with Image.open(io.BytesIO(raw)) as image:
         image.verify()
+
+
+@router.get("/capture/document-types")
+async def capture_document_types(
+    current_user: TenantUser = Depends(require_capturer), db: AsyncSession = Depends(get_db)
+) -> list[CaptureDocumentType]:
+    """What the app offers to record: the company's active types that have a template (one without
+    would spend the extraction and then fail to render). Just the picker's fields: a technician
+    has no business with the prompts or the recipients."""
+    has_template = exists().where(DocumentTemplate.document_type_id == DocumentType.id, DocumentTemplate.is_active.is_(True))
+    types = await db.scalars(
+        select(DocumentType)
+        .where(DocumentType.tenant_id == require_tenant_id(current_user), DocumentType.is_active.is_(True), has_template)
+        .order_by(DocumentType.name)
+    )
+    return [CaptureDocumentType(id=dt.id, name=dt.name, description=dt.description) for dt in types]
 
 
 @router.post("/capture", status_code=202)

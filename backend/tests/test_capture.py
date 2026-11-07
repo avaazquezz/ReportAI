@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.security import create_access_token, hash_password
 from app.models.channel_connection import ChannelConnection
+from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
 from app.models.job import Job
 from app.models.report import Report
@@ -191,3 +192,20 @@ async def test_replies_are_only_for_the_owner_s_waiting_app_drafts(client: Async
     assert (await reply(chat, acme["technician"])).status_code == 409  # a chat report is answered in the chat
     assert (await reply(done, acme["technician"])).status_code == 409
     assert await _count(db, Job) == 0
+
+
+async def test_the_app_offers_the_active_types_that_can_be_rendered(client: AsyncClient, db: AsyncSession) -> None:
+    acme, other = await _company(db), await _company(db, "Other")
+    untemplated = DocumentType(tenant_id=acme["tenant"].id, name="Sin plantilla", field_schema={}, is_active=True)
+    old = DocumentType(tenant_id=acme["tenant"].id, name="Vieja", field_schema={}, is_active=False)
+    db.add_all([untemplated, old])
+    await db.flush()
+    for doc_type in (acme["doc_type"], old, other["doc_type"]):
+        db.add(DocumentTemplate(tenant_id=doc_type.tenant_id, document_type_id=doc_type.id, file_path="x.docx", version=1, is_active=True))
+    await db.commit()
+
+    offered = await client.get("/capture/document-types", headers=_auth(acme["technician"]))
+
+    assert offered.status_code == 200
+    assert offered.json() == [{"id": str(acme["doc_type"].id), "name": "Visita de obra", "description": None}]
+    assert (await client.get("/capture/document-types", headers=_auth(acme["viewer"]))).status_code == 403
