@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import computed_field
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # its admin also runs the installation's settings. false = this server hosts several
     # companies under a super admin (the public demo).
     SINGLE_TENANT: bool = False
+    # Anyone may create a company on a free trial at /signup (the hosted service, once its legal
+    # texts are out). A one-company installation has no use for it: both on refuses to start.
+    SIGNUP_ENABLED: bool = False
 
     # ── Release this installation runs (baked into the image at build time; "dev" from a
     #    checkout) and where newer releases and security advisories are published. ──────
@@ -134,6 +137,12 @@ class Settings(BaseSettings):
     MAILGUN_API_KEY: str = ""
     MAILGUN_SIGNING_KEY: str = ""
     MAILGUN_INBOUND_DOMAIN: str = ""
+
+    @model_validator(mode="after")
+    def _signup_needs_several_companies(self) -> "Settings":
+        if self.SIGNUP_ENABLED and self.SINGLE_TENANT:
+            raise ValueError("SIGNUP_ENABLED=true needs SINGLE_TENANT=false: a one-company installation has no signup")
+        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property

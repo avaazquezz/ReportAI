@@ -21,6 +21,7 @@ TimezoneField = Annotated[str, AfterValidator(_known_timezone)]
 class SetupStatusResponse(BaseModel):
     single_tenant: bool
     needs_setup: bool
+    signup_enabled: bool
 
 
 class SetupCodeRequest(BaseModel):
