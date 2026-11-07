@@ -1,6 +1,6 @@
 """Webhook auth for Telegram — the only channel without an HMAC check until Phase 4.
 Telegram echoes the secret registered via setWebhook in the
-X-Telegram-Bot-Api-Secret-Token header; the route must verify it when present."""
+X-Telegram-Bot-Api-Secret-Token header; the route refuses any update without the right one."""
 
 from typing import Any
 from unittest.mock import AsyncMock
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.channel_connection import ChannelConnection
 from app.models.tenant import Tenant
+from app.services.channels import telegram_updates
 
 _UPDATE: dict[str, Any] = {"message": {"chat": {"id": 123456}, "text": "hello"}}
 
@@ -78,16 +79,37 @@ async def test_wrong_or_missing_secret_rejected(
     _pipeline_mock.assert_not_awaited()
 
 
-async def test_connection_without_secret_still_accepted(
+async def test_connection_without_secret_is_refused(
     client: AsyncClient, db: AsyncSession, _pipeline_mock: AsyncMock
 ) -> None:
-    # Enforce-if-present: connections created before secrets existed keep working.
+    # No secret means anyone who learns the connection id could post as the bot's users.
     connection = await _create_connection(db, credentials={"bot_token": "t"})
 
     response = await client.post(f"/webhooks/telegram/{connection.id}", json=_UPDATE)
 
-    assert response.status_code == 200
-    _pipeline_mock.assert_awaited_once()
+    assert response.status_code == 401
+    _pipeline_mock.assert_not_awaited()
+
+
+@pytest.mark.usefixtures("own_sessions")
+async def test_startup_gives_old_connections_a_secret_and_registers_it(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    connection = await _create_connection(db, credentials={"bot_token": "t"})
+    registered: dict[str, str] = {}
+
+    async def fake_register(connection_id: object, credentials: dict[str, str]) -> bool:
+        registered.update(credentials)
+        return True
+
+    monkeypatch.setattr(telegram_updates, "register_telegram_webhook", fake_register)
+
+    await telegram_updates.register_all_webhooks()
+
+    await db.refresh(connection)
+    secret = connection.credentials["secret_token"]
+    assert len(secret) >= 32 and connection.credentials["bot_token"] == "t"
+    assert registered["secret_token"] == secret
 
 
 async def test_inactive_connection_is_404(

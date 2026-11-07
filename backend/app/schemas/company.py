@@ -1,5 +1,8 @@
-from pydantic import BaseModel, Field
+from datetime import datetime
 
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.validators import EmailField
 from app.schemas.setup import Language, TimezoneField
 
 
@@ -8,7 +11,17 @@ class CompanyResponse(BaseModel):
     language: str
     timezone: str
     brand_color: str | None
+    reply_to_email: str | None
     has_logo: bool
+
+
+class CompanyDeletionRequest(BaseModel):
+    password: str = Field(max_length=128)
+    company_name: str = Field(max_length=255)  # typed by hand, as the last confirmation
+
+
+class CompanyDeletionResponse(BaseModel):
+    purge_after: datetime  # when every piece of the company's data is gone for good
 
 
 class CompanyUpdateRequest(BaseModel):
@@ -16,3 +29,22 @@ class CompanyUpdateRequest(BaseModel):
     language: Language
     timezone: TimezoneField
     brand_color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    # Where replies to its emails go. Empty or null: none, replies go to the sending address.
+    reply_to_email: EmailField | None = Field(default=None, max_length=320)
+
+    @field_validator("reply_to_email", mode="before")
+    @classmethod
+    def _empty_clears(cls, value: object) -> object:
+        return value or None
+
+
+class PlanUsageResponse(BaseModel):
+    """What the company may use this period and how much it has. Self-host has no plans:
+    `plan` is "unlimited" and `reports_limit` None."""
+
+    plan: str
+    status: str
+    period_start: datetime | None
+    period_end: datetime | None
+    reports_used: int
+    reports_limit: int | None

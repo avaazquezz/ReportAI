@@ -25,6 +25,18 @@ def _hash(code: str) -> str:
     return hashlib.sha256(code.upper().replace("-", "").encode()).hexdigest()
 
 
+def typed_code() -> tuple[str, str]:
+    """A fresh code a person reads and types (no 0/O, 1/I/L): its hash to keep, and how to show
+    it ("ABCD-EFGH"). Shared by sender invitations and the technicians' sign-in codes."""
+    raw = "".join(secrets.choice(_ALPHABET) for _ in range(_CODE_LENGTH))
+    return _hash(raw), f"{raw[:4]}-{raw[4:]}"
+
+
+def hash_typed_code(code: str) -> str:
+    """The hash a typed code is looked up by: case, spaces and the dash don't matter."""
+    return _hash(code.strip().replace(" ", ""))
+
+
 def code_in(text: str | None) -> str | None:
     """The invitation code a message consists of, if it is one."""
     match = _CODE_MESSAGE.match((text or "").strip())
@@ -44,18 +56,18 @@ async def create_invite(
     session: AsyncSession, connection: ChannelConnection, label: str, created_by: uuid.UUID
 ) -> tuple[SenderInvite, str]:
     """A new invitation and its code (shown once: only its hash is kept)."""
-    raw = "".join(secrets.choice(_ALPHABET) for _ in range(_CODE_LENGTH))
+    code_hash, code = typed_code()
     invite = SenderInvite(
         tenant_id=connection.tenant_id,
         connection_id=connection.id,
         label=label,
-        code_hash=_hash(raw),
+        code_hash=code_hash,
         expires_at=datetime.now(UTC) + INVITE_TTL,
         created_by=created_by,
     )
     session.add(invite)
     await session.flush()
-    return invite, f"{raw[:4]}-{raw[4:]}"
+    return invite, code
 
 
 async def redeem(session: AsyncSession, connection: ChannelConnection, code: str, sender_id: str) -> SenderInvite | None:

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { ReportFilters } from '~/types'
 
-definePageMeta({ middleware: ['auth', 'require-tenant-member'], layout: 'app', titleKey: 'admin.layout.nav.reports' })
+definePageMeta({ middleware: ['auth', 'require-company-user'], layout: 'app', titleKey: 'admin.layout.nav.reports' })
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { formatDateTime } = useLocaleDate()
 const { items, total, loading, error, fetchList, exportCsv } = useReports()
+const { isMember } = useRole()
 const { statusLabel, statusColor, statusOptions } = useReportStatus()
 const { items: documentTypes, fetchList: fetchDocumentTypes } = useDocumentTypes()
 const { show } = useSnackbar()
@@ -116,7 +117,7 @@ onBeforeUnmount(() => {
   <div>
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 class="font-display text-2xl font-bold text-ink-900">{{ t('admin.layout.nav.reports') }}</h1>
-      <v-btn variant="tonal" prepend-icon="mdi-file-delimited-outline" @click="onExport">
+      <v-btn v-if="isMember" variant="tonal" prepend-icon="mdi-file-delimited-outline" @click="onExport">
         {{ t('admin.reports.filters.exportCsv') }}
       </v-btn>
     </div>

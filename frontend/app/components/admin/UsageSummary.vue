@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const props = withDefaults(defineProps<{ tenantId?: string }>(), { tenantId: undefined })
 
 const DAYS = 30
@@ -24,6 +24,19 @@ const dailySeries = computed(() => {
 const sparklineValues = computed(() => dailySeries.value.map((point) => point.cost))
 const sparklineLabels = computed(() => dailySeries.value.map((point, index) => (index % 5 === 4 ? point.label : ' ')))
 const hasActivity = computed(() => sparklineValues.value.some((cost) => cost > 0))
+
+const aiUsage = computed(() => {
+  const s = summary.value
+  if (!s) return []
+  return [
+    { label: t('admin.usageSummary.inputTokensLabel'), value: s.total_input_tokens.toLocaleString(locale.value) },
+    { label: t('admin.usageSummary.outputTokensLabel'), value: s.total_output_tokens.toLocaleString(locale.value) },
+    {
+      label: t('admin.usageSummary.audioMinutesLabel'),
+      value: s.total_audio_minutes.toLocaleString(locale.value, { maximumFractionDigits: 1 })
+    }
+  ]
+})
 
 onMounted(() => fetchSummary(DAYS))
 </script>
@@ -55,6 +68,12 @@ onMounted(() => fetchSummary(DAYS))
             <p class="font-display text-2xl font-bold text-ink-900">
               {{ summary.avg_latency_ms ? Math.round(summary.avg_latency_ms) + ' ms' : '—' }}
             </p>
+          </v-card-text>
+        </v-card>
+        <v-card v-for="item in aiUsage" :key="item.label">
+          <v-card-text>
+            <p class="font-body text-sm text-ink-900/60">{{ item.label }}</p>
+            <p class="font-display text-2xl font-bold text-ink-900">{{ item.value }}</p>
           </v-card-text>
         </v-card>
       </div>

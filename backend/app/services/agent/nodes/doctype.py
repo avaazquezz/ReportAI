@@ -8,7 +8,7 @@ from app.models.document_type import DocumentType
 from app.repositories.base import BaseRepository
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.state import AgentState, DocumentTypeOption, ToolUsage
-from app.services.agent.tools.pricing import estimate_cost_usd
+from app.services.agent.tools.pricing import usage_of
 from app.services.channels.base import Button
 from app.services.i18n import t
 from app.services.llm import structured_completion
@@ -59,10 +59,7 @@ async def _classify_type(
         tool_name="choose_document_type",
         max_tokens=200,
     )
-    usage = ToolUsage(
-        model_used=result.model,
-        cost_usd=estimate_cost_usd(result.model, result.input_tokens, result.output_tokens),
-    )
+    usage = usage_of(result)
     choice = _TypeChoice.model_validate(result.data)
     if choice.type_number and 1 <= choice.type_number <= len(types) and choice.confidence >= _CLASSIFY_MIN_CONFIDENCE:
         return types[choice.type_number - 1], usage

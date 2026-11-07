@@ -70,6 +70,10 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/ || exit 1
 
-# Traefik is the only way in; trusting its X-Forwarded-For lets the login rate limiter see
-# real client IPs instead of counting every user as the proxy.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# The reverse proxy (Traefik or Caddy) is the only way in; trusting its X-Forwarded-For lets the
+# rate limiters see real client IPs instead of counting every user as the proxy. uvicorn reads
+# FORWARDED_ALLOW_IPS itself: "*" is right when only the proxy can reach this container (the
+# installer's internal network); on a host whose proxy network other containers share, set it to
+# the proxy's address so they can't forge client IPs.
+ENV FORWARDED_ALLOW_IPS="*"
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers"]

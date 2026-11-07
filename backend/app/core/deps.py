@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import AuthenticationException, AuthorizationException
 from app.core.security import decode_token
+from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -16,6 +17,18 @@ _READ_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 def is_demo_user(user: TenantUser) -> bool:
     return bool(settings.DEMO_USER_EMAIL) and user.email == settings.DEMO_USER_EMAIL
+
+
+async def can_sign_in(db: AsyncSession, user: TenantUser | None) -> bool:
+    """The one answer to "may this account act?", shared by every way in (token, password,
+    refresh, reset email): an active person in an active company. Suspending a company ends
+    its people's access at once, whatever session they hold."""
+    if user is None or not user.is_active:
+        return False
+    if user.tenant_id is None:  # super_admin
+        return True
+    tenant = await db.get(Tenant, user.tenant_id)
+    return tenant is not None and tenant.is_active
 
 
 async def get_current_user(
@@ -40,7 +53,7 @@ async def get_current_user(
 
     result = await db.execute(select(TenantUser).where(TenantUser.id == user_id))
     user = result.scalar_one_or_none()
-    if user is None or not user.is_active:
+    if user is None or not await can_sign_in(db, user):
         raise AuthenticationException("User not found or inactive")
     if payload.get("ver", 0) != user.token_version:
         raise AuthenticationException("Session ended, please sign in again")
@@ -57,12 +70,25 @@ async def get_current_user(
 # What a company's people can be: its admin runs everything; an approver reviews, corrects and
 # sends reports; a viewer only reads them.
 TENANT_ROLES = ("tenant_admin", "approver", "viewer")
+# A field technician captures reports and reads their own, nothing else. Deliberately not in
+# TENANT_ROLES: every route guarded by the panel roles refuses them without having to say so.
+TECHNICIAN = "technician"
 
 
 async def require_tenant_member(
     current_user: TenantUser = Depends(get_current_user),
 ) -> TenantUser:
     if current_user.role not in {*TENANT_ROLES, "super_admin"}:
+        raise AuthorizationException("Not a member of a company")
+    return current_user
+
+
+async def require_company_user(
+    current_user: TenantUser = Depends(get_current_user),
+) -> TenantUser:
+    """Anyone in a company, technicians included. A route that takes this must still limit a
+    technician to what is theirs (see `own_reports_only` in api/admin/reports.py)."""
+    if current_user.role not in {*TENANT_ROLES, TECHNICIAN, "super_admin"}:
         raise AuthorizationException("Not a member of a company")
     return current_user
 

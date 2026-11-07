@@ -1,7 +1,7 @@
 COMPOSE = docker compose --project-directory . -f infra/docker-compose.yml
 PROD = docker compose --project-directory . -f infra/docker-compose.prod.yml
 
-.PHONY: help up down logs ps shell-db migrate migrate-down migrate-create test lint deploy restart-worker
+.PHONY: help up down logs ps shell-db migrate migrate-down migrate-create test lint deploy restart-worker hooks
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -41,6 +41,9 @@ eval: ## Run the golden-set eval suite (costs real AI provider API calls)
 
 lint: ## Run ruff and mypy against the backend
 	$(COMPOSE) exec backend sh -c "ruff check . && mypy app"
+
+hooks: ## Enable the pre-commit hook in .githooks (ruff + mypy, eslint on staged areas)
+	git config core.hooksPath .githooks
 
 seed-demo: ## Seed a demo tenant with a self-generated template
 	$(COMPOSE) exec backend python scripts/seed_demo_tenant.py

@@ -115,6 +115,9 @@ jobs:
       - name: Lint (eslint)
         run: npm run lint
 
+      - name: Test
+        run: npm test
+
       - name: Type check
         run: npm run typecheck
 

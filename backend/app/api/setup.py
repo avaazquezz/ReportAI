@@ -31,7 +31,7 @@ from app.schemas.setup import (
     SetupTelegramCheckRequest,
     TelegramBotResponse,
 )
-from app.services import instance_settings
+from app.services import audit, instance_settings
 from app.services.channels.telegram_webhook import register_telegram_webhook, verify_telegram_bot
 from app.services.settings_checks import CheckFailed, check_ai, check_smtp, check_transcription
 from app.services.setup import code_is_valid, consume_setup_code, needs_setup
@@ -43,17 +43,13 @@ router = APIRouter(prefix="/setup", tags=["setup"])
 _SETUP_LOCK = 7_310_001
 
 
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
-
-
 async def _require_code(request: Request, db: AsyncSession, code: str) -> None:
     if not await needs_setup(db):
         raise ConflictException("This installation is already set up. Sign in instead.")
-    ip = _client_ip(request)
-    rate_limit.setup_code_by_ip.check(ip)
+    ip = audit.client_ip(request)
+    await rate_limit.setup_code_by_ip.check(db, ip)
     if not await code_is_valid(db, code):
-        rate_limit.setup_code_by_ip.record(ip)
+        await rate_limit.setup_code_by_ip.record(db, ip)
         raise ValidationException(
             "That setup code is wrong or has expired. Get a new one on the server with: reportai setup-code"
         )
@@ -66,7 +62,9 @@ def company_slug(name: str) -> str:
 
 @router.get("/status")
 async def setup_status(db: AsyncSession = Depends(get_db)) -> SetupStatusResponse:
-    return SetupStatusResponse(single_tenant=settings.SINGLE_TENANT, needs_setup=await needs_setup(db))
+    return SetupStatusResponse(
+        single_tenant=settings.SINGLE_TENANT, needs_setup=await needs_setup(db), signup_enabled=settings.SIGNUP_ENABLED
+    )
 
 
 @router.post("/verify", status_code=204)
@@ -170,4 +168,5 @@ async def complete_setup(
 
     await consume_setup_code(db)
     await db.flush()
+    await audit.record(db, "setup.completed", actor=admin, target=tenant.id, request=request, company=tenant.name)
     return tokens_for(admin)

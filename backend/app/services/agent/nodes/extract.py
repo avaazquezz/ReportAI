@@ -4,13 +4,13 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
-from app.services.agent.state import AgentState, ToolUsage
+from app.services.agent.state import AgentState
 from app.services.agent.tools.extraction_schema import (
     build_extraction_model,
     build_result_model,
     unverified_evidence_keys,
 )
-from app.services.agent.tools.pricing import estimate_cost_usd
+from app.services.agent.tools.pricing import usage_of
 from app.services.i18n import LANGUAGE_NAMES, normalize_language
 from app.services.llm import structured_completion
 from app.services.observability.execution_log import observed_node
@@ -36,6 +36,9 @@ def _build_system_prompt(state: AgentState) -> str:
         f"message sent by a person{sender}. The message was sent on {local:%A %Y-%m-%d} at "
         f"{local:%H:%M} ({local.tzname()}): resolve relative dates and times ('tomorrow', "
         "'next Thursday', 'el jueves') from that moment and always output absolute dates. "
+        "That moment is only for resolving what the message says: a message that gives no date "
+        "(not even 'today' or 'yesterday') leaves the date null — never assume it happened on "
+        "the day it was sent. "
         "Fill a field only with what the message states. If it does not say, return null for "
         "that field: never guess and never invent — a missing value will be asked of the "
         "person. In 'evidence', for every field you filled, copy the shortest exact quote from "
@@ -96,10 +99,7 @@ async def extract_node(state: AgentState) -> AgentState:
             "corrections": corrections,
             "extraction_attempts": state.extraction_attempts + 1,
             "correction_text": None,
-            "last_tool_usage": ToolUsage(
-                model_used=completion.model,
-                cost_usd=estimate_cost_usd(completion.model, completion.input_tokens, completion.output_tokens),
-            ),
+            "last_tool_usage": usage_of(completion),
         }
     )
 

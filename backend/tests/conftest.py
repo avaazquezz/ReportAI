@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app import models  # noqa: F401  — registers all tables on Base.metadata
-from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, Base, get_db
 from app.main import app
@@ -64,11 +63,6 @@ def _open_channels(monkeypatch: pytest.MonkeyPatch) -> None:
     """Production rejects everyone when a channel's allow-list is empty; the tests that
     aren't about the allow-list use empty ones and expect messages through."""
     monkeypatch.setattr(settings, "ALLOW_ANY_SENDER", True)
-
-
-@pytest.fixture(autouse=True)
-def _fresh_rate_limits() -> None:
-    rate_limit.clear_all()
 
 
 @pytest.fixture(autouse=True)

@@ -47,10 +47,12 @@ async def _code(db: AsyncSession) -> str:
 
 
 async def test_a_fresh_installation_asks_to_be_set_up(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    assert (await client.get("/setup/status")).json() == {"single_tenant": True, "needs_setup": True}
+    assert (await client.get("/setup/status")).json() == {"single_tenant": True, "needs_setup": True, "signup_enabled": False}
 
     monkeypatch.setattr(settings, "SINGLE_TENANT", False)  # a server hosting several companies
-    assert (await client.get("/setup/status")).json() == {"single_tenant": False, "needs_setup": False}
+    assert (await client.get("/setup/status")).json() == {
+        "single_tenant": False, "needs_setup": False, "signup_enabled": False
+    }
 
 
 async def test_the_wizard_creates_the_company_its_admin_and_its_settings_in_one_go(

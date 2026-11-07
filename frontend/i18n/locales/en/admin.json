@@ -9,7 +9,9 @@
         "reports": "Reports",
         "usage": "Usage & cost",
         "settings": "Settings",
-        "team": "Team"
+        "team": "Team",
+        "myReports": "My reports",
+        "audit": "Audit log"
       },
       "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here.",
       "toggleMenu": "Show or hide the menu"
@@ -212,8 +214,10 @@
       },
       "status": {
         "active": "Active",
-        "inactive": "Inactive"
+        "inactive": "Inactive",
+        "deletionRequested": "Deletion requested on {date}"
       },
+      "cancelDeletion": "{name} asked to delete its company, and its data will be purged when the grace period ends. Reactivating it cancels the deletion and gives its team access again.",
       "dialog": {
         "slugHint": "lowercase letters, numbers and hyphens",
         "adminNameLabel": "Admin name",
@@ -369,6 +373,9 @@
       "costLabel": "Cost (30 days)",
       "reportsGeneratedLabel": "Reports generated",
       "avgLatencyLabel": "Average latency",
+      "inputTokensLabel": "Input tokens",
+      "outputTokensLabel": "Output tokens",
+      "audioMinutesLabel": "Audio minutes transcribed",
       "dailyCostTitle": "Daily cost",
       "noActivity": "No activity in this period.",
       "byStatusTitle": "Reports by status",
@@ -391,7 +398,8 @@
       "tenant_admin": "Administrator",
       "approver": "Approver",
       "viewer": "Read only",
-      "super_admin": "Super admin"
+      "super_admin": "Super admin",
+      "technician": "Field technician"
     },
     "updates": {
       "securityTitle": "Security update pending",
@@ -427,6 +435,8 @@
         "timezone": "Time zone",
         "color": "Brand colour",
         "colorHint": "Used in the emails ReportAI sends",
+        "replyTo": "Reply-to email",
+        "replyToHint": "Replies to the emails ReportAI sends for your company arrive here. Empty: they go to the sending address.",
         "logo": "Logo",
         "logoHint": "Shown in emails and, when the template includes it ({tag}), in documents.",
         "noLogo": "No logo",
@@ -439,6 +449,27 @@
           "save": "Couldn't save the changes.",
           "logo": "Couldn't update the logo."
         }
+      },
+      "export": {
+        "title": "Export data",
+        "hint": "Download as one zip everything ReportAI holds for your company: its details, the team, the channels, the document types with their templates, the reports with their documents, audio and photos, and the audit log.",
+        "action": "Export data",
+        "tooSoon": "The data can be exported once an hour. Try again later.",
+        "error": "Couldn't export the data."
+      },
+      "delete": {
+        "title": "Delete the company",
+        "hint": "Blocks the whole team's access at once and, 30 days later, deletes all of the company's data for good: reports, audio, photos, templates and team. Export your data first if you'll need it.",
+        "action": "Delete the company",
+        "warning": "Nobody in the company will be able to sign in or send reports from now on. After 30 days, all its data is deleted with no way back.",
+        "nameLabel": "Type “{name}” to confirm",
+        "passwordLabel": "Your password",
+        "wrongPassword": "That password is wrong.",
+        "tooManyAttempts": "Too many attempts. Wait a few minutes.",
+        "error": "Couldn't delete the company.",
+        "doneTitle": "Company blocked",
+        "done": "Your data will be deleted for good on {date}. If you change your mind before then, write to {email}.",
+        "signOut": "Sign out"
       },
       "ai": {
         "openaiCompatible": "OpenAI-compatible (OpenAI, DeepSeek, Mistral, Ollama…)",
@@ -493,17 +524,21 @@
       "roleHelp": {
         "tenant_admin": "Everything: templates, channels, team and settings",
         "approver": "Reviews, corrects, approves and resends reports",
-        "viewer": "Only reads reports"
+        "viewer": "Only reads reports",
+        "technician": "Prepares reports from their phone and sees only their own. Signs in with an emailed link, no password."
       },
       "toast": {
         "invited": "Invitation sent to {email}.",
-        "roleChanged": "{name}'s role updated."
+        "roleChanged": "{name}'s role updated.",
+        "signedOut": "{name} has been signed out everywhere"
       },
       "errors": {
         "load": "Couldn't load the team.",
         "invite": "Couldn't send the invitation.",
-        "update": "Couldn't save the change."
-      }
+        "update": "Couldn't save the change.",
+        "signOut": "Couldn't sign them out."
+      },
+      "signOut": "Sign out everywhere"
     },
     "profile": {
       "title": "My profile",
@@ -597,6 +632,105 @@
       "errors": {
         "load": "Couldn't load the templates.",
         "install": "Couldn't create the document type."
+      }
+    },
+    "plan": {
+      "names": {
+        "unlimited": "Unlimited",
+        "trial": "Trial",
+        "starter": "Starter",
+        "pro": "Pro",
+        "business": "Business"
+      },
+      "status": {
+        "trialing": "On trial",
+        "active": "Active",
+        "past_due": "Payment due",
+        "canceled": "Canceled"
+      },
+      "notice": {
+        "trialDaysLeft": "{days} days left in your free trial.",
+        "trialEnded": "The free trial has ended: no new reports are prepared until you choose a plan.",
+        "quotaNear": "You've used {used} of your plan's {limit} reports this month.",
+        "quotaReached": "You've used all {limit} reports in your plan this month: no new reports are prepared until the next period or an upgrade.",
+        "pastDue": "A plan payment is due. The service stays on while it's sorted out.",
+        "inactive": "The plan isn't active: no reports are prepared."
+      },
+      "seePlan": "See the plan",
+      "trialUntil": "Trial until {date}",
+      "renewsOn": "The period renews on {date}",
+      "reportsUsed": "{used} of {limit} reports this period",
+      "noQuota": "{used} reports this period, no limit",
+      "planLabel": "Plan",
+      "planHint": "Changing plan starts a new period from today",
+      "statusLabel": "Plan status",
+      "periodEnd": "Period ends: {date}",
+      "toastSaved": "Plan updated",
+      "errors": {
+        "load": "Couldn't load the plan.",
+        "save": "Couldn't change the plan."
+      }
+    },
+    "audit": {
+      "help": "Who did what and when: sign-ins and changes to the team, the channels and the settings. Kept for a year.",
+      "system": "System",
+      "anonymous": "Not signed in",
+      "headers": {
+        "when": "Date",
+        "who": "Who",
+        "what": "What",
+        "details": "Details"
+      },
+      "errors": {
+        "load": "Couldn't load the audit log."
+      },
+      "actions": {
+        "auth": {
+          "login_succeeded": "Signed in",
+          "login_failed": "Failed sign-in attempt",
+          "password_changed": "Changed their password",
+          "password_reset_requested": "A password reset was requested",
+          "password_reset": "Reset the password",
+          "profile_updated": "Updated their profile",
+          "magic_link_requested": "A sign-in link was sent",
+          "magic_sign_in": "Signed in with an emailed link"
+        },
+        "team": {
+          "member_invited": "Invited a person to the team",
+          "member_updated": "Changed a team member",
+          "invite_resent": "Resent an invitation",
+          "signed_out": "Signed a person out everywhere"
+        },
+        "company": {
+          "updated": "Changed the company's details",
+          "logo_set": "Uploaded the logo",
+          "logo_removed": "Removed the logo",
+          "exported": "Exported the company's data",
+          "deletion_requested": "Asked to delete the company",
+          "deletion_cancelled": "Cancelled the company's deletion"
+        },
+        "instance": {
+          "ai_updated": "Changed the AI settings",
+          "email_updated": "Changed the mail server"
+        },
+        "channel": {
+          "created": "Created a channel",
+          "updated": "Changed a channel",
+          "invite_created": "Invited a sender",
+          "invite_revoked": "Revoked a sender invitation",
+          "sender_enrolled": "A sender joined with their invitation"
+        },
+        "setup": {
+          "completed": "Set up the installation"
+        },
+        "tenant": {
+          "created": "Created the company",
+          "updated": "Suspended or reactivated the company",
+          "purged": "All of a company's data was purged"
+        },
+        "plan": {
+          "changed": "Changed the plan"
+        }
       }
     }
   }

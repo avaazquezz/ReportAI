@@ -3,6 +3,7 @@ import io
 import json
 import tempfile
 import uuid
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -16,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import require_approver, require_tenant_member
+from app.core.deps import TECHNICIAN, require_approver, require_company_user, require_tenant_member
 from app.core.exceptions import ConflictException, ResourceNotFoundException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.channel_connection import ChannelConnection
@@ -61,6 +62,7 @@ from app.services.i18n import t
 from app.services.jobs.queue import RUN, enqueue
 from app.services.rendering.report_document import MissingTemplateError, render_report_pdf
 from app.services.sender_invites import sender_labels
+from app.services.transcription import AUDIO_TYPES
 
 router = APIRouter(prefix="/reports", tags=["admin:reports"])
 
@@ -72,9 +74,15 @@ _FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 
 
 async def _requester_names(db: AsyncSession, reports: list[Report]) -> dict[uuid.UUID, str]:
-    """The name each report's sender joined with, by report id (only those who joined by invitation)."""
+    """Who sent each report, by report id: a signed-in person's name, or the name a chat sender
+    joined with (only those who joined by invitation)."""
     labels = await sender_labels(db, list({r.channel_connection_id for r in reports if r.channel_connection_id}))
     names = {r.id: labels.get(r.channel_connection_id, {}).get(r.requester_identifier) for r in reports if r.channel_connection_id}
+    user_ids = {r.requester_user_id for r in reports if r.requester_user_id}
+    if user_ids:
+        rows = await db.execute(select(TenantUser.id, TenantUser.full_name).where(TenantUser.id.in_(user_ids)))
+        people = {user_id: name for user_id, name in rows}
+        names.update({r.id: people.get(r.requester_user_id) for r in reports if r.requester_user_id})
     return {report_id: name for report_id, name in names.items() if name}
 
 
@@ -88,6 +96,7 @@ def _to_response(report: Report, document_type_name: str | None, requester_name:
         requester_channel=report.requester_channel,
         requester_identifier=report.requester_identifier,
         requester_name=requester_name,
+        requester_user_id=report.requester_user_id,
         error_detail=report.error_detail,
         download_url=f"/reports/{report.id}/download" if report.file_path else None,
         created_at=report.created_at,
@@ -113,8 +122,16 @@ def _filters(
     )
 
 
+def own_reports_only(filters: ReportFilters, user: TenantUser) -> ReportFilters:
+    """A technician sees only the reports they captured; everyone else, the company's."""
+    return replace(filters, requester_user_id=user.id) if user.role == TECHNICIAN else filters
+
+
 async def _load(db: AsyncSession, report_id: uuid.UUID, user: TenantUser) -> Report:
-    return await get_scoped_or_404(ReportRepository(db), report_id, tenant_id=require_tenant_id(user))
+    report = await get_scoped_or_404(ReportRepository(db), report_id, tenant_id=require_tenant_id(user))
+    if user.role == TECHNICIAN and report.requester_user_id != user.id:
+        raise ResourceNotFoundException()  # a colleague's report: as if it didn't exist
+    return report
 
 
 async def _document_type(db: AsyncSession, report: Report) -> DocumentType:
@@ -212,10 +229,11 @@ async def list_reports(
     skip: int = 0,
     limit: int = Query(default=100, le=500),
     filters: ReportFilters = Depends(_filters),
-    current_user: TenantUser = Depends(require_tenant_member),
+    current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[ReportResponse]:
     tenant_id = require_tenant_id(current_user)
+    filters = own_reports_only(filters, current_user)
     repo = ReportRepository(db)
     rows = await repo.list_with_document_type_name(tenant_id=tenant_id, filters=filters, skip=skip, limit=limit)
     total = await repo.count_scoped(tenant_id=tenant_id, filters=filters)
@@ -292,7 +310,7 @@ async def export_reports(
 @router.get("/{report_id}")
 async def get_report(
     report_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_member),
+    current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     return await _detail(db, await _load(db, report_id, current_user))
@@ -485,7 +503,7 @@ async def resend_report(
 @router.get("/{report_id}/download")
 async def download_report(
     report_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_member),
+    current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     report = await _load(db, report_id, current_user)
@@ -503,20 +521,21 @@ async def download_report(
 @router.get("/{report_id}/audio")
 async def report_audio(
     report_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_member),
+    current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     report = await _load(db, report_id, current_user)
     if not report.audio_path:
         raise ResourceNotFoundException("This report has no audio")
-    return FileResponse(report.audio_path, media_type="audio/ogg")
+    media_type = AUDIO_TYPES.get(Path(report.audio_path).suffix.lower(), "application/octet-stream")
+    return FileResponse(report.audio_path, media_type=media_type)
 
 
 @router.get("/{report_id}/photos/{photo_id}")
 async def report_photo(
     report_id: uuid.UUID,
     photo_id: uuid.UUID,
-    current_user: TenantUser = Depends(require_tenant_member),
+    current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     report = await _load(db, report_id, current_user)

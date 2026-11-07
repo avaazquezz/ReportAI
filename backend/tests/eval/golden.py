@@ -52,6 +52,8 @@ class FieldOutcome:
 class Report:
     outcomes: list[FieldOutcome] = field(default_factory=list)
     errors: dict[str, str] = field(default_factory=dict)  # case id -> why it produced nothing
+    # case id -> provider errors it needed retrying past, shown so a flaky provider stays visible
+    retried: dict[str, list[str]] = field(default_factory=dict)
 
     def count(self, verdict: str) -> int:
         return sum(1 for outcome in self.outcomes if outcome.verdict == verdict)
@@ -90,6 +92,10 @@ class Report:
                 lines.append(f"  [{o.verdict}] {o.case_id}.{o.field}: expected {o.expected!r}, got {o.actual!r}")
         for case_id, error in self.errors.items():
             lines.append(f"  [error] {case_id}: {error}")
+        if self.retried:
+            lines.append(f"\nProvider errors retried (as the job queue would), {len(self.retried)} cases:")
+            for case_id, errors in self.retried.items():
+                lines.append(f"  [retried] {case_id}: {'; '.join(errors)}")
         return "\n".join(lines)
 
 
@@ -122,6 +128,18 @@ def _text_matches(expected: str, actual: str) -> bool:
 
 def _is_empty(value: Any) -> bool:
     return value is None or value == "" or value == []
+
+
+def _said(text: str, value: Any) -> bool:
+    """Whether every piece of text in a value is in the message word for word: a field filled
+    with something the message did say, where the case expected nothing, is a wrong answer;
+    "invented" is kept for what the message never said (a date nobody gave)."""
+    if isinstance(value, dict):
+        value = [item for item in value.values() if item is not None]
+    if isinstance(value, list):
+        parts = [part for item in value for part in (item.values() if isinstance(item, dict) else [item]) if part is not None]
+        return bool(parts) and all(_said(text, part) for part in parts)
+    return isinstance(value, str) and value.strip().lower() in text.lower()
 
 
 def values_match(spec: dict[str, Any], expected: Any, actual: Any) -> bool:
@@ -177,7 +195,7 @@ def grade(case: Case, actual: dict[str, Any]) -> list[FieldOutcome]:
             continue
         want, got = case.expected.get(name), actual.get(name)
         if _is_empty(want):
-            verdict = "correct" if _is_empty(got) else "invented"
+            verdict = "correct" if _is_empty(got) else "wrong" if _said(case.text, got) else "invented"
         elif _is_empty(got):
             verdict = "missed"
         else:

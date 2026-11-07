@@ -4,20 +4,25 @@ import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+# Not fastapi.UploadFile: that is a subclass, and request.form() hands back the starlette class,
+# so an isinstance check against fastapi's never matched and every audio attachment was dropped.
+from starlette.datastructures import UploadFile
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.channel_connection import ChannelConnection
 from app.services.agent.ingestion import ingest_message
 from app.services.channels.email_inbound import EmailInboundAdapter
+from app.services.transcription import AUDIO_TYPES
 
 router = APIRouter(tags=["webhooks"])
 logger = logging.getLogger(__name__)
 
-_AUDIO_CONTENT_TYPES = {"audio/ogg", "audio/mpeg", "audio/mp4", "audio/wav", "audio/webm"}
+_AUDIO_SUFFIXES = {content_type: suffix for suffix, content_type in AUDIO_TYPES.items()}
 
 
 def _verify_signature(timestamp: str, token: str, signature: str) -> bool:
@@ -60,10 +65,10 @@ async def email_webhook(
 
     saved_attachment_path: str | None = None
     for value in form.values():
-        if isinstance(value, UploadFile) and value.content_type in _AUDIO_CONTENT_TYPES:
+        if isinstance(value, UploadFile) and value.content_type in _AUDIO_SUFFIXES:
             storage_dir = Path(settings.DOCUMENT_STORAGE_PATH) / "inbound_tmp"
             storage_dir.mkdir(parents=True, exist_ok=True)
-            dest = storage_dir / f"{uuid.uuid4()}.audio"
+            dest = storage_dir / f"{uuid.uuid4()}{_AUDIO_SUFFIXES[value.content_type]}"
             dest.write_bytes(await value.read())
             saved_attachment_path = str(dest)
             break

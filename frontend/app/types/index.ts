@@ -20,12 +20,29 @@ export interface PaginatedResponse<T> {
   limit: number
 }
 
+// services/plans.py PLANS on the backend.
+export type PlanKey = 'unlimited' | 'trial' | 'starter' | 'pro' | 'business'
+export type PlanStatus = 'trialing' | 'active' | 'past_due' | 'canceled'
+
 export interface Tenant {
   id: string
   name: string
   slug: string
   is_active: boolean
+  plan: PlanKey
+  plan_status: PlanStatus
+  plan_period_end: string | null
+  deletion_requested_at: string | null
   created_at: string
+}
+
+export interface PlanUsage {
+  plan: PlanKey
+  status: PlanStatus
+  period_start: string | null
+  period_end: string | null
+  reports_used: number
+  reports_limit: number | null
 }
 
 export interface TenantCreateResponse extends Tenant {
@@ -212,16 +229,20 @@ export interface UsageSummary {
   total_reports: number
   reports_by_status: Record<string, number>
   avg_latency_ms: number | null
+  total_input_tokens: number
+  total_output_tokens: number
+  total_audio_minutes: number
   daily_cost: DailyCostPoint[]
 }
 
 // ── Fase 3: one-company installations ────────────────────────────────────────────────
 
-export type TenantRole = 'tenant_admin' | 'approver' | 'viewer'
+export type TenantRole = 'tenant_admin' | 'approver' | 'viewer' | 'technician'
 
 export interface SetupStatus {
   single_tenant: boolean
   needs_setup: boolean
+  signup_enabled: boolean
 }
 
 export interface CheckResult {
@@ -296,6 +317,7 @@ export interface Company {
   language: 'es' | 'en'
   timezone: string
   brand_color: string | null
+  reply_to_email: string | null
   has_logo: boolean
 }
 
@@ -312,6 +334,17 @@ export interface TeamInviteResult {
   member: TeamMember
   invite_email_sent: boolean
   invite_link: string | null
+}
+
+// backend/app/schemas/audit.py
+export interface AuditEvent {
+  id: string
+  created_at: string
+  actor_label: string | null
+  action: string
+  target: string | null
+  ip: string | null
+  details: Record<string, unknown> | null
 }
 
 export interface SenderInvite {

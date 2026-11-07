@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from app.core.config import settings
 from app.core.logging import describe_exception
 from app.services import llm
 from app.services.agent.nodes.extract import extract_node, validate_node
@@ -26,6 +27,8 @@ MIN_ACCURACY = 0.90
 MAX_INVENTED = 0
 # Parallel requests: enough to finish in minutes, few enough to stay under provider rate limits.
 _CONCURRENCY = int(os.environ.get("EVAL_CONCURRENCY", "4"))
+# Shorter than the job queue's 30/120/300 s, same idea: a transient provider error isn't a miss.
+_PROVIDER_RETRY_DELAYS = (5, 20)
 
 
 @pytest.fixture(autouse=True)
@@ -52,11 +55,18 @@ async def _extract(case: Case) -> dict[str, object]:
         field_schema=case.field_schema,
         prompt_instructions=case.prompt_instructions,
     )
-    extracted = await extract_node.__wrapped__(state)
-    validated = await validate_node.__wrapped__(extracted)
-    if validated.last_validation_error:
-        raise ValueError(f"invalid extraction: {validated.last_validation_error[:300]}")
-    return validated.extracted_fields or {}
+    # The graph's own loop (graph._route_after_validate): an extraction that fails validation goes
+    # back to the model with the error, up to the same limit as in production.
+    while True:
+        state = await validate_node.__wrapped__(await extract_node.__wrapped__(state))
+        if state.last_validation_error is None:
+            return state.extracted_fields or {}
+        if state.validation_retries >= settings.MAX_VALIDATION_RETRIES:
+            raise InvalidExtraction(state.last_validation_error[:300])
+
+
+class InvalidExtraction(Exception):
+    """The model's answer stayed invalid after every retry: a real failure, never retried."""
 
 
 async def run_golden_set(cases: list[Case]) -> Report:
@@ -65,11 +75,20 @@ async def run_golden_set(cases: list[Case]) -> Report:
 
     async def run(case: Case) -> None:
         async with gate:
-            try:
-                actual = await _extract(case)
-            except Exception as exc:  # noqa: BLE001 — one broken case is a result, not a crash
-                report.errors[case.id] = describe_exception(exc)
-                return
+            for delay in (*_PROVIDER_RETRY_DELAYS, None):
+                try:
+                    actual = await _extract(case)
+                    break
+                except InvalidExtraction as exc:
+                    report.errors[case.id] = f"invalid extraction: {exc}"
+                    return
+                except Exception as exc:  # noqa: BLE001 — one broken case is a result, not a crash
+                    if delay is None:
+                        report.errors[case.id] = describe_exception(exc)
+                        return
+                    # A provider hiccup (overloaded, timeout): production's job queue retries it too.
+                    report.retried.setdefault(case.id, []).append(describe_exception(exc))
+                    await asyncio.sleep(delay)
         report.outcomes.extend(grade(case, actual))
 
     await asyncio.gather(*(run(case) for case in cases))

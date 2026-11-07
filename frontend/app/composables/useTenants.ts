@@ -1,4 +1,4 @@
-import type { PaginatedResponse, Tenant, TenantCreateRequest, TenantCreateResponse } from '~/types'
+import type { PaginatedResponse, PlanKey, PlanStatus, Tenant, TenantCreateRequest, TenantCreateResponse } from '~/types'
 
 export function useTenants() {
   const { t } = useI18n()
@@ -35,6 +35,12 @@ export function useTenants() {
     await api(`/admin/tenants/${id}`, { method: 'PATCH', body: { is_active: isActive } })
   }
 
+  // A new plan starts a new period from now; a status on its own keeps the period.
+  async function setPlan(id: string, change: { plan?: PlanKey; plan_status?: PlanStatus }): Promise<Tenant> {
+    const api = useApi()
+    return await api<Tenant>(`/admin/tenants/${id}`, { method: 'PATCH', body: change })
+  }
+
   async function resendInvite(id: string) {
     const api = useApi()
     return await api<{ message: string }>(`/admin/tenants/${id}/resend-invite`, { method: 'POST' })
@@ -45,5 +51,5 @@ export function useTenants() {
     return await api<Tenant>(`/admin/tenants/${id}`)
   }
 
-  return { items, total, loading, error, fetchList, create, setActive, resendInvite, getById }
+  return { items, total, loading, error, fetchList, create, setActive, setPlan, resendInvite, getById }
 }

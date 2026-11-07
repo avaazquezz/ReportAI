@@ -5,7 +5,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, health, setup
+from app.api import auth, health, setup, signup
+from app.api.admin import audit as admin_audit
 from app.api.admin import channel_connections as admin_channel_connections
 from app.api.admin import company as admin_company
 from app.api.admin import dashboard as admin_dashboard
@@ -22,11 +23,13 @@ from app.api.webhooks import telegram as telegram_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.error_tracking import init_error_tracking
 from app.core.logging import configure_logging
 from app.services.agent.tools.pricing import require_priced_model_for_spend_cap
 from app.services.setup import needs_setup
 
 configure_logging()
+init_error_tracking("api")
 logger = logging.getLogger(__name__)
 
 
@@ -66,6 +69,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(setup.router)
+app.include_router(signup.router)
 app.include_router(admin_tenants.router)
 app.include_router(admin_document_types.router)
 app.include_router(admin_channel_connections.router)
@@ -77,6 +81,7 @@ app.include_router(admin_company.router)
 app.include_router(admin_template_assistant.router)
 app.include_router(admin_starter_templates.router)
 app.include_router(admin_dashboard.router)
+app.include_router(admin_audit.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)

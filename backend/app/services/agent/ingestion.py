@@ -26,9 +26,8 @@ from app.models.inbound_message import InboundMessage
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
-from app.repositories.execution_log_repository import ExecutionLogRepository
 from app.repositories.report_repository import PENDING_STATUSES, ReportRepository
-from app.services import instance_settings, sender_invites
+from app.services import audit, plans, sender_invites
 from app.services.channels.base import IncomingMessage, OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.i18n import t
@@ -201,9 +200,17 @@ async def ingest_message(
     if incoming.external_id and not await _first_delivery(db, connection.id, incoming.external_id):
         return IngestResult("duplicate")
 
+    if tenant is None or not tenant.is_active:  # suspended: nothing new starts, nothing resumes
+        await say(connection, incoming.sender_id, t(language, "tenant_suspended"), meta=incoming.meta)
+        return IngestResult("rejected")
+
     # An invitation code lets its holder in — and is answered, never turned into a report.
     code = sender_invites.code_in(incoming.text)
     if code and (invite := await sender_invites.redeem(db, connection, code, incoming.sender_id)):
+        await audit.record(
+            db, "channel.sender_enrolled", tenant_id=connection.tenant_id, target=connection.id, actor_label="system",
+            invite_id=str(invite.id), label=invite.label, sender_id=incoming.sender_id,
+        )
         await say(connection, incoming.sender_id, t(language, "enrolled", name=invite.label), meta=incoming.meta)
         return IngestResult("replied")
 
@@ -219,12 +226,10 @@ async def ingest_message(
         await say(connection, incoming.sender_id, t(language, "rejected_sender", sender=incoming.sender_id), meta=incoming.meta)
         return IngestResult("rejected")
 
-    # Global wallet guard, checked before both paths (a correction reply extracts again).
-    if settings.DAILY_SPEND_CAP_USD > 0:
-        midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-        if await ExecutionLogRepository(db).total_cost_since(midnight) >= settings.DAILY_SPEND_CAP_USD:
-            await say(connection, incoming.sender_id, t(language, "spend_capped"), meta=incoming.meta)
-            return IngestResult("rejected")
+    # The plan and the wallet, checked before both paths (a correction reply extracts again).
+    if refusal := await plans.message_refusal(db, tenant, voice=bool(incoming.media_reference)):
+        await say(connection, incoming.sender_id, t(language, refusal), meta=incoming.meta)
+        return IngestResult("rejected")
 
     if sender_invites.is_start_command(incoming.text):  # Telegram's Start button: say what to do
         await say(connection, incoming.sender_id, t(language, "welcome"), meta=incoming.meta)
@@ -234,12 +239,6 @@ async def ingest_message(
         key = "unsupported_message" if incoming.unsupported else "empty_message"
         await say(connection, incoming.sender_id, t(language, key), meta=incoming.meta)
         return IngestResult("replied")
-
-    # Better said now than as a failed report a minute later.
-    stored = await instance_settings.load(db)
-    if incoming.media_reference and not instance_settings.transcription_from(stored).configured:
-        await say(connection, incoming.sender_id, t(language, "voice_not_configured"), meta=incoming.meta)
-        return IngestResult("rejected")
 
     repo = ReportRepository(db)
     active = await repo.find_active_for_sender(
@@ -271,8 +270,9 @@ async def ingest_message(
         await say(connection, incoming.sender_id, t(language, "busy"), meta=incoming.meta)
         return IngestResult("busy", active.id)
 
-    if not instance_settings.ai_from(stored).configured:
-        await say(connection, incoming.sender_id, t(language, "not_configured"), meta=incoming.meta)
+    # Better said now than as a failed report a minute later.
+    if refusal := await plans.new_report_refusal(db, tenant):
+        await say(connection, incoming.sender_id, t(language, refusal), meta=incoming.meta)
         return IngestResult("rejected")
 
     # New reports only — a reply to a paused report must never be rate-limited away.

@@ -6,10 +6,14 @@ from pydantic import BaseModel
 
 
 class ToolUsage(BaseModel):
-    """Side channel the execution-logging decorator reads and clears after each node."""
+    """Side channel the execution-logging decorator reads and clears after each node. Its fields
+    are execution_logs columns of the same name."""
 
     model_used: str | None = None
     cost_usd: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    audio_seconds: float | None = None
 
 
 class DocumentTypeOption(BaseModel):

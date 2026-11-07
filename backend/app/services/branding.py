@@ -24,11 +24,14 @@ class Branding:
     name: str
     color: str
     logo_path: str | None
+    reply_to: str | None = None  # the company's address for replies (the sender is the platform's)
 
     @classmethod
     def of(cls, tenant: Tenant) -> "Branding":
         logo = tenant.logo_path if tenant.logo_path and Path(tenant.logo_path).exists() else None
-        return cls(name=tenant.name, color=tenant.brand_color or DEFAULT_COLOR, logo_path=logo)
+        return cls(
+            name=tenant.name, color=tenant.brand_color or DEFAULT_COLOR, logo_path=logo, reply_to=tenant.reply_to_email
+        )
 
 
 class InvalidLogoError(ValueError):

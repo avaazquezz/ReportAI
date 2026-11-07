@@ -1,7 +1,7 @@
 """The installation's own settings, entered in the panel: the AI model and voice transcription
 the reports use, and the mail server everything is sent through."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -23,7 +23,7 @@ from app.schemas.instance_settings import (
     TranscriptionSettings,
     TranscriptionSettingsResponse,
 )
-from app.services import instance_settings
+from app.services import audit, instance_settings
 from app.services.agent.tools.pricing import require_priced_model_for_spend_cap
 from app.services.settings_checks import CheckFailed, check_ai, check_smtp, check_transcription
 from app.services.updates import UpdateStatus, update_status
@@ -88,7 +88,8 @@ async def get_ai_settings(
 @router.put("/ai")
 async def update_ai_settings(
     payload: AISettingsUpdate,
-    _: TenantUser = Depends(require_instance_admin),
+    request: Request,
+    current_user: TenantUser = Depends(require_instance_admin),
     db: AsyncSession = Depends(get_db),
 ) -> AISettingsResponse:
     stored = await instance_settings.load(db)
@@ -98,7 +99,10 @@ async def update_ai_settings(
         require_priced_model_for_spend_cap(extraction.model, settings.DAILY_SPEND_CAP_USD)
     except RuntimeError as exc:
         raise ValidationException(str(exc)) from exc
-    await instance_settings.save(db, {**payload.extraction.as_values(), **payload.transcription.as_values()})
+    values = {**payload.extraction.as_values(), **payload.transcription.as_values()}
+    await instance_settings.save(db, values)
+    if fields := audit.changed_fields(stored, _given(values)):
+        await audit.record(db, "instance.ai_updated", actor=current_user, request=request, fields=fields)
     return await _ai_response(db)
 
 
@@ -132,10 +136,14 @@ async def get_email_settings(
 @router.put("/email")
 async def update_email_settings(
     payload: EmailSettings,
-    _: TenantUser = Depends(require_instance_admin),
+    request: Request,
+    current_user: TenantUser = Depends(require_instance_admin),
     db: AsyncSession = Depends(get_db),
 ) -> EmailSettingsResponse:
+    stored = await instance_settings.load(db)
     await instance_settings.save(db, payload.as_values())
+    if fields := audit.changed_fields(stored, _given(payload.as_values())):
+        await audit.record(db, "instance.email_updated", actor=current_user, request=request, fields=fields)
     return EmailSettingsResponse.of(await instance_settings.smtp_config(db))
 
 

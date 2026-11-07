@@ -4,6 +4,7 @@ means (try again, or give up and tell the person)."""
 import asyncio
 import contextlib
 import logging
+import time
 import uuid
 from typing import Any
 
@@ -23,6 +24,7 @@ from app.services.agent.graph import get_compiled_graph
 from app.services.agent.nodes.deliver import mark_report_failed
 from app.services.agent.persistence import save_report
 from app.services.agent.state import AgentState
+from app.services.agent.tools.pricing import transcription_usage
 from app.services.channels.base import OutgoingMessage
 from app.services.channels.factory import get_channel_adapter
 from app.services.delivery.deliveries import DeliveryFailed, send_pending
@@ -38,6 +40,7 @@ from app.services.jobs.queue import (
     extend_lease,
     fail_or_retry,
 )
+from app.services.observability.execution_log import write_execution_log
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +122,7 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
     await _mark_paused_if_interrupted(result, report.id)
 
 
-async def _reply(job: ClaimedJob, connection: ChannelConnection, language: str) -> str | dict[str, Any]:
+async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant) -> str | dict[str, Any]:
     """A pressed button or the panel answers with a structured reply, handed on as it is. A typed
     reply is text, and a voice note is turned into text before the graph sees it."""
     if job.payload.get("action"):
@@ -129,7 +132,19 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, language: str) 
     if text or not media_reference:
         return text
     audio = await get_channel_adapter(connection).download_media(media_reference)
-    return (await transcription.transcribe(audio, f"reply-{job.id}.ogg", language)).text.strip()
+    filename = f"reply-{job.id}{transcription.audio_suffix(media_reference)}"
+    start = time.monotonic()
+    transcript = await transcription.transcribe(audio, filename, tenant.language)
+    # Outside the graph, so no node logs it: metered here.
+    await write_execution_log(
+        tenant_id=tenant.id,
+        report_id=job.report_id,
+        step="transcribe_reply",
+        status="success",
+        usage=transcription_usage(transcript),
+        latency_ms=int((time.monotonic() - start) * 1000),
+    )
+    return transcript.text.strip()
 
 
 async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection, tenant: Tenant) -> None:
@@ -140,7 +155,7 @@ async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection
     if not any(task.interrupts for task in snapshot.tasks):
         return  # an earlier attempt already delivered this answer
 
-    result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant.language)), config)
+    result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant)), config)
     await _mark_paused_if_interrupted(result, report.id)
 
 
