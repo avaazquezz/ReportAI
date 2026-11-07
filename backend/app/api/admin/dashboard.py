@@ -21,6 +21,7 @@ from app.models.report import Report
 from app.models.tenant_user import TenantUser
 from app.repositories.report_repository import PENDING_STATUSES
 from app.services import instance_settings
+from app.services.channels.web import WEB
 from app.services.sender_invites import sender_labels
 
 router = APIRouter(prefix="/dashboard", tags=["admin:dashboard"])
@@ -95,7 +96,12 @@ async def _checklist(db: AsyncSession, tenant_id: uuid.UUID) -> Checklist:
     async def any_of(*conditions: object) -> bool:
         return bool(await db.scalar(select(exists().where(*conditions))))  # type: ignore[arg-type]
 
-    channel = (ChannelConnection.tenant_id == tenant_id, ChannelConnection.is_active.is_(True))
+    # A chat channel someone set up: the app's own connection (made by a first capture) isn't one.
+    channel = (
+        ChannelConnection.tenant_id == tenant_id,
+        ChannelConnection.is_active.is_(True),
+        ChannelConnection.channel_type != WEB,
+    )
     return Checklist(
         ai=instance_settings.ai_from(stored).configured,
         transcription=instance_settings.transcription_from(stored).configured,
