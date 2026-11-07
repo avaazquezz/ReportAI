@@ -117,6 +117,7 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
             received_at=report.received_at,
             sender_label=job.payload.get("sender_label"),
             channel_meta=report.channel_meta or {},
+            document_type_id=job.payload.get("document_type_id"),  # chosen in the app before recording
         )
         result = await graph.ainvoke(state, config)
     await _mark_paused_if_interrupted(result, report.id)

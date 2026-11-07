@@ -6,10 +6,10 @@ import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
 from sqlalchemy import select, update
@@ -17,8 +17,19 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import TECHNICIAN, require_approver, require_company_user, require_tenant_member
-from app.core.exceptions import ConflictException, ResourceNotFoundException, ValidationException
+from app.core.deps import (
+    TECHNICIAN,
+    require_approver,
+    require_capturer,
+    require_company_user,
+    require_tenant_member,
+)
+from app.core.exceptions import (
+    ConflictException,
+    PlanLimitException,
+    ResourceNotFoundException,
+    ValidationException,
+)
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.channel_connection import ChannelConnection
 from app.models.delivery import Delivery
@@ -49,6 +60,7 @@ from app.schemas.report import (
     RevisionResponse,
     StepResponse,
 )
+from app.services import plans
 from app.services.agent.ingestion import request_resume, say
 from app.services.agent.summary import format_value
 from app.services.agent.tools.extraction_schema import (
@@ -57,6 +69,7 @@ from app.services.agent.tools.extraction_schema import (
     merge_edits,
     missing_required_fields,
 )
+from app.services.channels.web import WEB, store_voice_note
 from app.services.delivery.deliveries import attachment_name, local_day, request_resend
 from app.services.i18n import t
 from app.services.jobs.queue import RUN, enqueue
@@ -320,7 +333,7 @@ async def get_report(
 async def approve_report(
     report_id: uuid.UUID,
     payload: ApproveRequest | None = None,
-    current_user: TenantUser = Depends(require_approver),
+    current_user: TenantUser = Depends(require_capturer),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
     """Approve a paused report, with the reviewer's corrections if any — the same as the requester
@@ -340,6 +353,33 @@ async def approve_report(
     if not await request_resume(db, report, reply):
         raise ConflictException("Report was already resumed")
     db.add(ReportRevision(report_id=report.id, user_id=current_user.id, action="approve", changes=changes or None))
+    return await _refreshed_detail(db, report)
+
+
+@router.post("/{report_id}/reply", status_code=202)
+async def reply_to_report(
+    report_id: uuid.UUID,
+    text: Annotated[str | None, Form(max_length=20_000)] = None,
+    audio: Annotated[UploadFile | None, File()] = None,
+    current_user: TenantUser = Depends(require_capturer),
+    db: AsyncSession = Depends(get_db),
+) -> ReportDetailResponse:
+    """What to change in a draft made in the app, said or typed: like answering the bot in a chat,
+    the report is extracted again with it. Confirming is /approve."""
+    report = await _load(db, report_id, current_user)
+    if report.requester_channel != WEB:
+        raise ConflictException("Only reports made in the app take replies here")
+    if report.status not in PENDING_STATUSES:
+        raise ConflictException("Report is not waiting for an answer")
+    text = (text or "").strip() or None
+    if audio is None and text is None:
+        raise ValidationException("Record or type what to change")
+    tenant = await db.get(Tenant, report.tenant_id)
+    if refusal := await plans.message_refusal(db, tenant, voice=audio is not None):  # it costs AI too
+        raise PlanLimitException(t(tenant.language if tenant else None, refusal))
+    media_reference = await store_voice_note(audio) if audio is not None else None
+    if not await request_resume(db, report, {"text": text, "media_reference": media_reference}):
+        raise ConflictException("Report was already resumed")
     return await _refreshed_detail(db, report)
 
 
@@ -457,7 +497,7 @@ async def edit_report_fields(
 async def preview_report(
     report_id: uuid.UUID,
     payload: EditFieldsRequest | None = None,
-    current_user: TenantUser = Depends(require_approver),
+    current_user: TenantUser = Depends(require_capturer),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """The PDF as it would come out with these edits, without saving or sending anything."""

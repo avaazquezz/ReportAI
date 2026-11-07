@@ -128,8 +128,8 @@ async def test_a_technician_reads_their_report_and_no_one_else_s(
     assert own.status_code == 200
 
 
-async def test_a_technician_cannot_act_on_their_own_report_yet(client: AsyncClient, world: dict[str, object]) -> None:
-    # Approving from the field app comes with it (Fase 5); until then only approvers act.
+async def test_a_technician_cannot_reject_their_own_report(client: AsyncClient, world: dict[str, object]) -> None:
+    # They confirm and correct their drafts from the app (test_capture.py); rejecting is review, the approvers'.
     response = await client.post(
         f"/reports/{world['ana_report'].id}/reject",  # type: ignore[attr-defined]
         json={"reason": "x"},
