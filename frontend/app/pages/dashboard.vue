@@ -4,9 +4,9 @@ import type { Dashboard } from '~/types'
 definePageMeta({
   middleware: [
     'auth',
-    // A technician has no dashboard: their page is their reports.
+    // A technician has no dashboard: their page is recording a report.
     () => {
-      if (useRole().isTechnician.value) return navigateTo('/admin/reports')
+      if (useRole().isTechnician.value) return navigateTo('/capture')
     }
   ],
   layout: 'app',
@@ -45,9 +45,10 @@ const steps = computed(() => {
     { key: 'transcription', done: done.transcription, to: settings && `${settings}?tab=ai`, optional: true },
     { key: 'email', done: done.email, to: settings && `${settings}?tab=email`, optional: true },
     { key: 'document_type', done: done.document_type, to: '/admin/document-types' },
-    { key: 'channel', done: done.channel, to: '/admin/channels' },
-    { key: 'senders', done: done.senders, to: '/admin/channels' },
-    { key: 'first_report', done: done.first_report, to: null }
+    // The app is a channel of its own: a chat bot and its senders are extras.
+    { key: 'channel', done: done.channel, to: '/admin/channels', optional: true },
+    { key: 'senders', done: done.senders, to: '/admin/channels', optional: true },
+    { key: 'first_report', done: done.first_report, to: '/capture' }
   ]
 })
 const pendingSteps = computed(() => steps.value.filter((s) => !s.done && !s.optional).length)
