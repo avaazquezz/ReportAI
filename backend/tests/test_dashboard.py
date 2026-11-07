@@ -82,6 +82,9 @@ async def test_the_admin_sees_what_is_left_to_set_up(client: AsyncClient, db: As
     monkeypatch.setattr(settings, "EXTRACTION_PROVIDER", "anthropic")
     tenant, admin, _ = await _setup(client, db)
 
+    # The app's own connection, made by a first capture, is not a channel anyone set up.
+    db.add(ChannelConnection(tenant_id=tenant.id, channel_type="web", display_name="App", routing_key=str(tenant.id)))
+    await db.commit()
     empty = (await client.get("/dashboard", headers=admin)).json()["checklist"]
     assert not any(empty.values())
 
