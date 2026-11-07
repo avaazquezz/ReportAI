@@ -16,7 +16,7 @@ from app.api.webhooks import email as email_webhook
 from app.api.webhooks import whatsapp as whatsapp_webhook
 from app.core.config import Settings, settings
 from app.services import instance_settings, llm, transcription
-from app.services.agent.nodes import extract, media
+from app.services.agent.nodes import extract, ingest, media
 from app.services.agent.state import AgentState
 from app.services.agent.tools.pricing import estimate_cost_usd, require_priced_model_for_spend_cap
 
@@ -185,6 +185,27 @@ async def test_transcription_goes_through_the_configured_openai_compatible_clien
     assert create.await_args.kwargs["model"] == settings.TRANSCRIPTION_MODEL
     assert create.await_args.kwargs["language"] == "en"  # the company's language, not a fixed one
     assert result.last_tool_usage is not None and result.last_tool_usage.model_used == settings.TRANSCRIPTION_MODEL
+
+
+async def test_a_recording_with_text_alongside_keeps_both(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, own_sessions: None
+) -> None:
+    """Typed details next to a recording (the app, an email's body) are added to what was said: the
+    recording is never dropped for them."""
+    audio = tmp_path / "audio.webm"
+    audio.write_bytes(b"fake-audio")
+    create = AsyncMock(return_value=SimpleNamespace(text="Visita de mantenimiento en la nave"))
+    client = SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create)))
+    monkeypatch.setattr(transcription, "_client", lambda *_: client)
+    monkeypatch.setattr(settings, "TRANSCRIPTION_API_KEY", "gsk-test")
+    typed = "Cliente: Construcciones Norte"
+
+    ingested = await ingest.ingest_node.__wrapped__(_state(media_reference=str(audio), incoming_text=typed))
+    assert ingested.is_voice
+    result = await media.transcribe_node.__wrapped__(ingested.model_copy(update={"media_local_path": str(audio)}))
+
+    assert result.transcript == "Visita de mantenimiento en la nave"
+    assert result.source_text == "Visita de mantenimiento en la nave\n\nCliente: Construcciones Norte"
 
 
 async def test_transcription_without_a_key_explains_what_to_set(monkeypatch: pytest.MonkeyPatch) -> None:
