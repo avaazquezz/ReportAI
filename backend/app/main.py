@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, health, setup
+from app.api import auth, health, setup, signup
 from app.api.admin import audit as admin_audit
 from app.api.admin import channel_connections as admin_channel_connections
 from app.api.admin import company as admin_company
@@ -69,6 +69,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(setup.router)
+app.include_router(signup.router)
 app.include_router(admin_tenants.router)
 app.include_router(admin_document_types.router)
 app.include_router(admin_channel_connections.router)

@@ -62,7 +62,9 @@ def company_slug(name: str) -> str:
 
 @router.get("/status")
 async def setup_status(db: AsyncSession = Depends(get_db)) -> SetupStatusResponse:
-    return SetupStatusResponse(single_tenant=settings.SINGLE_TENANT, needs_setup=await needs_setup(db))
+    return SetupStatusResponse(
+        single_tenant=settings.SINGLE_TENANT, needs_setup=await needs_setup(db), signup_enabled=settings.SIGNUP_ENABLED
+    )
 
 
 @router.post("/verify", status_code=204)

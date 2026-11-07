@@ -7,6 +7,7 @@ ENCRYPTION_KEY yet. Changing it makes every stored secret unreadable: they have 
 
 import base64
 import json
+from datetime import timedelta
 from functools import cache
 from typing import Any
 
@@ -25,10 +26,29 @@ class UndecryptableSecretError(RuntimeError):
 
 
 @cache
-def _fernet() -> Fernet:
+def _fernet(info: bytes = b"reportai secrets at rest") -> Fernet:
     material = (settings.ENCRYPTION_KEY or settings.SECRET_KEY).encode()
-    key = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b"reportai secrets at rest").derive(material)
+    key = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=info).derive(material)
     return Fernet(base64.urlsafe_b64encode(key))
+
+
+# Its own key: a link's token never opens a stored secret, nor the other way round.
+_LINKS = b"reportai sealed links"
+
+
+def seal(payload: dict[str, Any]) -> str:
+    """The payload as a token only this server can read back, for a link sent by email: nothing in
+    it is readable in a URL or a log, it can't be altered, and it carries when it was made."""
+    return _fernet(_LINKS).encrypt(json.dumps(payload).encode()).decode()
+
+
+def unseal(token: str, max_age: timedelta) -> dict[str, Any]:
+    """Raises ValueError for a token this server didn't make, an altered one, or one older than max_age."""
+    try:
+        payload: dict[str, Any] = json.loads(_fernet(_LINKS).decrypt(token.encode(), ttl=int(max_age.total_seconds())))
+    except InvalidToken as exc:
+        raise ValueError("The link is wrong or has expired") from exc
+    return payload
 
 
 def encrypt(plaintext: str) -> str:
