@@ -58,6 +58,9 @@ onMounted(() => {
   if (isInstanceAdmin.value) loadUpdates()
   // Only a notice: if it can't be loaded the page works the same, so it just doesn't show.
   if (isMember.value) loadPlan().catch(() => {})
+  // The panel, not the landing, keeps a copy on the device so it opens with no coverage. Browsers
+  // only allow service workers over HTTPS: an installation reached by its IP over HTTP goes without.
+  if (!import.meta.dev && 'serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js')
 })
 
 const { mobile } = useDisplay()
