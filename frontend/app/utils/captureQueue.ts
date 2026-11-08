@@ -1,6 +1,6 @@
 // What the offline queue (composables/useCaptureQueue.ts) uploads, and what a failed upload means.
 // Pure, so it can be checked on its own (tests/captureQueue.test.ts).
-import type { Capture } from '~/composables/useCaptureQueue'
+import type { Capture, QueuedCapture } from '~/composables/useCaptureQueue'
 
 // The rest follow the subtype (webm, ogg, png, webp...). The API reads the format from the part's
 // content type; the file name only has to agree with it.
@@ -41,4 +41,15 @@ export function uploadOutcome(error: unknown): 'retry' | 'fail' {
 export function failureMessage(error: unknown): string | null {
   const detail = (error as { data?: { detail?: unknown } } | null | undefined)?.data?.detail
   return typeof detail === 'string' ? detail : null
+}
+
+/** The oldest waiting capture of this person that this pass hasn't tried yet. Never anyone else's:
+ * with nobody signed in, nothing is sent. */
+export function nextToSend(
+  items: readonly QueuedCapture[],
+  ownerId: string | null,
+  tried: ReadonlySet<string>
+): QueuedCapture | undefined {
+  if (!ownerId) return undefined
+  return items.find((item) => item.ownerId === ownerId && item.state === 'waiting' && !tried.has(item.id))
 }

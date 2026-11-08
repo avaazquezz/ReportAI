@@ -1,7 +1,8 @@
 // Run from frontend/ with: npm test
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { buildCaptureForm, failureMessage, uploadOutcome } from '../app/utils/captureQueue.ts'
+import type { QueuedCapture } from '../app/composables/useCaptureQueue.ts'
+import { buildCaptureForm, failureMessage, nextToSend, uploadOutcome } from '../app/utils/captureQueue.ts'
 
 const typeId = '7d1c6f1e-2b8a-4c3e-9f41-0a6c5e2d8b10'
 const file = (form: FormData, key: string) => form.get(key) as File
@@ -64,4 +65,33 @@ test("the server's reason is shown only when it is a sentence", () => {
   assert.equal(failureMessage({ data: { detail: [{ loc: ['body', 'document_type_id'], msg: 'Field required' }] } }), null)
   assert.equal(failureMessage(new TypeError('fetch failed')), null)
   assert.equal(failureMessage(null), null)
+})
+
+const queued = (id: string, ownerId: string, state: QueuedCapture['state'] = 'waiting'): QueuedCapture => ({
+  id,
+  documentTypeId: typeId,
+  text: 'x',
+  audio: null,
+  photos: [],
+  ownerId,
+  createdAt: 0,
+  attempts: 0,
+  state,
+  error: null
+})
+
+test("someone else's capture on a shared device is never sent under this session", () => {
+  const items = [queued('ana-1', 'ana'), queued('luis-1', 'luis')]
+  assert.equal(nextToSend(items, 'luis', new Set())?.id, 'luis-1')
+  assert.equal(nextToSend(items, 'luis', new Set(['luis-1'])), undefined)
+})
+
+test('with nobody signed in, nothing is sent', () => {
+  assert.equal(nextToSend([queued('ana-1', 'ana')], null, new Set()), undefined)
+})
+
+test("the person's oldest waiting capture goes first, skipping failed, in flight and already tried", () => {
+  const items = [queued('a', 'ana', 'failed'), queued('b', 'ana', 'sending'), queued('c', 'ana'), queued('d', 'ana')]
+  assert.equal(nextToSend(items, 'ana', new Set())?.id, 'c')
+  assert.equal(nextToSend(items, 'ana', new Set(['c']))?.id, 'd')
 })
