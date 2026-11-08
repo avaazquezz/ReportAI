@@ -11,6 +11,9 @@ export interface Capture {
 }
 
 export interface QueuedCapture extends Capture {
+  // Who recorded it. A shared phone or tablet may hold someone else's captures: they are only shown
+  // and sent while that same person is signed in, never under another session.
+  ownerId: string
   createdAt: number
   attempts: number
   state: 'waiting' | 'sending' | 'failed'
@@ -59,6 +62,8 @@ let ready: Promise<void> | null = null
 let flushing: Promise<void> | null = null
 let again = false
 let persistAsked = false
+let owner: () => string | null = () => null
+let mine: Readonly<Ref<QueuedCapture[]>> = items
 
 const find = (id: string) => items.value.find((item) => item.id === id)
 
@@ -98,7 +103,7 @@ async function send(item: QueuedCapture) {
 async function drain() {
   const tried = new Set<string>()
   for (;;) {
-    const next = items.value.find((item) => item.state === 'waiting' && !tried.has(item.id))
+    const next = nextToSend(items.value, owner(), tried)
     if (!next || !navigator.onLine) return
     tried.add(next.id)
     await send(next)
@@ -124,6 +129,8 @@ function flush(): Promise<void> {
 
 async function enqueue(capture: Capture): Promise<EnqueueResult> {
   await ready
+  const ownerId = owner()
+  if (!ownerId) throw new Error('A capture is only queued for a signed-in person')
   if (!persistAsked) {
     persistAsked = true
     // Best effort, so the browser is less likely to evict the stored recordings (Safari is the
@@ -132,7 +139,15 @@ async function enqueue(capture: Capture): Promise<EnqueueResult> {
     void navigator.storage?.persist?.()
   }
   // photos copied: an array held in a ref() is a proxy, which IndexedDB can't store.
-  const item: QueuedCapture = { ...capture, photos: [...capture.photos], createdAt: Date.now(), attempts: 0, state: 'waiting', error: null }
+  const item: QueuedCapture = {
+    ...capture,
+    photos: [...capture.photos],
+    ownerId,
+    createdAt: Date.now(),
+    attempts: 0,
+    state: 'waiting',
+    error: null
+  }
   await save(item)
   items.value = [...items.value, item]
   if (!navigator.onLine) return { state: 'queued' }
@@ -159,11 +174,21 @@ async function discard(id: string) {
   await remove(id)
 }
 
-/** The app's offline queue of captures. On the server it stays empty and never loads or sends. */
+/** The signed-in person's offline queue of captures. On the server it stays empty and never loads or sends. */
 export function useCaptureQueue() {
   if (import.meta.client && !api) {
     // Kept for good: useApi() needs the Nuxt context, which an 'online' event doesn't have.
     api = useApi()
+    const auth = useAuthStore()
+    owner = () => auth.user?.id ?? null
+    // Detached: the page that first asks for the queue must not take these with it when it unmounts.
+    effectScope(true).run(() => {
+      mine = computed(() => items.value.filter((item) => item.ownerId === owner()))
+      // Signing in again is when that person's waiting captures can go up.
+      watch(owner, (id) => {
+        if (id) void flush()
+      })
+    })
     ready = load()
     void flush()
     window.addEventListener('online', () => void flush())
@@ -173,5 +198,5 @@ export function useCaptureQueue() {
       if (document.visibilityState === 'visible') void flush()
     })
   }
-  return { items: items as Readonly<Ref<QueuedCapture[]>>, enqueue, flush, retry, discard }
+  return { items: mine, enqueue, flush, retry, discard }
 }
