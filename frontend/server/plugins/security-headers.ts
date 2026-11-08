@@ -21,6 +21,9 @@ export default defineNitroPlugin((nitroApp) => {
     // Only what Nuxt writes itself: the head and the closing tags (payload, entry). Never the app's
     // HTML (body, and bodyPrepend, which carries what is teleported to <body>): a script that slipped
     // into a rendered value must stay unsigned, so the browser refuses it.
+    // ponytail: built for the non-streaming renderer. With SSR streaming on, Nuxt reads the nonce
+    // from unhead's output before this hook runs; signing would then have to move into unhead.
+    // tests/securityHeaders.smoke.mjs fails if that day comes unnoticed.
     html.head = html.head.map((chunk) => signScripts(chunk, nonce))
     html.bodyAppend = html.bodyAppend.map((chunk) => signScripts(chunk, nonce))
     setResponseHeader(event, 'Content-Security-Policy', contentSecurityPolicy(nonce, useRuntimeConfig(event).public.apiBase))
