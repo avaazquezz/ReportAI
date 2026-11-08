@@ -10,7 +10,8 @@ account. This guide gets a technical person from an empty server to the first ap
 - **Optional but recommended:** a domain or subdomain (`reportes.empresa.com`) pointing at the
   server, with ports 80 and 443 open. You get HTTPS with a free certificate, renewed on its own.
   Without a domain, the panel is served over plain HTTP on the server's IP: only acceptable on a
-  private network or behind a VPN.
+  private network or behind a VPN. The technicians' field app needs HTTPS: over plain HTTP,
+  browsers block the microphone and the app can't be installed or open without coverage.
 - An API key for the AI that reads the messages: Anthropic (recommended), OpenAI, DeepSeek or
   any OpenAI-compatible provider. Each report costs a few cents, billed to that account.
 - **For voice notes:** an API key for a transcription service (Groq recommended: fast and cheap).
