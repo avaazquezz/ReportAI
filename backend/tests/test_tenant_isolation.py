@@ -54,6 +54,7 @@ ID_ROUTES: dict[tuple[str, str], dict[str, Any]] = {
     ("DELETE", "/channels/{connection_id}/invites/{invite_id}"): {},
     ("GET", "/reports/{report_id}"): {},
     ("POST", "/reports/{report_id}/approve"): {"json": {}},
+    ("POST", "/reports/{report_id}/reply"): {"data": {"text": "x"}},
     ("POST", "/reports/{report_id}/reject"): {"json": {"reason": "x"}},
     ("POST", "/reports/{report_id}/retry"): {},
     ("PATCH", "/reports/{report_id}/fields"): {"json": {"fields": {}}},

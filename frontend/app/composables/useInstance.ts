@@ -10,7 +10,9 @@ export function useInstance() {
   async function load(): Promise<SetupStatus | null> {
     if (status.value) return status.value
     try {
-      status.value = await useApi()<SetupStatus>('/setup/status')
+      // In the browser, one bar of coverage isn't waited out: a report can be recorded without it.
+      const wait = import.meta.client ? { timeout: DEVICE_COPY_AFTER_MS, retry: 0 } : {}
+      status.value = await useApi()<SetupStatus>('/setup/status', wait)
     } catch {
       // The API being down must not make every page unreachable; pages report their own errors.
       return null
@@ -38,10 +40,12 @@ export function useRole() {
   // Captures reports and reads only their own: outside TENANT_ROLES on purpose, like the API.
   const isTechnician = computed(() => role.value === 'technician')
   const canApprove = computed(() => role.value === 'tenant_admin' || role.value === 'approver')
+  // Records reports in the app and confirms their own: mirrors the API's require_capturer.
+  const canCapture = computed(() => canApprove.value || isTechnician.value)
   // Runs the installation (AI keys, email server, updates): its company's admin when it serves one
   // company, the super admin when it hosts several.
   const isInstanceAdmin = computed(() =>
     status.value?.single_tenant ? role.value === 'tenant_admin' : role.value === 'super_admin'
   )
-  return { role, isAdmin, isSuperAdmin, isMember, isTechnician, canApprove, isInstanceAdmin }
+  return { role, isAdmin, isSuperAdmin, isMember, isTechnician, canApprove, canCapture, isInstanceAdmin }
 }

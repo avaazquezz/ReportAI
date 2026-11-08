@@ -21,7 +21,7 @@ async function signIn(body: { token: string } | { email: string; code: string })
   loading.value = true
   try {
     await authStore.magicSignIn(body)
-    await navigateTo('/admin/reports')
+    await navigateTo('/capture') // a technician's home: recording a report
   } catch {
     error.value = t('auth.magic.error')
   } finally {

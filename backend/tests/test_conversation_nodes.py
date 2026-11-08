@@ -270,3 +270,41 @@ async def test_a_pressed_document_type_button_selects_that_type(db: AsyncSession
     result = await doctype.parse_document_type_selection_node.__wrapped__(state)
 
     assert result.document_type_id == chosen.id
+
+
+async def test_the_type_chosen_in_the_app_is_used_unless_it_was_switched_off(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.models.document_type import DocumentType
+
+    report, connection = await _world(db)
+    chosen = DocumentType(tenant_id=report.tenant_id, name="Visita", field_schema=SCHEMA, is_active=True)
+    off = DocumentType(tenant_id=report.tenant_id, name="Vieja", field_schema=SCHEMA, is_active=False)
+    db.add_all([chosen, off, DocumentType(tenant_id=report.tenant_id, name="Acta", field_schema=SCHEMA, is_active=True)])
+    await db.commit()
+    guess = AsyncMock(side_effect=AssertionError("nothing to guess"))
+    monkeypatch.setattr(doctype, "structured_completion", guess)
+
+    picked = await doctype.resolve_tenant_doctype_node.__wrapped__(
+        _state(report, connection, channel_type="web", document_type_id=chosen.id, field_schema=None, source_text="Visité la obra")
+    )
+    assert picked.document_type_id == chosen.id and picked.document_type_name == "Visita"
+
+    monkeypatch.setattr(doctype, "structured_completion", AsyncMock(return_value=LLMResult({"type_number": None, "confidence": 0}, 60, 4, "m")))
+    fallback = await doctype.resolve_tenant_doctype_node.__wrapped__(
+        _state(report, connection, channel_type="web", document_type_id=off.id, field_schema=None, source_text="algo")
+    )
+    assert fallback.document_type_id is None and len(fallback.available_document_types) == 2
+
+
+async def test_in_the_app_anything_said_is_a_correction_never_a_spoken_yes(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report, connection = await _world(db)
+    monkeypatch.setattr(approval, "classify_reply", AsyncMock(side_effect=AssertionError("no classifier in the app")))
+
+    result = await approval.classify_approval_reply_node.__wrapped__(
+        _state(report, connection, channel_type="web", pending_user_reply="Sí, confírmalo")
+    )
+
+    assert result.intent == "correct" and result.correction_text == "Sí, confírmalo"

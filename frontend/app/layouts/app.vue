@@ -7,11 +7,14 @@ const authStore = useAuthStore()
 
 // Every panel tab used to carry the landing's title; now each says which page it is (FE-11).
 useHead({
-  title: () => (route.meta.titleKey ? `${t(route.meta.titleKey)} · ReportAI` : 'ReportAI')
+  title: () => (route.meta.titleKey ? `${t(route.meta.titleKey)} · ReportAI` : 'ReportAI'),
+  // Installable from the panel only: a visitor on the landing shouldn't be offered the field app.
+  link: [{ rel: 'manifest', href: '/manifest.webmanifest' }],
+  meta: [{ name: 'theme-color', content: '#FFFFFF' }]
 })
 const { state: snackbar } = useSnackbar()
 
-const { isAdmin, isMember, isTechnician, isSuperAdmin, isInstanceAdmin } = useRole()
+const { isAdmin, isMember, isTechnician, isSuperAdmin, isInstanceAdmin, canCapture } = useRole()
 
 const navItems = computed(() => {
   const settings = { title: t('admin.layout.nav.settings'), to: '/admin/settings', icon: 'mdi-cog-outline' }
@@ -21,11 +24,13 @@ const navItems = computed(() => {
       ...(isInstanceAdmin.value ? [settings] : [])
     ]
   }
+  const capture = { title: t('admin.layout.nav.capture'), to: '/capture', icon: 'mdi-microphone-outline' }
   if (isTechnician.value) {
-    return [{ title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }]
+    return [capture, { title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }]
   }
   const items = [
     { title: t('admin.dashboard.title'), to: '/dashboard', icon: 'mdi-home-outline' },
+    ...(canCapture.value ? [capture] : []),
     { title: t('admin.layout.nav.reports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }
   ]
   if (!isAdmin.value) return items
@@ -53,6 +58,9 @@ onMounted(() => {
   if (isInstanceAdmin.value) loadUpdates()
   // Only a notice: if it can't be loaded the page works the same, so it just doesn't show.
   if (isMember.value) loadPlan().catch(() => {})
+  // The panel, not the landing, keeps a copy on the device so it opens with no coverage. Browsers
+  // only allow service workers over HTTPS: an installation reached by its IP over HTTP goes without.
+  if (!import.meta.dev && 'serviceWorker' in navigator) void navigator.serviceWorker.register('/sw.js')
 })
 
 const { mobile } = useDisplay()
@@ -90,7 +98,8 @@ function toggleDrawer() {
         </v-btn>
       </v-app-bar-title>
       <v-spacer />
-      <v-chip class="mr-4" size="small" variant="tonal">{{ roleLabel }}</v-chip>
+      <!-- On a phone the name needs the room more than the role does (CSS, not useDisplay: no hydration mismatch). -->
+      <v-chip class="mr-4 d-none d-sm-flex" size="small" variant="tonal">{{ roleLabel }}</v-chip>
       <LanguageSwitcher class="mr-4" />
       <v-btn variant="text" @click="authStore.logout()">{{ t('admin.layout.logout') }}</v-btn>
     </v-app-bar>

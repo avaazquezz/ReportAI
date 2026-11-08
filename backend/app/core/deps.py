@@ -101,6 +101,17 @@ async def require_approver(
     return current_user
 
 
+async def require_capturer(
+    current_user: TenantUser = Depends(get_current_user),
+) -> TenantUser:
+    """Records reports in the app and confirms them: approvers, and a technician, whose own
+    confirmation sends the document. A route that takes this must still keep a technician to their
+    own reports (`_load` in api/admin/reports.py)."""
+    if current_user.role not in {"tenant_admin", "approver", "super_admin", TECHNICIAN}:
+        raise AuthorizationException("Not allowed to capture or confirm reports")
+    return current_user
+
+
 async def require_tenant_admin(
     current_user: TenantUser = Depends(get_current_user),
 ) -> TenantUser:

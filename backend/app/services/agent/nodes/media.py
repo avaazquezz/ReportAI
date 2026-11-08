@@ -51,12 +51,13 @@ async def transcribe_node(state: AgentState) -> AgentState:
 
     audio_bytes = await asyncio.to_thread(Path(state.media_local_path).read_bytes)
     transcript = await transcription.transcribe(audio_bytes, Path(state.media_local_path).name, state.language)
-    text = transcript.text
+    # What was said first, then whatever came typed with it: both are the report's source.
+    text = "\n\n".join(part for part in (transcript.text, state.incoming_text) if part)
     await save_report(state.report_id, source_text=text)
 
     return state.model_copy(
         update={
-            "transcript": text,
+            "transcript": transcript.text,
             "incoming_text": text,
             "source_text": text,
             "last_tool_usage": transcription_usage(transcript),

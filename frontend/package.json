@@ -13,7 +13,8 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxi typecheck",
-    "test": "jiti tests/savings.test.ts && jiti tests/planNotice.test.ts && jiti tests/auditSummary.test.ts"
+    "test:smoke": "node --test tests/securityHeaders.smoke.mjs",
+    "test": "jiti tests/savings.test.ts && jiti tests/planNotice.test.ts && jiti tests/auditSummary.test.ts && jiti tests/captureQueue.test.ts && jiti tests/locale.test.ts && jiti tests/session.test.ts && jiti tests/securityHeaders.test.ts"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

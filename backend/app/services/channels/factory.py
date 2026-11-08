@@ -31,4 +31,8 @@ def get_channel_adapter(connection: ChannelConnection) -> ChannelAdapter:
             inbound_slug=connection.credentials["inbound_slug"],
             channel_connection_id=connection.id,
         )
+    if connection.channel_type == "web":
+        from app.services.channels.web import WebAdapter
+
+        return WebAdapter(channel_connection_id=connection.id)
     raise ValueError(f"Unknown channel_type: {connection.channel_type!r}")

@@ -11,7 +11,8 @@
         "settings": "Settings",
         "team": "Team",
         "myReports": "My reports",
-        "audit": "Audit log"
+        "audit": "Audit log",
+        "capture": "New report"
       },
       "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here.",
       "toggleMenu": "Show or hide the menu"
@@ -73,11 +74,11 @@
         "document_type": "Have a template",
         "document_typeHelp": "Upload a Word example or start with a ready-made template.",
         "channel": "Connect a channel",
-        "channelHelp": "A Telegram bot, for example.",
+        "channelHelp": "Optional: besides the app, a Telegram bot or an email inbox.",
         "senders": "Invite whoever will send reports",
         "sendersHelp": "Under Channels, with a link: no ids to copy.",
         "first_report": "Get the first report",
-        "first_reportHelp": "Send the bot a voice note describing a job."
+        "first_reportHelp": "Record one from «New report», or send a voice note to the bot if you have one."
       },
       "counts": {
         "waiting": "Waiting on someone",
@@ -331,7 +332,8 @@
         "export": "Couldn't export the CSV.",
         "email": "Enter a valid email.",
         "retry": "Couldn't try the report again.",
-        "retryBusy": "Its sender has another report in progress: finish or cancel that one before trying this again."
+        "retryBusy": "Its sender has another report in progress: finish or cancel that one before trying this again.",
+        "reply": "The correction couldn't be sent."
       },
       "toast": {
         "approved": "Report approved — generating the document.",
@@ -339,7 +341,8 @@
         "saved": "Changes saved and PDF regenerated.",
         "regenerated": "PDF regenerated.",
         "resent": "Resending.",
-        "retried": "The report is running again."
+        "retried": "The report is running again.",
+        "replied": "Correction sent. Preparing the report again…"
       },
       "steps": {
         "ingest": "Message received",
@@ -367,6 +370,13 @@
         "deliver": "Delivered",
         "finalize_report": "Report closed",
         "fail": "Failed"
+      },
+      "correct": {
+        "title": "Correct",
+        "help": "Say or type what to change or what's missing. The report is prepared again with it.",
+        "recorded": "Correction recorded",
+        "text": "Or type it",
+        "send": "Send correction"
       }
     },
     "usageSummary": {
@@ -731,6 +741,47 @@
         "plan": {
           "changed": "Changed the plan"
         }
+      }
+    },
+    "capture": {
+      "title": "New report",
+      "type": "Report type",
+      "typeOnly": "Report: {name}",
+      "noTypes": "There's no report type ready to record yet. Ask whoever manages the account to upload a template.",
+      "recorded": "Recording",
+      "recordedFor": "Recording of {length}",
+      "recordAgain": "Record again",
+      "notes": "Add details (optional)",
+      "text": "Or type the report",
+      "photo": "Photo {n}",
+      "removePhoto": "Remove photo {n}",
+      "addPhoto": "Add photo",
+      "send": "Send",
+      "queuedOffline": "Saved on this phone. It will be sent as soon as there is coverage again.",
+      "errors": {
+        "types": "The report types couldn't be loaded. Reload the page.",
+        "send": "It couldn't be sent. It stays saved below so you can retry.",
+        "store": "It couldn't be saved on this phone (private browsing?). Don't close this page and try again."
+      },
+      "record": {
+        "start": "Start recording",
+        "stop": "Stop recording",
+        "hint": "Tap and describe the visit",
+        "recording": "Recording",
+        "denied": "The browser won't let the page use the microphone. Allow it in the site permissions, or type the report.",
+        "unsupported": "This browser can't record audio. Type the report, or use an up-to-date Chrome or Safari.",
+        "failed": "The microphone couldn't be opened. Try again."
+      },
+      "queue": {
+        "title": "Waiting to be sent",
+        "help": "They are saved on this phone and are sent on their own when coverage comes back.",
+        "waiting": "Waiting for coverage",
+        "sending": "Sending…",
+        "failed": "Couldn't be sent",
+        "retry": "Retry",
+        "discard": "Discard",
+        "discardTitle": "Discard this report?",
+        "discardMessage": "The recording is deleted from this phone and can't be recovered."
       }
     }
   }

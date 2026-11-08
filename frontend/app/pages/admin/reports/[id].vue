@@ -8,12 +8,16 @@ const route = useRoute()
 const reportId = String(route.params.id)
 const { formatDateTime } = useLocaleDate()
 const { statusLabel, statusColor } = useReportStatus()
-const { getById, approve, reject, retry, editFields, preview, resend, fetchBlob } = useReports()
+const { getById, approve, reject, retry, editFields, preview, resend, reply, fetchBlob } = useReports()
 const { show } = useSnackbar()
 const authStore = useAuthStore()
-const { canApprove } = useRole()
+const { canApprove, isTechnician } = useRole()
 // The public demo and read-only accounts look at reports; they don't change them.
 const readOnly = computed(() => (authStore.user?.is_demo ?? false) || !canApprove.value)
+// Made in the app: its author corrects it by voice or text and confirms it (a technician only
+// ever sees their own). Reviewing everyone's — reject, regenerate, resend — stays the approvers'.
+const fromApp = computed(() => report.value?.requester_channel === 'web')
+const canConfirm = computed(() => !(authStore.user?.is_demo ?? false) && (canApprove.value || (isTechnician.value && fromApp.value)))
 
 const POLL_MS = 3000
 
@@ -39,7 +43,7 @@ const dirty = computed(() => Object.keys(edits.value).length > 0)
 const status = computed(() => report.value?.status ?? '')
 const awaitingApproval = computed(() => status.value === 'awaiting_approval')
 const delivered = computed(() => FINISHED_STATUSES.includes(status.value))
-const editable = computed(() => !readOnly.value && (awaitingApproval.value || delivered.value))
+const editable = computed(() => (!readOnly.value && (awaitingApproval.value || delivered.value)) || (canConfirm.value && awaitingApproval.value))
 const rejectable = computed(() => !readOnly.value && PAUSED_STATUSES.includes(status.value))
 // A report that failed (not one an admin rejected) can run again once the cause is fixed.
 const retryable = computed(() => !readOnly.value && status.value === 'failed' && report.value?.error_detail !== 'Rejected by admin')
@@ -160,6 +164,16 @@ async function onRetry() {
     busy.value = null
   }
 }
+const correction = ref('')
+const correctionAudio = ref<Blob | null>(null)
+const correctionRecording = ref(false)
+async function onReply() {
+  await run('reply', () => reply(reportId, { text: correction.value.trim() || null, audio: correctionAudio.value }), 'admin.reports.toast.replied')
+  if (status.value === 'pending') {
+    correction.value = ''
+    correctionAudio.value = null
+  }
+}
 const onResendFailed = () => run('resend', () => resend(reportId), 'admin.reports.toast.resent')
 const onResendOne = (delivery: ReportDelivery) =>
   run('resend', () => resend(reportId, { delivery_id: delivery.id }), 'admin.reports.toast.resent')
@@ -266,7 +280,7 @@ onBeforeUnmount(() => {
       </v-alert>
 
       <div class="mb-6 flex flex-wrap gap-2">
-        <template v-if="awaitingApproval && !readOnly">
+        <template v-if="awaitingApproval && canConfirm">
           <v-btn color="success" :loading="busy === 'approve'" :disabled="missing.length > 0" @click="onApprove">
             {{ dirty ? t('admin.reports.actions.approveWithChanges') : t('admin.reports.actions.approve') }}
           </v-btn>
@@ -294,6 +308,31 @@ onBeforeUnmount(() => {
       <p v-if="missing.length && editable" class="-mt-4 mb-6 font-body text-sm text-failed-600">
         {{ t('admin.reports.detail.fillRequired', { fields: missing.join(', ') }) }}
       </p>
+
+      <v-card v-if="awaitingApproval && canConfirm && fromApp" flat border class="mb-6">
+        <v-card-title>{{ t('admin.reports.correct.title') }}</v-card-title>
+        <v-card-subtitle>{{ t('admin.reports.correct.help') }}</v-card-subtitle>
+        <v-card-text class="flex flex-col gap-3">
+          <div class="flex items-center gap-4">
+            <RecordControl v-if="!correctionAudio" v-model:recording="correctionRecording" size="small" @recorded="correctionAudio = $event" />
+            <template v-else>
+              <v-chip prepend-icon="mdi-microphone" closable @click:close="correctionAudio = null">{{ t('admin.reports.correct.recorded') }}</v-chip>
+            </template>
+          </div>
+          <v-textarea v-model="correction" :label="t('admin.reports.correct.text')" rows="2" auto-grow counter="20000" maxlength="20000" />
+          <div>
+            <v-btn
+              color="primary"
+              variant="tonal"
+              :loading="busy === 'reply'"
+              :disabled="correctionRecording || (!correction.trim() && !correctionAudio)"
+              @click="onReply"
+            >
+              {{ t('admin.reports.correct.send') }}
+            </v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
 
       <v-row>
         <v-col cols="12" md="7">

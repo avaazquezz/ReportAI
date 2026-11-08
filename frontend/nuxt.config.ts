@@ -7,6 +7,13 @@ export default defineNuxtConfig({
   // what keeps Vuetify's own component styles from being overridden.
   modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxt/eslint', '@nuxtjs/i18n'],
   css: ['@mdi/font/css/materialdesignicons.css', '~/assets/css/fonts.css', '~/assets/css/main.css'],
+  routeRules: {
+    // The page the service worker keeps on the phone (modules/service-worker): rendered with nothing
+    // in it, so the app can draw whichever page was asked for with no coverage.
+    '/app-shell': { ssr: false },
+    // Asked for on every visit, so a fixed service worker reaches the phones on their next one.
+    '/sw.js': { headers: { 'cache-control': 'no-cache' } }
+  },
   runtimeConfig: {
     // Server-side base for SSR fetches: inside Docker the public domain isn't
     // reachable from the container, so SSR talks to the backend service directly.
@@ -44,7 +51,13 @@ export default defineNuxtConfig({
     // it has no notion of "Spain's co-official regional languages also mean Spanish".
     // app/plugins/locale-detect.server.ts does that bucketing itself on every SSR
     // request, so the built-in one is disabled rather than left running redundantly.
-    detectBrowserLanguage: false
+    detectBrowserLanguage: false,
+    experimental: {
+      // Writes each locale's messages as a static file in the build, which the service worker keeps
+      // on the phone (modules/service-worker); served by a server route, the app would open with no
+      // coverage showing translation keys instead of text.
+      prerenderMessages: true
+    }
   },
   vuetify: {
     vuetifyOptions: {

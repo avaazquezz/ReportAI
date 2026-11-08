@@ -45,6 +45,13 @@ export function useSessionCookies() {
   return cookies
 }
 
+/** Whose session this browser holds, read from its own token. The cookies are the same in every
+ * tab, so this follows a sign-in made in another tab, unlike the profile a page keeps in memory. */
+export function useSessionUserId() {
+  const { access, refresh } = useSessionCookies()
+  return computed(() => tokenSubject(refresh.value ?? access.value))
+}
+
 export function useApi() {
   // Everything that needs the Nuxt context is resolved here, synchronously: inside a fetch hook,
   // after an await, there is no context and useCookie() throws NUXT_E1001 (FE-2).
@@ -77,7 +84,10 @@ export function useApi() {
       access.value = tokens.access_token
       refresh.value = tokens.refresh_token
       return true
-    } catch {
+    } catch (error) {
+      // No answer at all (coverage dropped mid-renewal): the session is unreachable, not over.
+      // Ending it would sign a technician out in a basement and send them back to their email.
+      if (isUnreachable(error)) throw error
       if (import.meta.client) {
         // Another tab may have renewed first, spending the token this one sent.
         refreshCookie(ACCESS_COOKIE)
@@ -99,6 +109,7 @@ export function useApi() {
   async function endSession() {
     access.value = null
     refresh.value = null
+    forgetOfflineCopies()
     await nuxtApp.runWithContext(() => {
       useAuthStore().user = null
       return navigateTo('/login')

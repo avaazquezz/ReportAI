@@ -11,7 +11,8 @@
         "settings": "Ajustes",
         "team": "Equipo",
         "myReports": "Mis informes",
-        "audit": "Registro de actividad"
+        "audit": "Registro de actividad",
+        "capture": "Nuevo informe"
       },
       "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
       "toggleMenu": "Mostrar u ocultar el menú"
@@ -73,11 +74,11 @@
         "document_type": "Tener una plantilla",
         "document_typeHelp": "Sube un Word de ejemplo o empieza con una plantilla ya hecha.",
         "channel": "Conectar un canal",
-        "channelHelp": "Por ejemplo, un bot de Telegram.",
+        "channelHelp": "Opcional: además de la app, un bot de Telegram o un buzón de email.",
         "senders": "Invitar a quien enviará informes",
         "sendersHelp": "Desde Canales, con un enlace: sin copiar identificadores.",
         "first_report": "Recibir el primer informe",
-        "first_reportHelp": "Envía una nota de voz al bot describiendo un trabajo."
+        "first_reportHelp": "Graba uno desde «Nuevo informe», o envía una nota de voz al bot si tienes uno."
       },
       "counts": {
         "waiting": "Esperando a alguien",
@@ -331,7 +332,8 @@
         "export": "No se pudo exportar el CSV.",
         "email": "Escribe un email válido.",
         "retry": "No se pudo reintentar el informe.",
-        "retryBusy": "Quien lo envió tiene otro informe en curso: termínalo o cancélalo antes de reintentar este."
+        "retryBusy": "Quien lo envió tiene otro informe en curso: termínalo o cancélalo antes de reintentar este.",
+        "reply": "No se ha podido enviar la corrección."
       },
       "toast": {
         "approved": "Informe aprobado — generando el documento.",
@@ -339,7 +341,8 @@
         "saved": "Cambios guardados y PDF regenerado.",
         "regenerated": "PDF regenerado.",
         "resent": "Reenvío en marcha.",
-        "retried": "Informe en marcha otra vez."
+        "retried": "Informe en marcha otra vez.",
+        "replied": "Corrección enviada. Preparando el informe otra vez…"
       },
       "steps": {
         "ingest": "Mensaje recibido",
@@ -367,6 +370,13 @@
         "deliver": "Entregado",
         "finalize_report": "Informe cerrado",
         "fail": "Fallido"
+      },
+      "correct": {
+        "title": "Corregir",
+        "help": "Di o escribe qué hay que cambiar o qué falta. El informe se vuelve a preparar con ello.",
+        "recorded": "Corrección grabada",
+        "text": "O escríbelo",
+        "send": "Enviar corrección"
       }
     },
     "usageSummary": {
@@ -731,6 +741,47 @@
         "plan": {
           "changed": "Cambió el plan"
         }
+      }
+    },
+    "capture": {
+      "title": "Nuevo informe",
+      "type": "Tipo de informe",
+      "typeOnly": "Informe: {name}",
+      "noTypes": "Todavía no hay ningún tipo de informe listo para grabar. Pide a quien gestiona la cuenta que suba una plantilla.",
+      "recorded": "Grabación",
+      "recordedFor": "Grabación de {length}",
+      "recordAgain": "Volver a grabar",
+      "notes": "Añade detalles (opcional)",
+      "text": "O escribe el informe",
+      "photo": "Foto {n}",
+      "removePhoto": "Quitar la foto {n}",
+      "addPhoto": "Añadir foto",
+      "send": "Enviar",
+      "queuedOffline": "Guardado en el móvil. Se enviará solo en cuanto vuelva la cobertura.",
+      "errors": {
+        "types": "No se han podido cargar los tipos de informe. Recarga la página.",
+        "send": "No se ha podido enviar. Queda guardado abajo para reintentarlo.",
+        "store": "No se ha podido guardar en el móvil (¿navegación privada?). No cierres esta página y vuelve a probar."
+      },
+      "record": {
+        "start": "Empezar a grabar",
+        "stop": "Parar la grabación",
+        "hint": "Pulsa y cuenta la visita",
+        "recording": "Grabando",
+        "denied": "El navegador no deja usar el micrófono. Actívalo en los permisos del sitio, o escribe el informe.",
+        "unsupported": "Este navegador no puede grabar audio. Escribe el informe o usa Chrome o Safari actualizados.",
+        "failed": "No se ha podido abrir el micrófono. Vuelve a probar."
+      },
+      "queue": {
+        "title": "Pendientes de enviar",
+        "help": "Están guardados en este móvil y se envían solos al recuperar la cobertura.",
+        "waiting": "Esperando cobertura",
+        "sending": "Enviando…",
+        "failed": "No se pudo enviar",
+        "retry": "Reintentar",
+        "discard": "Descartar",
+        "discardTitle": "¿Descartar este informe?",
+        "discardMessage": "Se borra la grabación de este móvil y no se podrá recuperar."
       }
     }
   }

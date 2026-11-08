@@ -15,7 +15,8 @@ class Report(Base):
         Index("ix_reports_tenant_id", "tenant_id"),
         Index("ix_reports_tenant_id_created_at", "tenant_id", "created_at"),  # the plan's quota count
         Index("ix_reports_tenant_id_requester_user_id", "tenant_id", "requester_user_id", "created_at"),
-        # A sender has at most one report in flight or waiting on them.
+        # A chat sender has at most one report in flight or waiting on them: their next message
+        # answers it. The app has no such ambiguity, so a technician may keep several drafts open.
         Index(
             "uq_reports_one_active_per_sender",
             "tenant_id",
@@ -24,6 +25,7 @@ class Report(Base):
             unique=True,
             postgresql_where=text(
                 "status IN ('pending', 'awaiting_doctype_selection', 'awaiting_details', 'awaiting_approval')"
+                " AND requester_channel <> 'web'"
             ),
         ),
     )
