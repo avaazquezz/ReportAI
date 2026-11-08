@@ -14,6 +14,9 @@ const CACHE = `reportai-${VERSION}`
 const PRECACHED = new Set(PRECACHE)
 // Rendered by the server with this installation's settings, but with no page in it: answered for
 // any page asked for with no network, the app then draws that page on the phone.
+// ponytail: the shell keeps the public settings (NUXT_PUBLIC_*) of when it was installed; a change of
+// them without a new build reaches phones only with the next release. Re-fetch it on activate or
+// periodically if those settings ever start changing between releases.
 const SHELL = '/app-shell'
 // On weak coverage a page that takes longer than this opens from the phone instead, and the app
 // then talks to the API by itself.
@@ -22,12 +25,14 @@ const NAVIGATION_TIMEOUT_MS = 4000
 self.addEventListener('install', (event) => event.waitUntil(fill()))
 
 // All or nothing: if one file can't be stored, this version isn't installed and the previous one
-// keeps working.
+// keeps working. The shell first: if a deployment lands mid-install, this build's own files (its
+// builds/meta/<id>.json at least) are gone from the server and the install fails, instead of
+// keeping a shell of the new build over this build's files.
 async function fill() {
   const cache = await caches.open(CACHE)
-  await Promise.all(PRECACHE.map((url) => keep(cache, url)))
   const shell = await fetch(SHELL, { cache: 'no-store' })
   if (!shell.ok) throw new Error(`${SHELL} answered ${shell.status}`)
+  await Promise.all(PRECACHE.map((url) => keep(cache, url)))
   await cache.put(SHELL, shell)
 }
 

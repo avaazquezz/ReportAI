@@ -45,8 +45,9 @@ export default defineNuxtModule({
         throw new Error('No prerendered i18n messages to keep: the app would open offline without its texts')
       }
 
-      // The version is the content itself: a new deployment that changes nothing the phone keeps
-      // doesn't make it download anything again.
+      // The version is the content itself. Every build gets a new one (its builds/meta/<id>.json is
+      // named after the build), but the phone only downloads the files that changed: sw.js copies
+      // the hashed ones it already holds.
       const hash = createHash('sha256')
       for (const file of files) hash.update(file).update(await readFile(join(publicDir, file)))
       const version = hash.digest('hex').slice(0, 12)
