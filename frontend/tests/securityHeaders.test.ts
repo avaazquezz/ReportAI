@@ -22,6 +22,31 @@ test('nothing but script tags is touched, and a signed tag is not signed twice',
   assert.equal(signScripts(html, 'abc'), html)
 })
 
+test('"<script" written inside an attribute value is text, never signed into a running script', () => {
+  // unhead leaves < and > as they are in attribute values: signing this text used to close the
+  // value early and turn the rest into a script carrying the nonce, which the browser ran.
+  const meta = '<meta name="description" content="<script><script>document.documentElement.dataset.pwned=1</script>">'
+  assert.equal(signScripts(meta, 'abc'), meta)
+  const ogTitle = '<meta property="og:title" content="a><script>alert(1)</script>">'
+  assert.equal(signScripts(ogTitle, 'abc'), ogTitle)
+  const singleQuoted = "<meta content='<script>alert(1)</script>'>"
+  assert.equal(signScripts(singleQuoted, 'abc'), singleQuoted)
+})
+
+test("text inside comments and other elements' content is never a tag", () => {
+  const html =
+    '<!-- <script>a</script> --><title><script>b</script></title><style>p::after{content:"<script>"}</style>' +
+    '<noscript><script>c</script></noscript>'
+  assert.equal(signScripts(html, 'abc'), html)
+})
+
+test("a script's own text holding \"<script\" signs only the real tag, and nonce inside a value doesn't count", () => {
+  assert.equal(
+    signScripts('<script type="application/ld+json">{"q":"<script>"}</script><script data-note=" nonce=1">x</script>', 'abc'),
+    '<script nonce="abc" type="application/ld+json">{"q":"<script>"}</script><script nonce="abc" data-note=" nonce=1">x</script>'
+  )
+})
+
 test('scripts run only from this origin or with this response\'s nonce, never from eval or inline markup', () => {
   const scripts = directive(contentSecurityPolicy('n0nce+/=', '/api'), 'script-src')
   assert.equal(scripts, "script-src 'self' 'nonce-n0nce+/='")
@@ -42,7 +67,8 @@ test('a relative API base is this origin; an absolute one adds its origin, witho
 test('the panel can never be framed, and plugins and <base> stay out', () => {
   const policy = contentSecurityPolicy('n', '/api')
   assert.equal(directive(policy, 'frame-ancestors'), "frame-ancestors 'none'")
-  assert.equal(directive(policy, 'object-src'), "object-src 'none'")
+  // Only blob: (the PDF preview in Safari): never this origin's files or anyone else's.
+  assert.equal(directive(policy, 'object-src'), 'object-src blob:')
   assert.equal(directive(policy, 'base-uri'), "base-uri 'self'")
 })
 
