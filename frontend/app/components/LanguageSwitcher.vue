@@ -4,7 +4,7 @@ const { locale, setLocale } = useI18n()
 // setLocale() alone doesn't reliably persist the override for the next SSR
 // request — write the same cookie server/middleware/locale-detect.ts and
 // detectBrowserLanguage read (i18n_redirected) directly too.
-const overrideCookie = useCookie('i18n_redirected', { path: '/', maxAge: 60 * 60 * 24 * 365 })
+const overrideCookie = useCookie(LOCALE_COOKIE, { path: '/', maxAge: 60 * 60 * 24 * 365 })
 
 async function toggleLocale() {
   const next = locale.value === 'es' ? 'en' : 'es'

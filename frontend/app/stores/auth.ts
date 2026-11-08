@@ -61,6 +61,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       access.value = null
       refresh.value = null
+      forgetOfflineCopies()
       if (refreshToken) {
         // Ends the session on the server too; signing out must not wait on (or fail with) it.
         api('/auth/logout', { method: 'POST', body: { refresh_token: refreshToken } }).catch(() => {})

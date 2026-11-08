@@ -98,7 +98,9 @@ async def classify_approval_reply_node(state: AgentState) -> AgentState:
         return state.model_copy(update={"intent": intent, "correction_text": None})
 
     text = (reply or "").strip()
-    intent, result = await classify_reply(text)
+    # The app confirms and cancels with buttons (the panel's approve checks required fields):
+    # anything said or typed there is a correction, never a spoken "yes" that skips the check.
+    intent, result = ("correct", None) if state.channel_type == "web" and text else await classify_reply(text)
     update: dict[str, Any] = {"intent": intent, "last_tool_usage": usage_of(result) if result else None}
     if intent == "correct":
         update |= {"correction_text": text, "correction_attempts": state.correction_attempts + 1}

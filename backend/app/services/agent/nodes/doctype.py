@@ -74,6 +74,12 @@ async def resolve_tenant_doctype_node(state: AgentState) -> AgentState:
             filters={"tenant_id": state.tenant_id, "is_active": True}, limit=50
         )
 
+    # Chosen in the app before recording: nothing to guess, unless it was switched off since.
+    if state.document_type_id is not None:
+        chosen = next((dt for dt in active_types if dt.id == state.document_type_id), None)
+        if chosen is not None:
+            return _apply_document_type(state, chosen)
+        state = state.model_copy(update={"document_type_id": None})
     if len(active_types) == 1:
         return _apply_document_type(state, active_types[0])
 

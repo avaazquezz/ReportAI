@@ -12,6 +12,8 @@
 		reverse_proxy frontend:3000
 	}
 
+	# The panel sends these three itself, with the rest of its security headers and its CSP
+	# (frontend/server/utils/securityHeaders.ts); here they also cover the API. Keep them equal.
 	header {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY

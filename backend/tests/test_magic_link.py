@@ -72,9 +72,11 @@ async def test_only_a_technician_gets_a_link_and_everyone_gets_the_same_answer(
     assert mailbox.await_count == 1 and mailbox.await_args.kwargs["to"] == [technician.email]
 
 
+@pytest.mark.parametrize("single_tenant", [False, True])  # a self-hosted company has technicians too
 async def test_the_link_signs_in_once_and_marks_the_email_verified(
-    client: AsyncClient, db: AsyncSession, mailbox: AsyncMock
+    client: AsyncClient, db: AsyncSession, mailbox: AsyncMock, monkeypatch: pytest.MonkeyPatch, single_tenant: bool
 ) -> None:
+    monkeypatch.setattr(settings, "SINGLE_TENANT", single_tenant)
     technician = await _person(db, "technician")
     await client.post("/auth/magic-link", json={"email": technician.email})
     token, _ = _sent(mailbox)

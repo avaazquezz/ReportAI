@@ -63,7 +63,8 @@ def _route_after_validate(state: AgentState) -> str:
 
 
 def _route_after_completeness(state: AgentState) -> str:
-    if not state.missing_fields:
+    # In the app the review form shows what is missing and asks for it: no chat question.
+    if not state.missing_fields or state.channel_type == "web":
         return "human_approval_prompt"
     if state.missing_attempts < MAX_MISSING_ATTEMPTS:
         return "ask_missing_fields"

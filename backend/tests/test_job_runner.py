@@ -169,6 +169,19 @@ async def test_a_voice_reply_is_transcribed_before_the_graph_sees_it(
     assert transcribe.await_args.args[2] == "es"  # in the company's language
 
 
+async def test_a_reply_said_and_typed_reaches_the_graph_whole(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    graph = _use_graph(monkeypatch, FakeGraph(paused=True))
+    adapter.download_media.return_value = b"opus"
+    monkeypatch.setattr(runner.transcription, "transcribe", AsyncMock(return_value=Transcript("la fecha era el martes", "m")))
+
+    await execute(_job(report, RESUME, {"text": "y el cliente es Norte", "media_reference": "voice-9"}))
+
+    assert graph.ainvoke.await_args.args[0] == Command(resume="la fecha era el martes\n\ny el cliente es Norte")
+
+
 async def test_a_voice_reply_is_metered_for_its_report(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
 ) -> None:

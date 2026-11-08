@@ -72,12 +72,13 @@ def _shrink_to_jpeg(raw: bytes) -> bytes:
     return out.getvalue()
 
 
-async def _save_photo(
-    db: AsyncSession, connection: ChannelConnection, incoming: IncomingMessage, report_id: uuid.UUID | None
+async def store_photo(
+    db: AsyncSession, *, tenant_id: uuid.UUID, report_id: uuid.UUID | None, sender_id: str, raw: bytes,
+    caption: str | None = None,
 ) -> None:
-    raw = await get_channel_adapter(connection).download_media(incoming.photo_reference or "")
+    """Saves a picture, downsized, as an attachment of the report (or waiting for one)."""
     jpeg = await asyncio.to_thread(_shrink_to_jpeg, raw)
-    folder = Path(settings.DOCUMENT_STORAGE_PATH) / "attachments" / str(connection.tenant_id)
+    folder = Path(settings.DOCUMENT_STORAGE_PATH) / "attachments" / str(tenant_id)
     path = folder / f"{uuid.uuid4()}.jpg"
 
     def _write() -> None:
@@ -85,16 +86,17 @@ async def _save_photo(
         path.write_bytes(jpeg)
 
     await asyncio.to_thread(_write)
-    db.add(
-        ReportAttachment(
-            tenant_id=connection.tenant_id,
-            report_id=report_id,
-            sender_identifier=incoming.sender_id,
-            path=str(path),
-            caption=incoming.text,
-        )
-    )
+    db.add(ReportAttachment(tenant_id=tenant_id, report_id=report_id, sender_identifier=sender_id, path=str(path), caption=caption))
     await db.flush()
+
+
+async def _save_photo(
+    db: AsyncSession, connection: ChannelConnection, incoming: IncomingMessage, report_id: uuid.UUID | None
+) -> None:
+    raw = await get_channel_adapter(connection).download_media(incoming.photo_reference or "")
+    await store_photo(
+        db, tenant_id=connection.tenant_id, report_id=report_id, sender_id=incoming.sender_id, raw=raw, caption=incoming.text
+    )
 
 
 async def _first_delivery(db: AsyncSession, connection_id: uuid.UUID, external_id: str) -> bool:
@@ -127,18 +129,25 @@ async def create_report_with_job(
     sender_label: str | None = None,
     sent_at: datetime | None = None,
     meta: dict[str, Any] | None = None,
+    report_id: uuid.UUID | None = None,
+    requester_user_id: uuid.UUID | None = None,
+    document_type_id: uuid.UUID | None = None,
 ) -> Report | None:
     """A new report and the job that will process it, in the caller's transaction. None when the
-    sender already has one in flight (the partial unique index says so, race-safely)."""
+    sender already has one in flight, or `report_id` is taken (the database says so, race-safely).
+    The app passes who captured it and the document type chosen before recording."""
     report = Report(
         tenant_id=connection.tenant_id,
         status="pending",
         requester_channel=channel_type,
         requester_identifier=sender_id,
+        requester_user_id=requester_user_id,
         channel_connection_id=connection.id,
         received_at=sent_at or datetime.now(UTC),
         channel_meta=meta or None,
     )
+    if report_id is not None:
+        report.id = report_id
     try:
         async with db.begin_nested():
             db.add(report)
@@ -156,12 +165,10 @@ async def create_report_with_job(
         ),
         {"report": report.id, "tenant": connection.tenant_id, "sender": sender_id, "window": _ORPHAN_PHOTO_WINDOW_MINUTES},
     )
-    await enqueue(
-        db,
-        report_id=report.id,
-        kind=RUN,
-        payload={"text": text, "media_reference": media_reference, "sender_label": sender_label},
-    )
+    payload: dict[str, Any] = {"text": text, "media_reference": media_reference, "sender_label": sender_label}
+    if document_type_id is not None:
+        payload["document_type_id"] = str(document_type_id)
+    await enqueue(db, report_id=report.id, kind=RUN, payload=payload)
     return report
 
 

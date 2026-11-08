@@ -3,7 +3,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,7 @@ from app.schemas.channel_connection import (
 from app.schemas.common import PaginatedResponse
 from app.services import audit
 from app.services.channels.telegram_webhook import register_telegram_webhook, verify_telegram_bot
+from app.services.channels.web import WEB
 from app.services.sender_invites import create_invite, sender_labels, telegram_link
 
 router = APIRouter(prefix="/channels", tags=["admin:channels"])
@@ -91,10 +92,10 @@ async def list_channel_connections(
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[ChannelConnectionResponse]:
     tenant_id = require_tenant_id(current_user)
-    repo = BaseRepository(ChannelConnection, db)
-    filters = {"tenant_id": tenant_id}
-    items = await repo.list(skip=skip, limit=limit, filters=filters)
-    total = await repo.count(filters=filters)
+    # The app's own connection (made on its first capture) has nothing to set up: not listed.
+    query = select(ChannelConnection).where(ChannelConnection.tenant_id == tenant_id, ChannelConnection.channel_type != WEB)
+    items = list(await db.scalars(query.order_by(ChannelConnection.created_at).offset(skip).limit(limit)))
+    total = int(await db.scalar(select(func.count()).select_from(query.subquery())) or 0)
     labels = await sender_labels(db, [c.id for c in items])
     return PaginatedResponse(
         items=[ChannelConnectionResponse.from_model(c, labels.get(c.id)) for c in items],
