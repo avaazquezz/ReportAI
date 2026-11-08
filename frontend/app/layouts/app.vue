@@ -7,7 +7,10 @@ const authStore = useAuthStore()
 
 // Every panel tab used to carry the landing's title; now each says which page it is (FE-11).
 useHead({
-  title: () => (route.meta.titleKey ? `${t(route.meta.titleKey)} · ReportAI` : 'ReportAI')
+  title: () => (route.meta.titleKey ? `${t(route.meta.titleKey)} · ReportAI` : 'ReportAI'),
+  // Installable from the panel only: a visitor on the landing shouldn't be offered the field app.
+  link: [{ rel: 'manifest', href: '/manifest.webmanifest' }],
+  meta: [{ name: 'theme-color', content: '#FFFFFF' }]
 })
 const { state: snackbar } = useSnackbar()
 
