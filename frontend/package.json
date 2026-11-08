@@ -13,7 +13,7 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxi typecheck",
-    "test": "jiti tests/savings.test.ts && jiti tests/planNotice.test.ts && jiti tests/auditSummary.test.ts && jiti tests/captureQueue.test.ts && jiti tests/locale.test.ts"
+    "test": "jiti tests/savings.test.ts && jiti tests/planNotice.test.ts && jiti tests/auditSummary.test.ts && jiti tests/captureQueue.test.ts && jiti tests/locale.test.ts && jiti tests/session.test.ts"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

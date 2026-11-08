@@ -10,7 +10,9 @@ export function useInstance() {
   async function load(): Promise<SetupStatus | null> {
     if (status.value) return status.value
     try {
-      status.value = await useApi()<SetupStatus>('/setup/status')
+      // In the browser, one bar of coverage isn't waited out: a report can be recorded without it.
+      const wait = import.meta.client ? { timeout: DEVICE_COPY_AFTER_MS, retry: 0 } : {}
+      status.value = await useApi()<SetupStatus>('/setup/status', wait)
     } catch {
       // The API being down must not make every page unreachable; pages report their own errors.
       return null

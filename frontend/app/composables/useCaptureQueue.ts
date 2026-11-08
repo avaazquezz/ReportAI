@@ -179,13 +179,15 @@ export function useCaptureQueue() {
   if (import.meta.client && !api) {
     // Kept for good: useApi() needs the Nuxt context, which an 'online' event doesn't have.
     api = useApi()
-    const auth = useAuthStore()
-    owner = () => auth.user?.id ?? null
     // Detached: the page that first asks for the queue must not take these with it when it unmounts.
     effectScope(true).run(() => {
+      // Whoever the session's token is for, not the profile this tab shows: another tab may have
+      // signed someone else in, and the captures go up with that token.
+      const sessionUserId = useSessionUserId()
+      owner = () => sessionUserId.value
       mine = computed(() => items.value.filter((item) => item.ownerId === owner()))
       // Signing in again is when that person's waiting captures can go up.
-      watch(owner, (id) => {
+      watch(sessionUserId, (id) => {
         if (id) void flush()
       })
     })
