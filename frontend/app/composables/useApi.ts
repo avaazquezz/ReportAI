@@ -77,7 +77,10 @@ export function useApi() {
       access.value = tokens.access_token
       refresh.value = tokens.refresh_token
       return true
-    } catch {
+    } catch (error) {
+      // No answer at all (coverage dropped mid-renewal): the session is unreachable, not over.
+      // Ending it would sign a technician out in a basement and send them back to their email.
+      if (!(error as { response?: Response }).response) throw error
       if (import.meta.client) {
         // Another tab may have renewed first, spending the token this one sent.
         refreshCookie(ACCESS_COOKIE)
