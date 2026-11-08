@@ -51,13 +51,15 @@ const canSend = computed(
 
 onMounted(async () => {
   const copy = `capture-types:${authStore.user!.id}`
+  const kept = readOfflineCopy<CaptureDocumentType[]>(copy)
   try {
-    types.value = await api<CaptureDocumentType[]>('/capture/document-types')
+    // With a copy to fall back on, one bar of coverage isn't waited out (a GET: safe to abandon).
+    const wait = kept ? { timeout: DEVICE_COPY_AFTER_MS, retry: 0 } : {}
+    types.value = await api<CaptureDocumentType[]>('/capture/document-types', wait)
     keepOfflineCopy(copy, types.value)
   } catch (error) {
     // No coverage: the types this person last saw are the ones they can record now.
-    const kept = (error as { response?: Response }).response ? null : readOfflineCopy<CaptureDocumentType[]>(copy)
-    if (!kept) {
+    if (!kept || !isUnreachable(error)) {
       loadError.value = true
       return
     }
