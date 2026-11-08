@@ -102,6 +102,7 @@ export function useApi() {
   async function endSession() {
     access.value = null
     refresh.value = null
+    forgetOfflineCopies()
     await nuxtApp.runWithContext(() => {
       useAuthStore().user = null
       return navigateTo('/login')

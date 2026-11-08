@@ -20,6 +20,7 @@ const MAX_PHOTOS = 10
 
 const { t } = useI18n()
 const api = useApi()
+const authStore = useAuthStore()
 const { formatDateTime } = useLocaleDate()
 const { items: queued, enqueue, retry, discard } = useCaptureQueue()
 
@@ -49,12 +50,20 @@ const canSend = computed(
 )
 
 onMounted(async () => {
+  const copy = `capture-types:${authStore.user!.id}`
   try {
     types.value = await api<CaptureDocumentType[]>('/capture/document-types')
-    if (types.value.length === 1) documentTypeId.value = types.value[0]!.id
-  } catch {
-    loadError.value = true
+    keepOfflineCopy(copy, types.value)
+  } catch (error) {
+    // No coverage: the types this person last saw are the ones they can record now.
+    const kept = (error as { response?: Response }).response ? null : readOfflineCopy<CaptureDocumentType[]>(copy)
+    if (!kept) {
+      loadError.value = true
+      return
+    }
+    types.value = kept
   }
+  if (types.value.length === 1) documentTypeId.value = types.value[0]!.id
 })
 
 function setAudio(blob: Blob | null, seconds = 0) {
