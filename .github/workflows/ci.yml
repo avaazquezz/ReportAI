@@ -123,3 +123,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Smoke test the built server (CSP nonce, security headers)
+        run: npm run test:smoke
