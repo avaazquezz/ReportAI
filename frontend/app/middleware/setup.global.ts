@@ -1,5 +1,13 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-  const status = await useInstance().load()
+  const instance = useInstance()
+  if (!instance.status.value && !useNuxtApp().payload.serverRendered) {
+    // Booted from the service worker's shell (no coverage, or one bar): an installation with a
+    // service worker is already set up, and recording a report needs nothing from here, so the
+    // answer isn't waited for. It is used from the next navigation on.
+    void instance.load()
+    return
+  }
+  const status = await instance.load()
   if (!status) return
   // A fresh installation: nothing else works until its company and admin exist.
   if (status.needs_setup) return to.path === '/setup' ? undefined : navigateTo('/setup')
