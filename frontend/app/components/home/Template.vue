@@ -6,13 +6,6 @@ const FIELDS = ['site', 'date', 'company'] as const
 const TABLE = ['deficiency', 'measure', 'deadline'] as const
 // Built here: a literal "{{" inside a template mustache would read as a nested interpolation.
 const tagOf = (key: string) => `{{ ${t(`home.hero.sheet.tags.${key}`)} }}`
-const initials = computed(() =>
-  t('home.hero.sheet.company')
-    .split(/\s+/)
-    .map((word) => word[0])
-    .join('')
-    .slice(0, 2)
-)
 </script>
 
 <template>
@@ -31,7 +24,7 @@ const initials = computed(() =>
           </figcaption>
           <div class="sheet rounded-[2px] px-6 pb-8 pt-6 text-[0.8rem]" :class="side === 'tags' ? 'rotate-[-0.6deg]' : 'rotate-[0.4deg]'">
             <div class="flex items-center justify-between border-b border-ink-900/10 pb-4">
-              <span class="grid h-8 w-8 place-items-center rounded-[2px] bg-doc-700 text-[0.65rem] font-semibold text-white" aria-hidden="true">{{ initials }}</span>
+              <span class="grid h-8 w-8 place-items-center rounded-[2px] bg-doc-700 text-[0.6rem] font-semibold text-white" aria-hidden="true">{{ t('home.hero.sheet.mark') }}</span>
               <span class="t-data text-[0.7rem] text-ink-900/60">{{ side === 'tags' ? t('home.template.file') : 'PDF' }}</span>
             </div>
             <p class="m-0 mt-4 text-center text-[0.78rem] font-semibold uppercase tracking-[0.03em] text-doc-700">{{ t('home.hero.sheet.title') }}</p>

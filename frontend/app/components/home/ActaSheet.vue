@@ -13,30 +13,24 @@ export interface ActaRow {
 // A page of the client's own visit report, drawn in code: the company's mark, the document title
 // and one ruled line per field. In `tagged` mode each field shows its template tag ({{ obra }})
 // until a timeline swaps in the value (LandingToken); otherwise it shows the value, or a "missing"
-// note in the reviewer's red.
+// note in the reviewer's red. The company is the visitor's own ("Tu empresa", a "LOGO" mark), never
+// a made-up firm that could be mistaken for a real one.
 defineProps<{
   company: string
+  mark: string
   title: string
   rows: ActaRow[]
   tagged?: boolean
   emptyLabel?: string
   missingLabel?: string
 }>()
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .map((word) => word[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
 </script>
 
 <template>
   <article class="sheet relative rounded-[2px] px-[clamp(1.25rem,0.6rem+2.6vw,2.75rem)] pb-12 pt-8">
     <header class="flex items-center gap-4 border-b border-ink-900/10 pb-6">
       <span class="grid h-11 w-11 shrink-0 place-items-center rounded-[3px] bg-doc-700 text-[0.8rem] font-semibold tracking-wide text-white" aria-hidden="true">
-        {{ initials(company) }}
+        {{ mark }}
       </span>
       <div class="min-w-0">
         <p class="m-0 text-[0.78rem] text-ink-900/60">{{ company }}</p>

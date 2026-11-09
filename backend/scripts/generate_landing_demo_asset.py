@@ -14,6 +14,10 @@ Usage (inside the backend container, so the AI keys and GOTENBERG_URL resolve):
 Writes to backend/scripts/_landing_demo_output/ (or _landing_demo_output_en/ when the
 input filename ends in "_en"): audio.mp3, transcript.txt, fields.json, informe.pdf,
 meta.json (models/cost) — copy the ones you want into frontend/public/demo/.
+
+To change only the look (the company, its mark, the template) without paying for AI again, paint
+the report from the fields.json a previous run kept:
+    ... python scripts/generate_landing_demo_asset.py --rerender es
 """
 
 import asyncio
@@ -23,6 +27,7 @@ import sys
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageDraw, ImageFont
@@ -37,26 +42,55 @@ from app.services.rendering.report_document import template_values
 from app.services.templates import starters
 
 STARTER = "safety_visit"
-# The fictional coordinator's own firm: its name and logo head the report, as a client's would.
-COMPANY = {"es": ("Prevención Levante", "PL"), "en": ("Northline Safety", "NS")}
+# The visitor's own firm heads the report, as a client's would: "your company" and a LOGO
+# placeholder, never a made-up name that could be mistaken for a real company.
+COMPANY = {"es": ("Tu empresa", "LOGO"), "en": ("Your company", "LOGO")}
 COLOR = "#1F2A44"
 # When the note is "sent": its "today" and "next Thursday" resolve against this.
 SENT_AT = datetime(2026, 10, 1, 13, 40, tzinfo=ZoneInfo("Europe/Madrid"))
 
 
-def _logo(initials: str, path: Path) -> None:
+def _logo(mark: str, path: Path) -> None:
     image = Image.new("RGBA", (360, 120), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle((0, 0, 120, 120), radius=26, fill=COLOR)
-    font = ImageFont.load_default(size=58)
-    draw.text((60, 62), initials, font=font, fill="#FF6A45", anchor="mm")
+    font = ImageFont.load_default(size=min(58, 150 // len(mark)))  # two initials or a short word
+    draw.text((60, 62), mark, font=font, fill="#FF6A45", anchor="mm")
     image.save(path)
+
+
+def _output_dir(locale: str) -> Path:
+    output_dir = Path(__file__).parent / ("_landing_demo_output_en" if locale == "en" else "_landing_demo_output")
+    output_dir.mkdir(exist_ok=True)
+    return output_dir
+
+
+async def _render(locale: str, output_dir: Path, schema: dict[str, Any], fields: dict[str, Any]) -> None:
+    print("Rendering the .docx and converting it to PDF...")
+    name, mark = COMPANY[locale]
+    logo = output_dir / "logo.png"
+    _logo(mark, logo)
+    docx_path = output_dir / "informe.docx"
+    values = template_values(schema, fields, locale)
+    await asyncio.to_thread(
+        fill_template, str(output_dir / "template.docx"), values, str(docx_path),
+        branding=Branding(name=name, color=COLOR, logo_path=str(logo)),
+    )
+    await convert_docx_to_pdf(str(docx_path), str(output_dir / "informe.pdf"))
+
+
+async def rerender(locale: str) -> None:
+    """The report painted again from the fields a previous run kept: no AI call."""
+    output_dir = _output_dir(locale)
+    schema = starters.build(STARTER, locale, str(output_dir / "template.docx"))
+    fields = json.loads((output_dir / "fields.json").read_text(encoding="utf-8"))
+    await _render(locale, output_dir, schema, fields)
+    print(f"\nDone. {output_dir / 'informe.pdf'}")
 
 
 async def generate(audio_path: Path) -> None:
     locale = "en" if audio_path.stem.endswith("_en") else "es"
-    output_dir = Path(__file__).parent / ("_landing_demo_output_en" if locale == "en" else "_landing_demo_output")
-    output_dir.mkdir(exist_ok=True)
+    output_dir = _output_dir(locale)
 
     template_path = output_dir / "template.docx"
     schema = starters.build(STARTER, locale, str(template_path))
@@ -93,16 +127,7 @@ async def generate(audio_path: Path) -> None:
         sys.exit(f"Validation failed:\n{state.last_validation_error}")
     assert state.extracted_fields is not None
 
-    print("Rendering the .docx and converting it to PDF...")
-    name, initials = COMPANY[locale]
-    logo = output_dir / "logo.png"
-    _logo(initials, logo)
-    docx_path = output_dir / "informe.docx"
-    values = template_values(schema, state.extracted_fields, locale)
-    await asyncio.to_thread(
-        fill_template, str(template_path), values, str(docx_path), branding=Branding(name=name, color=COLOR, logo_path=str(logo))
-    )
-    await convert_docx_to_pdf(str(docx_path), str(output_dir / "informe.pdf"))
+    await _render(locale, output_dir, schema, state.extracted_fields)
 
     shutil.copy(audio_path, output_dir / "audio.mp3")
     (output_dir / "transcript.txt").write_text(transcript.text, encoding="utf-8")
@@ -118,6 +143,9 @@ async def generate(audio_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit("Usage: python scripts/generate_landing_demo_asset.py <path-to-audio-file>")
-    asyncio.run(generate(Path(sys.argv[1])))
+    if len(sys.argv) == 3 and sys.argv[1] == "--rerender" and sys.argv[2] in COMPANY:
+        asyncio.run(rerender(sys.argv[2]))
+    elif len(sys.argv) == 2:
+        asyncio.run(generate(Path(sys.argv[1])))
+    else:
+        sys.exit("Usage: python scripts/generate_landing_demo_asset.py <path-to-audio-file> | --rerender es|en")

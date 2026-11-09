@@ -33,7 +33,8 @@
         "action": "Levante Structures to fit it before anyone works in that area again.”"
       },
       "sheet": {
-        "company": "Levante Safety",
+        "company": "Your company",
+        "mark": "LOGO",
         "title": "Health and safety site visit",
         "size": "A4 · 210 mm",
         "template": "Company template",
