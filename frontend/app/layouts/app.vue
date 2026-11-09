@@ -148,3 +148,7 @@ function toggleDrawer() {
     </v-snackbar>
   </v-app>
 </template>
+
+<!-- Material Design Icons: the panel's icon font, used by its own icons and by Vuetify's. Only the
+     panel's layouts load it (nuxt.config.ts). -->
+<style src="@mdi/font/css/materialdesignicons.css"></style>

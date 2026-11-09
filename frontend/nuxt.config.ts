@@ -6,7 +6,15 @@ export default defineNuxtConfig({
   // Tailwind preflight is disabled (see tailwind.config.ts), so load order is
   // what keeps Vuetify's own component styles from being overridden.
   modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxt/eslint', '@nuxtjs/i18n'],
-  css: ['@mdi/font/css/materialdesignicons.css', '~/assets/css/fonts.css', '~/assets/css/main.css'],
+  // The icon font's stylesheet (~420 KB, ~74% of the global CSS) is loaded by the panel's layouts
+  // (app, auth), the only pages that draw icons: the public pages no longer wait for it.
+  css: ['~/assets/css/fonts.css', '~/assets/css/main.css'],
+  nitro: {
+    // Every build file also ships pre-compressed (.br, .gz) and the server sends what the browser
+    // accepts: the global stylesheet (Vuetify and the icon font included) is ~540 KB raw, and
+    // uncompressed it held the landing's first paint for seconds on a mobile connection.
+    compressPublicAssets: { gzip: true, brotli: true }
+  },
   routeRules: {
     // The page the service worker keeps on the phone (modules/service-worker): rendered with nothing
     // in it, so the app can draw whichever page was asked for with no coverage.
