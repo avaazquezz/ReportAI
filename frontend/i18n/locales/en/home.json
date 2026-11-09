@@ -178,7 +178,7 @@
         },
         "missing": {
           "title": "What's missing gets asked for.",
-          "body": "If your template marks a detail as required (the date, who made the visit) and you didn't say it, the report can't be approved until you add it. Anything else stays blank, in plain sight, for you to catch when you review."
+          "body": "If your template marks a detail as required (the date, who made the visit) and you didn't say it, it asks for it. In the app, the report can't be approved until you add it. Whatever wasn't said stays blank, in plain sight."
         },
         "approval": {
           "title": "You decide when it goes.",
