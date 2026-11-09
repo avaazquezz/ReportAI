@@ -1,3 +1,6 @@
+// The hosted service's own pages: the commercial landing and the engineering case study.
+const MARKETING_PAGES = new Set(['/', '/arquitectura'])
+
 export default defineNuxtRouteMiddleware(async (to) => {
   const instance = useInstance()
   if (!instance.status.value && !useNuxtApp().payload.serverRendered) {
@@ -13,5 +16,5 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (status.needs_setup) return to.path === '/setup' ? undefined : navigateTo('/setup')
   if (to.path === '/setup') return navigateTo('/login')
   // A company's own server has no marketing page: its address opens the panel.
-  if (status.single_tenant && to.path === '/') return navigateTo('/dashboard')
+  if (status.single_tenant && MARKETING_PAGES.has(to.path)) return navigateTo('/dashboard')
 })
