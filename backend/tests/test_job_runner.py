@@ -96,6 +96,21 @@ async def test_a_run_starts_the_graph_with_the_tenants_language_and_clock(
     assert report.source_text == "Visited the site"
 
 
+async def test_a_report_in_its_own_language_is_read_in_it_not_in_the_company_s(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock
+) -> None:
+    # The landing's live demo: an English visitor in a Spanish company is transcribed, read and
+    # rendered in English.
+    report = await _report(db, language="es")
+    report.channel_meta = {"public_demo": True, "locale": "en"}
+    await db.commit()
+    graph = _use_graph(monkeypatch, FakeGraph())
+
+    await execute(_job(report, RUN, {"text": "Visited the site"}))
+
+    assert graph.ainvoke.await_args.args[0].language == "en"
+
+
 async def test_a_run_that_pauses_records_what_the_report_waits_for(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock
 ) -> None:
