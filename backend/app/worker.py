@@ -112,6 +112,14 @@ async def purge_deleted_companies() -> None:
         logger.info("Purged company %s at the end of its deletion grace period", tenant_id)
 
 
+async def purge_public_demo_reports() -> None:
+    async with AsyncSessionLocal() as session:
+        purged = await data_lifecycle.purge_expired_public_demo_reports(session)
+        await session.commit()
+    if purged:
+        logger.info("Deleted %s live-demo reports a day old", purged)
+
+
 async def apply_retention() -> None:
     async with AsyncSessionLocal() as session:
         dropped = await data_lifecycle.drop_expired_audio(session)
@@ -136,6 +144,7 @@ async def maintenance() -> None:
     await roll_plan_periods()
     await asyncio.to_thread(drop_expired_drafts)
     await purge_deleted_companies()
+    await purge_public_demo_reports()
     await apply_retention()
 
 
