@@ -4,6 +4,7 @@ from datetime import timedelta
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import RateLimitException
 from app.models.rate_limit_hit import RateLimitHit
 
@@ -19,10 +20,12 @@ class AttemptLimiter:
     # can overshoot the limit by a few. A per-key advisory lock closes that if it ever matters.
     """
 
-    def __init__(self, name: str, max_attempts: int, window_seconds: int) -> None:
+    def __init__(self, name: str, max_attempts: int, window_seconds: int, *, refusal: str | None = None) -> None:
         self.name = name
         self.max_attempts = max_attempts
         self.window = timedelta(seconds=window_seconds)
+        # The 429's detail, when a caller must tell this limit from another one; None = the generic one.
+        self.refusal = refusal
 
     def _key(self, key: str) -> str:
         return f"{self.name}:{key}"
@@ -38,7 +41,10 @@ class AttemptLimiter:
             )
         ).one()
         if count >= self.max_attempts:
-            raise RateLimitException(max(math.ceil(oldest_left), 1))
+            retry_after = max(math.ceil(oldest_left), 1)
+            if self.refusal is None:
+                raise RateLimitException(retry_after)
+            raise RateLimitException(retry_after, self.refusal)
 
     async def record(self, db: AsyncSession, key: str) -> None:
         """Counts one attempt and commits at once: the request usually fails right after, and
@@ -70,6 +76,17 @@ signup_by_email = AttemptLimiter("signup_email", max_attempts=3, window_seconds=
 signup_by_ip = AttemptLimiter("signup_ip", max_attempts=5, window_seconds=60 * 60)
 # A company's data export reads every file it has: once an hour is plenty for portability.
 export_by_tenant = AttemptLimiter("export_tenant", max_attempts=1, window_seconds=60 * 60)
+# The landing's live demo is open to anyone and each try costs real AI: a few per visitor and a
+# ceiling for everyone, per day, with details the page tells apart. Each preview hits Gotenberg.
+_DAY = 24 * 60 * 60
+DEMO_TOTAL_KEY = "all"
+demo_capture_by_ip = AttemptLimiter(
+    "demo_capture_ip", settings.PUBLIC_DEMO_PER_IP_DAILY, _DAY, refusal="You have used your demo tries for today."
+)
+demo_capture_total = AttemptLimiter(
+    "demo_capture_total", settings.PUBLIC_DEMO_DAILY_LIMIT, _DAY, refusal="The demo is full for today. Try again tomorrow."
+)
+demo_pdf_by_ip = AttemptLimiter("demo_pdf_ip", max_attempts=10, window_seconds=60 * 60)
 
 
 async def prune(db: AsyncSession) -> None:

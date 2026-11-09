@@ -10,17 +10,19 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import ColumnElement, ScalarResult, and_, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.langgraph_checkpointer import get_checkpointer
 from app.models.document_template import DocumentTemplate
 from app.models.inbound_message import InboundMessage
+from app.models.job import Job
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
 from app.services import audit
+from app.services.channels.web import WEB
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,8 @@ KEEP_INBOUND_IDS_FOR = timedelta(days=30)
 # An emailed voice note waits in inbound_tmp until its report copies it, minutes later. It isn't
 # deleted on copy: a retried job reads it again.
 KEEP_INBOUND_FILES_FOR = timedelta(days=2)
+# What a visitor dictates to the landing's live demo is kept for a day, as the page promises.
+PUBLIC_DEMO_TTL = timedelta(hours=24)
 
 # Under the storage folder, a company's own files live in <folder>/<tenant id>, and a report's
 # (document, audio) in <report id>.
@@ -112,6 +116,44 @@ async def drop_expired_audio(db: AsyncSession) -> int:
     await asyncio.to_thread(_delete_files, [audio for _, audio in expired if audio], [])
     await db.execute(update(Report).where(Report.id.in_([report_id for report_id, _ in expired])).values(audio_path=None))
     return len(expired)
+
+
+def is_public_demo_report() -> ColumnElement[bool]:
+    """A report the landing's live demo made. Only the demo route puts this meta on an app (web)
+    report, and the app's own captures carry none, so no chat message can pass for one."""
+    return and_(Report.requester_channel == WEB, Report.channel_meta.contains({"public_demo": True}))
+
+
+async def purge_expired_public_demo_reports(db: AsyncSession) -> int:
+    """Deletes the live demo's reports once they are PUBLIC_DEMO_TTL old (no commit). Their paused
+    conversations and files go first: they are found through the rows, so a crash halfway leaves
+    the rows to find them again on the next run. Jobs and photos go with the rows by CASCADE.
+
+    # ponytail: a sequential scan of reports every maintenance round; a partial index on
+    # created_at WHERE the meta says public_demo if the table ever grows large.
+    """
+    expired = list(
+        await db.execute(
+            select(Report.id, Report.file_path, Report.audio_path).where(
+                is_public_demo_report(), Report.created_at < datetime.now(UTC) - PUBLIC_DEMO_TTL
+            )
+        )
+    )
+    if not expired:
+        return 0
+    report_ids = [report.id for report in expired]
+    photos = await db.scalars(select(ReportAttachment.path).where(ReportAttachment.report_id.in_(report_ids)))
+    # The recording as it was uploaded waits in inbound_tmp, which is otherwise swept after two days.
+    uploaded = Job.payload["media_reference"].astext
+    uploads: ScalarResult[str] = await db.scalars(select(uploaded).where(Job.report_id.in_(report_ids), uploaded.is_not(None)))
+    paths = [p for r in expired for p in (r.file_path, r.audio_path) if p] + list(photos) + list(uploads)
+    folders = [_storage() / str(report_id) for report_id in report_ids]
+
+    for report_id in report_ids:
+        await get_checkpointer().adelete_thread(str(report_id))
+    await asyncio.to_thread(_delete_files, paths, folders)
+    await db.execute(delete(Report).where(Report.id.in_(report_ids)))
+    return len(report_ids)
 
 
 async def prune_inbound_ids(db: AsyncSession) -> None:

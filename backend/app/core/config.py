@@ -1,3 +1,4 @@
+import uuid
 from typing import Literal
 
 from pydantic import computed_field, model_validator
@@ -88,6 +89,18 @@ class Settings(BaseSettings):
     DEMO_USER_PASSWORD: str = ""
     DEMO_TELEGRAM_BOT_TOKEN: str = ""
     DEMO_NOTIFICATION_EMAIL: str = ""
+    # The landing's live demo (api/public_demo.py): an anonymous visitor dictates a short visit and
+    # the real pipeline fills a report in PUBLIC_DEMO_USER_EMAIL's company, never approved or sent.
+    # That company must not be the one-click demo's (DEMO_USER_EMAIL): anyone can sign into that
+    # one and would read and hear other visitors' recordings. The types are document type ids of
+    # the live demo's company (English falls back to the Spanish one). Each try costs AI, so few
+    # per visitor's IP and a ceiling for everyone, both per 24 hours.
+    PUBLIC_DEMO_ENABLED: bool = False
+    PUBLIC_DEMO_USER_EMAIL: str = ""
+    PUBLIC_DEMO_DOCUMENT_TYPE_ES: str = ""
+    PUBLIC_DEMO_DOCUMENT_TYPE_EN: str = ""
+    PUBLIC_DEMO_PER_IP_DAILY: int = 3
+    PUBLIC_DEMO_DAILY_LIMIT: int = 50
 
     # ── AI provider for extraction — chosen per installation, in the panel (Settings → AI) or
     #    here; a value saved in the panel wins. "anthropic" uses the
@@ -142,6 +155,28 @@ class Settings(BaseSettings):
     def _signup_needs_several_companies(self) -> "Settings":
         if self.SIGNUP_ENABLED and self.SINGLE_TENANT:
             raise ValueError("SIGNUP_ENABLED=true needs SINGLE_TENANT=false: a one-company installation has no signup")
+        return self
+
+    @model_validator(mode="after")
+    def _public_demo_needs_its_company_and_type(self) -> "Settings":
+        if not self.PUBLIC_DEMO_ENABLED:
+            return self
+        if not self.PUBLIC_DEMO_USER_EMAIL or not self.PUBLIC_DEMO_DOCUMENT_TYPE_ES:
+            raise ValueError(
+                "PUBLIC_DEMO_ENABLED=true needs PUBLIC_DEMO_USER_EMAIL and PUBLIC_DEMO_DOCUMENT_TYPE_ES: "
+                "the demo's reports are made in that account's company, as that document type"
+            )
+        if self.PUBLIC_DEMO_USER_EMAIL.strip().lower() == self.DEMO_USER_EMAIL.strip().lower():
+            raise ValueError(
+                "PUBLIC_DEMO_USER_EMAIL must not be DEMO_USER_EMAIL: anyone can sign into the one-click "
+                "demo and would read other visitors' recordings"
+            )
+        for name in ("PUBLIC_DEMO_DOCUMENT_TYPE_ES", "PUBLIC_DEMO_DOCUMENT_TYPE_EN"):
+            if value := getattr(self, name):
+                try:
+                    uuid.UUID(value)
+                except ValueError as exc:
+                    raise ValueError(f"{name} must be a document type id (a UUID)") from exc
         return self
 
     @computed_field  # type: ignore[prop-decorator]
