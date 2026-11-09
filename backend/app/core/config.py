@@ -1,12 +1,26 @@
+import re
 import uuid
-from typing import Literal
+from collections.abc import Iterator
+from typing import Any, Literal
 
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# A setting is a secret when its name says so; DATABASE_URL carries the database password. Matched
+# by name, so a new *_API_KEY or *_TOKEN is covered the day it is added.
+_SECRET_NAME = re.compile(r"KEY|SECRET|PASSWORD|TOKEN|DSN|DATABASE_URL")
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # A refused configuration doesn't echo what it was given: the environment's keys are in it.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
+
+    def __repr_args__(self) -> Iterator[tuple[str | None, Any]]:
+        """What repr() and str() show, so a traceback, a failed test or a log line never prints a
+        secret in clear. Read by name, a setting is its real value as always."""
+        for name, value in super().__repr_args__():
+            hidden = isinstance(value, str) and value and name is not None and _SECRET_NAME.search(name)
+            yield name, "**********" if hidden else value
 
     # ── PostgreSQL ───────────────────────────────────────────────────────
     POSTGRES_HOST: str = "postgres"
