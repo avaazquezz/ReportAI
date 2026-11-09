@@ -178,7 +178,7 @@
         },
         "missing": {
           "title": "Lo que falta, se pide.",
-          "body": "Si tu plantilla marca un dato como obligatorio —la fecha, quién hizo la visita— y no lo dijiste, el informe no se puede aprobar hasta que lo completes. Lo demás queda en blanco, a la vista, para que lo veas al revisar."
+          "body": "Si tu plantilla marca un dato como obligatorio —la fecha, quién hizo la visita— y no lo dijiste, te lo pide. En la app, el informe no se puede aprobar hasta que lo completes. Lo que no se dijo queda en blanco, a la vista."
         },
         "approval": {
           "title": "Tú decides cuándo sale.",

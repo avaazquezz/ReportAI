@@ -133,7 +133,9 @@ async function send() {
 function outcomeOf(error: unknown): Phase {
   const response = (error as { response?: Response }).response
   if (!response) return 'failed'
-  if (response.status === 404) return 'unavailable'
+  // 404: switched off. 402: the platform can't take it right now (its daily spend cap, AI not set
+  // up); either way the recorded sample is what the visitor can have.
+  if (response.status === 404 || response.status === 402) return 'unavailable'
   if (response.status === 429) return demoLimitHit((error as { data?: { detail?: unknown } }).data?.detail)
   return 'failed'
 }
@@ -272,7 +274,7 @@ onBeforeUnmount(() => {
           <button type="button" class="u-field cursor-pointer border-0 bg-transparent p-0 font-semibold" @click="toggleSample">
             {{ samplePlaying ? t('home.demo.samplePause') : t('home.demo.samplePlay') }}
           </button>
-          <a :href="sample.pdf" target="_blank" rel="noopener" class="u-field">{{ t('home.demo.samplePdf') }}</a>
+          <a :href="sample.pdf" class="u-field">{{ t('home.demo.samplePdf') }}</a>
           <audio ref="samplePlayer" :src="sample.audio" preload="none" @play="samplePlaying = true" @pause="samplePlaying = false" @ended="samplePlaying = false" />
         </div>
       </div>
