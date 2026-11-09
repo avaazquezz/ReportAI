@@ -1,0 +1,195 @@
+/* ── Landing (pages/index.vue): "El acta se rellena sola" ─────────────────────────────────────
+   A form that fills itself in. Paper, a printed sheet, the rules of its fields, a reviewer's red
+   pen and an approval stamp: colour means what it means on a safety form, it never decorates. */
+
+/* Tailwind's Preflight is off (Vuetify owns the reset), so a bare `border-t` would set a width on a
+   border whose style is still `none`. Preflight's border rule, for this page only and with zero
+   specificity: any utility or component rule still wins. */
+:where(.home) *,
+:where(.home) ::before,
+:where(.home) ::after {
+  border-style: solid;
+  border-width: 0;
+}
+
+.home {
+  --acta-paper: #f5f5f2;
+  --acta-sheet: #ffffff;
+  --acta-ink: #12151c;
+  --acta-rule: #c9cdd3;
+  --acta-red: #c0432a;
+  --acta-red-on-dark: #ff6a45;
+  --acta-green: #136b4f;
+  --acta-night: #0d1015;
+  background: var(--acta-paper);
+  color: var(--acta-ink);
+}
+
+/* Type scale. Fluid, always with a rem term so browser zoom still scales it. The display face is
+   Archivo at 112.5% width: the wide grotesk of site signage. */
+.t-display,
+.t-section,
+.t-plan-lg {
+  font-family: Archivo, Arial, sans-serif;
+  font-stretch: 112.5%;
+  font-weight: 800;
+  text-wrap: balance;
+}
+.t-display {
+  font-size: clamp(2.6rem, 1rem + 7vw, 8.4rem);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+}
+.t-section {
+  font-size: clamp(2.05rem, 1.25rem + 3vw, 4.1rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+.t-plan-lg {
+  font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.85rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.t-lead {
+  font-size: clamp(1.1rem, 1rem + 0.45vw, 1.35rem);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.t-body {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+/* Mono is for data only: field names, measures, timings. */
+.t-data {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The page grid: 12 columns, the first two kept as the annotation margin on wide screens. */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(1rem, 0.5rem + 1.6vw, 2rem);
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 0.4rem + 2.6vw, 3rem);
+}
+
+/* Vertical rhythm: three steps used on purpose, never one padding everywhere. */
+.space-s { padding-block: 4rem; }
+.space-m { padding-block: clamp(5rem, 3rem + 6vw, 8rem); }
+.space-l { padding-block: clamp(6.5rem, 3rem + 11vw, 15rem); }
+
+/* A form field's rule: dashed while empty, solid ink once something is written on it. */
+.field-rule {
+  border-bottom: 1px dashed var(--acta-rule);
+}
+.field-rule.is-filled {
+  border-bottom-style: solid;
+  border-bottom-color: color-mix(in srgb, var(--acta-ink) 35%, transparent);
+}
+
+/* The signature on links: a form field's underline, dashed at rest, solid when you're on it. */
+.u-field {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  transition: text-decoration-color 0.2s var(--ease-ra);
+}
+.u-field:hover,
+.u-field:focus-visible {
+  text-decoration-style: solid;
+  text-decoration-color: currentColor;
+}
+
+/* Buttons. The primary is ink, not the brand red: red means "correct this" on this page.
+   display sits in :where() (no specificity) so a utility like `hidden sm:inline-flex` wins. */
+:where(.btn-primary, .btn-quiet) {
+  display: inline-flex;
+}
+.btn-primary,
+.btn-quiet {
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3.25rem;
+  padding-inline: 1.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition:
+    background-color 0.2s var(--ease-ra),
+    transform 0.2s var(--ease-ra),
+    box-shadow 0.2s var(--ease-ra);
+}
+.btn-primary {
+  background: var(--acta-ink);
+  color: #fff;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.4);
+}
+.btn-primary:hover {
+  background: #262b36;
+}
+.btn-primary:active,
+.btn-quiet:active {
+  transform: translateY(1px);
+}
+.btn-quiet {
+  border: 1px solid color-mix(in srgb, var(--acta-ink) 22%, transparent);
+  color: var(--acta-ink);
+}
+.btn-quiet:hover {
+  border-color: var(--acta-ink);
+}
+.home-night .btn-primary,
+.btn-primary.is-inverse {
+  background: #fff;
+  color: var(--acta-ink);
+}
+
+/* Navigation: no rule at rest, the field underline when you're on it. */
+.u-nav {
+  text-underline-offset: 0.35em;
+  text-decoration-thickness: 1px;
+}
+.u-nav:hover,
+.u-nav:focus-visible {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+}
+
+/* A hairline in whatever colour the text is (light or dark header). */
+.border-hair {
+  border-color: color-mix(in srgb, currentColor 18%, transparent);
+}
+
+/* A printed sheet resting on the desk. */
+.sheet {
+  background: var(--acta-sheet);
+  box-shadow:
+    0 1px 2px rgb(18 21 28 / 0.08),
+    0 24px 48px -24px rgb(18 21 28 / 0.35);
+}
+
+/* On the dark act, focus rings and selection use the red that reads on black. */
+.home-night :focus-visible {
+  outline-color: var(--acta-red-on-dark);
+}
+
+/* Anchored sections land below the sticky header. */
+.home [id] {
+  scroll-margin-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-quiet,
+  .u-field {
+    transition: none;
+  }
+}

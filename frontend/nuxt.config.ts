@@ -8,7 +8,7 @@ export default defineNuxtConfig({
   modules: ['vuetify-nuxt-module', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@nuxt/eslint', '@nuxtjs/i18n'],
   // The icon font's stylesheet (~420 KB, ~74% of the global CSS) is loaded by the panel's layouts
   // (app, auth), the only pages that draw icons: the public pages no longer wait for it.
-  css: ['~/assets/css/fonts.css', '~/assets/css/main.css'],
+  css: ['~/assets/css/fonts.css', '~/assets/css/main.css', '~/assets/css/home.css'],
   nitro: {
     // Every build file also ships pre-compressed (.br, .gz) and the server sends what the browser
     // accepts: the global stylesheet (Vuetify and the icon font included) is ~540 KB raw, and
@@ -48,8 +48,8 @@ export default defineNuxtConfig({
       // vuetify.json feeds vuetify-nuxt-module's auto-detected i18n adapter (it
       // reads Vuetify's own UI strings — pagination, "no data available", etc. —
       // from this same vue-i18n message tree under the `$vuetify` key).
-      { code: 'es', language: 'es-ES', name: 'Español', files: ['es/vuetify.json', 'es/common.json', 'es/landing.json', 'es/auth.json', 'es/admin.json'] },
-      { code: 'en', language: 'en-US', name: 'English', files: ['en/vuetify.json', 'en/common.json', 'en/landing.json', 'en/auth.json', 'en/admin.json'] }
+      { code: 'es', language: 'es-ES', name: 'Español', files: ['es/vuetify.json', 'es/common.json', 'es/landing.json', 'es/auth.json', 'es/admin.json', 'es/home.json'] },
+      { code: 'en', language: 'en-US', name: 'English', files: ['en/vuetify.json', 'en/common.json', 'en/landing.json', 'en/auth.json', 'en/admin.json', 'en/home.json'] }
     ],
     defaultLocale: 'en',
     // No /en/ /es/ URL prefixes — the landing nav's anchor links (e.g. #ejemplo-real)
