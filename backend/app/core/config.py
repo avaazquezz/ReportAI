@@ -94,13 +94,15 @@ class Settings(BaseSettings):
     # That company must not be the one-click demo's (DEMO_USER_EMAIL): anyone can sign into that
     # one and would read and hear other visitors' recordings. The types are document type ids of
     # the live demo's company (English falls back to the Spanish one). Each try costs AI, so few
-    # per visitor's IP and a ceiling for everyone, both per 24 hours.
+    # per visitor's IP and a ceiling for everyone, both per 24 hours, and a budget of its own per
+    # UTC day (a long recording costs more than the average try).
     PUBLIC_DEMO_ENABLED: bool = False
     PUBLIC_DEMO_USER_EMAIL: str = ""
     PUBLIC_DEMO_DOCUMENT_TYPE_ES: str = ""
     PUBLIC_DEMO_DOCUMENT_TYPE_EN: str = ""
     PUBLIC_DEMO_PER_IP_DAILY: int = 3
     PUBLIC_DEMO_DAILY_LIMIT: int = 50
+    PUBLIC_DEMO_DAILY_SPEND_USD: float = 2.0
 
     # ── AI provider for extraction — chosen per installation, in the panel (Settings → AI) or
     #    here; a value saved in the panel wins. "anthropic" uses the
@@ -161,6 +163,16 @@ class Settings(BaseSettings):
     def _public_demo_needs_its_company_and_type(self) -> "Settings":
         if not self.PUBLIC_DEMO_ENABLED:
             return self
+        if self.SINGLE_TENANT:
+            raise ValueError(
+                "PUBLIC_DEMO_ENABLED=true needs SINGLE_TENANT=false: the live demo belongs to the hosted "
+                "service's landing, and a company's own server would spend its AI on strangers"
+            )
+        if 0 < self.DAILY_SPEND_CAP_USD <= self.PUBLIC_DEMO_DAILY_SPEND_USD:
+            raise ValueError(
+                "DAILY_SPEND_CAP_USD must be above PUBLIC_DEMO_DAILY_SPEND_USD: the demo's spend counts "
+                "towards the platform's cap, and the demo alone must not stop every company for the day"
+            )
         if not self.PUBLIC_DEMO_USER_EMAIL or not self.PUBLIC_DEMO_DOCUMENT_TYPE_ES:
             raise ValueError(
                 "PUBLIC_DEMO_ENABLED=true needs PUBLIC_DEMO_USER_EMAIL and PUBLIC_DEMO_DOCUMENT_TYPE_ES: "
