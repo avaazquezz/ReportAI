@@ -5,12 +5,14 @@ The report is made in the live demo's own company (PUBLIC_DEMO_USER_EMAIL's) thr
 channel, so the graph stops at awaiting_approval and nothing is sent to anyone: nobody approves it
 and the worker deletes it, recording included, once it is PUBLIC_DEMO_TTL old. That company is never
 the one-click demo's (DEMO_USER_EMAIL), which anyone can sign into: a visitor's recording is seen by
-that visitor only. Every try costs AI, so a few per IP and a ceiling for everyone, per day. Switched
-off, every route here is a 404 like one that doesn't exist."""
+that visitor only. Every try costs AI, so a few per visitor, a ceiling for everyone and a budget of
+its own, per day. Switched off, every route here is a 404 like one that doesn't exist."""
 
+import ipaddress
+import os
 import tempfile
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -24,11 +26,17 @@ from app.api.capture import CaptureResponse
 from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.exceptions import ConflictException, PlanLimitException, ResourceNotFoundException
+from app.core.exceptions import (
+    ConflictException,
+    PlanLimitException,
+    RateLimitException,
+    ResourceNotFoundException,
+)
 from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
+from app.repositories.execution_log_repository import ExecutionLogRepository
 from app.repositories.report_repository import FINISHED_STATUSES
 from app.services import audit, plans
 from app.services.agent.ingestion import create_report_with_job
@@ -44,8 +52,35 @@ MAX_AUDIO_BYTES = 3 * 1024 * 1024  # a couple of minutes of speech: a short visi
 _NOT_FOUND = "Not Found"
 _READY = ("awaiting_approval", *FINISHED_STATUSES)
 _FAILED = ("failed", "cancelled")
+# Rendered once into the report's own folder, which the purge deletes with the report.
+_PREVIEW = "demo-preview.pdf"
 
 Locale = Literal["es", "en"]
+
+
+def _visitor(request: Request) -> str:
+    """Whom the per-visitor limits count: the address, or an IPv6 address's /64, which one home or
+    one server gets whole (otherwise changing its last bits would buy more tries)."""
+    ip = audit.client_ip(request)
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:  # no address to read ("unknown"): those all share one count
+        return ip
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped is not None:
+            return str(address.ipv4_mapped)
+        return str(ipaddress.IPv6Network((address, 64), strict=False))
+    return ip
+
+
+async def _within_budget(db: AsyncSession, tenant_id: uuid.UUID) -> None:
+    """The demo's own AI budget for the UTC day, on top of the count of tries: a long recording
+    costs more than the average one. Said to the visitor as the demo being full."""
+    midnight = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    spent = await ExecutionLogRepository(db).total_cost_since(midnight, tenant_id=tenant_id)
+    if spent >= settings.PUBLIC_DEMO_DAILY_SPEND_USD:
+        until_tomorrow = midnight + timedelta(days=1) - datetime.now(UTC)
+        raise RateLimitException(max(int(until_tomorrow.total_seconds()), 1), rate_limit.DEMO_FULL)
 
 
 def _require_demo() -> None:
@@ -137,10 +172,12 @@ async def capture_demo_report(
     locale: Annotated[Locale, Form()] = "es",
     db: AsyncSession = Depends(get_db),
 ) -> CaptureResponse:
-    """Starts a demo report from a voice note and/or a typed note. Both limits are checked before
-    anything else and counted only for a try that is accepted."""
-    ip = audit.client_ip(request)
-    await rate_limit.demo_capture_by_ip.check(db, ip)
+    """Starts a demo report from a voice note and/or a typed note. A try is counted only once it
+    is accepted, and simultaneous tries are counted one after another (rate_limit.claim), so a
+    burst gets the same tries as a visitor clicking one at a time."""
+    visitor = _visitor(request)
+    # A first look without the lock, so most refused tries stop before anything is stored.
+    await rate_limit.demo_capture_by_ip.check(db, visitor)
     await rate_limit.demo_capture_total.check(db, rate_limit.DEMO_TOTAL_KEY)
 
     text = (text or "").strip() or None
@@ -160,11 +197,21 @@ async def capture_demo_report(
     assert tenant is not None  # message_refusal refuses a missing company
     if refusal := await plans.new_report_refusal(db, tenant):
         raise PlanLimitException(t(locale, refusal))
+    await _within_budget(db, tenant.id)
 
     # An unsupported recording is refused here, before the try is counted.
     media_reference = await store_voice_note(audio) if audio is not None else None
-    await rate_limit.demo_capture_by_ip.record(db, ip)
-    await rate_limit.demo_capture_total.record(db, rate_limit.DEMO_TOTAL_KEY)
+    try:
+        await rate_limit.claim(
+            db,
+            "demo_capture",
+            (rate_limit.demo_capture_by_ip, visitor),
+            (rate_limit.demo_capture_total, rate_limit.DEMO_TOTAL_KEY),
+        )
+    except RateLimitException:
+        if media_reference is not None:  # a refused try's recording is not kept
+            Path(media_reference).unlink(missing_ok=True)
+        raise
 
     report = await create_report_with_job(
         db,
@@ -205,25 +252,30 @@ async def get_demo_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_d
 
 @router.get("/reports/{report_id}/pdf")
 async def demo_report_pdf(report_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)) -> Response:
-    """The PDF the report would make, rendered in a temporary folder: nothing is kept or sent.
-    Counted per IP, since every render is a trip to Gotenberg."""
+    """The PDF the report would make; nothing is sent. It is rendered on the first ask and kept in
+    the report's own folder, which the purge deletes with the report: a demo report never changes
+    once extracted, and a render is a trip to the Gotenberg the paying companies share. Renders,
+    not reads, are counted per visitor."""
     report, document_type = await _visible_report(db, report_id)
     if report.extracted_fields is None or document_type is None:
         raise ConflictException("Nothing has been extracted from this report yet")
-    ip = audit.client_ip(request)
-    await rate_limit.demo_pdf_by_ip.check(db, ip)
-    await rate_limit.demo_pdf_by_ip.record(db, ip)
-    with tempfile.TemporaryDirectory() as folder:
-        try:
-            pdf_path = await render_report_pdf(
-                report_id=report.id,
-                document_type_id=document_type.id,
-                field_schema=document_type.field_schema,
-                fields=report.extracted_fields,
-                language=(report.channel_meta or {}).get("locale", "es"),
-                folder=folder,
-            )
-        except MissingTemplateError as exc:
-            raise ConflictException("This document type has no active template") from exc
-        content = Path(pdf_path).read_bytes()
-    return Response(content=content, media_type="application/pdf")
+    preview = Path(settings.DOCUMENT_STORAGE_PATH) / str(report.id) / _PREVIEW
+    if not preview.exists():
+        await rate_limit.claim(db, "demo_pdf", (rate_limit.demo_pdf_by_ip, _visitor(request)))
+        preview.parent.mkdir(parents=True, exist_ok=True)
+        # Rendered beside its final place, then moved in whole: two first asks at once can't
+        # leave half a file behind.
+        with tempfile.TemporaryDirectory(dir=preview.parent) as folder:
+            try:
+                pdf_path = await render_report_pdf(
+                    report_id=report.id,
+                    document_type_id=document_type.id,
+                    field_schema=document_type.field_schema,
+                    fields=report.extracted_fields,
+                    language=(report.channel_meta or {}).get("locale", "es"),
+                    folder=folder,
+                )
+            except MissingTemplateError as exc:
+                raise ConflictException("This document type has no active template") from exc
+            os.replace(pdf_path, preview)
+    return Response(content=preview.read_bytes(), media_type="application/pdf")

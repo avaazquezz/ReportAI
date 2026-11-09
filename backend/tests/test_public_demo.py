@@ -2,7 +2,10 @@
 within a few tries per IP and a daily ceiling for everyone. Only the demo's own reports of the last
 day are shown, and the worker deletes them after that. Switched off, none of it exists."""
 
+import asyncio
 import uuid
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import AsyncExitStack
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,14 +16,16 @@ import pytest
 from httpx import ASGITransport, AsyncClient, Response
 from pydantic import ValidationError
 from sqlalchemy import func, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.api import public_demo
 from app.core import rate_limit
 from app.core.config import Settings, settings
+from app.core.database import get_db
 from app.core.security import hash_password
 from app.main import app
 from app.models.document_type import DocumentType
+from app.models.execution_log import ExecutionLog
 from app.models.job import Job
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
@@ -38,6 +43,8 @@ _SCHEMA = {
 _DEMO_META = {"public_demo": True, "locale": "es"}
 _TRIES_USED = "You have used your demo tries for today."
 _DEMO_FULL = "The demo is full for today. Try again tomorrow."
+# A visitor at an address, with its own database session per request (see `simultaneous`).
+Visitor = Callable[[str], Awaitable[AsyncClient]]
 
 
 @pytest.fixture(autouse=True)
@@ -223,6 +230,85 @@ async def test_the_demo_has_a_daily_ceiling_for_everyone(
     assert await _reports(db) == 2
 
 
+@pytest.fixture
+async def simultaneous(_test_engine: AsyncEngine, db: AsyncSession) -> AsyncGenerator[Visitor, None]:
+    """Visitors whose requests run at the same time, each with its own database session as in
+    production (the `client` fixture shares one session, which serializes everything)."""
+    factory = async_sessionmaker(_test_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def own_session() -> AsyncGenerator[AsyncSession, None]:
+        async with factory() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    app.dependency_overrides[get_db] = own_session
+    async with AsyncExitStack() as stack:
+        yield lambda ip: stack.enter_async_context(
+            AsyncClient(transport=ASGITransport(app=app, client=(ip, 4000)), base_url="http://test")
+        )
+    app.dependency_overrides.clear()
+
+
+async def test_a_burst_of_simultaneous_tries_from_one_visitor_gets_their_tries_and_no_more(
+    simultaneous: Visitor, db: AsyncSession, demo: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(rate_limit.demo_capture_by_ip, "max_attempts", 3)
+    visitor = await simultaneous("203.0.113.7")
+
+    answers = await asyncio.gather(*[_try(visitor, text=f"Visita {n} a la nave 3") for n in range(20)])
+
+    assert sorted(a.status_code for a in answers) == [202] * 3 + [429] * 17
+    assert await _reports(db) == 3
+
+
+async def test_a_burst_of_simultaneous_tries_from_everyone_stops_at_the_daily_ceiling(
+    simultaneous: Visitor, db: AsyncSession, demo: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(rate_limit.demo_capture_total, "max_attempts", 5)
+    visitors = [await simultaneous(f"198.51.100.{n}") for n in range(1, 21)]
+
+    answers = await asyncio.gather(*[_try(visitor) for visitor in visitors])
+
+    assert sorted(a.status_code for a in answers) == [202] * 5 + [429] * 15
+    assert {a.json()["detail"] for a in answers if a.status_code == 429} == {_DEMO_FULL}
+    assert await _reports(db) == 5
+
+
+async def test_one_ipv6_network_is_one_visitor(
+    client: AsyncClient, db: AsyncSession, demo: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A /64 is what one home or one server gets: changing the last bits must not buy more tries.
+    monkeypatch.setattr(rate_limit.demo_capture_by_ip, "max_attempts", 1)
+
+    first, sibling, elsewhere = [await _from(ip) for ip in ("2001:db8:1:2::1", "2001:db8:1:2:ffff::9", "2001:db8:1:3::1")]
+
+    assert [first.status_code, sibling.status_code, elsewhere.status_code] == [202, 429, 202]
+
+
+async def test_the_demo_stops_for_the_day_once_it_has_spent_its_own_budget(
+    client: AsyncClient, db: AsyncSession, demo: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Long recordings cost more than the average try: the ceiling on tries alone doesn't bound it.
+    monkeypatch.setattr(settings, "PUBLIC_DEMO_DAILY_SPEND_USD", 1.0)
+    monkeypatch.setattr(settings, "DAILY_SPEND_CAP_USD", 0)  # the platform's breaker is another test's
+    db.add(ExecutionLog(tenant_id=demo["tenant"].id, step="extract", status="success", cost_usd=0.6))
+    db.add(ExecutionLog(tenant_id=(await _tenant(db, "Acme")).id, step="extract", status="success", cost_usd=5.0))
+    await db.commit()
+    under = await _try(client)
+
+    db.add(ExecutionLog(tenant_id=demo["tenant"].id, step="extract", status="success", cost_usd=0.4))
+    await db.commit()
+    over = await _try(client)
+
+    assert under.status_code == 202  # another company's spend is not the demo's
+    assert over.status_code == 429 and over.json()["detail"] == _DEMO_FULL
+    assert await _reports(db) == 1
+
+
 async def test_a_type_outside_the_demo_company_fails_loud_and_makes_nothing(
     client: AsyncClient, db: AsyncSession, demo: dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -331,34 +417,42 @@ def rendered(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     return mock
 
 
-async def test_the_preview_is_the_report_s_pdf_and_nothing_is_kept(
-    client: AsyncClient, db: AsyncSession, demo: dict[str, Any], rendered: AsyncMock
+async def test_the_preview_is_the_report_s_pdf_rendered_once_and_kept_with_the_report(
+    client: AsyncClient, db: AsyncSession, demo: dict[str, Any], rendered: AsyncMock, tmp_path: Path
 ) -> None:
     report = await _report(
         db, demo["tenant"].id, meta={"public_demo": True, "locale": "en"}, document_type_id=demo["en"].id,
         extracted_fields={"site": "Bay 3"},
     )
 
-    response = await client.get(f"/demo/reports/{report.id}/pdf")
+    answers = [await client.get(f"/demo/reports/{report.id}/pdf") for _ in range(3)]
 
-    assert response.status_code == 200 and response.headers["content-type"] == "application/pdf"
-    assert response.content == b"%PDF-1.4 demo"
+    assert all(a.status_code == 200 and a.headers["content-type"] == "application/pdf" for a in answers)
+    assert {a.content for a in answers} == {b"%PDF-1.4 demo"}
+    assert rendered.await_count == 1  # Gotenberg once, however often the visitor opens it
     call = rendered.await_args.kwargs
     assert (call["document_type_id"], call["fields"], call["language"]) == (demo["en"].id, {"site": "Bay 3"}, "en")
     assert not Path(call["folder"]).exists()
+    # In the report's folder, which the purge deletes with the report (see the purge test).
+    assert [p.name for p in (tmp_path / str(report.id)).iterdir()] == ["demo-preview.pdf"]
 
 
-async def test_no_preview_before_extraction_and_only_a_few_an_hour(
+async def test_no_preview_before_extraction_and_only_a_few_renders_an_hour(
     client: AsyncClient, db: AsyncSession, demo: dict[str, Any], rendered: AsyncMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(rate_limit.demo_pdf_by_ip, "max_attempts", 1)
     waiting = await _report(db, demo["tenant"].id, status="pending", document_type_id=demo["es"].id)
-    ready = await _report(db, demo["tenant"].id, document_type_id=demo["es"].id, extracted_fields={"site": "Nave 3"})
+    first, second = [
+        await _report(db, demo["tenant"].id, document_type_id=demo["es"].id, extracted_fields={"site": f"Nave {n}"})
+        for n in (3, 4)
+    ]
+
+    asked = [first.id, second.id, first.id]  # read now: a refusal rolls back the shared session
 
     assert (await client.get(f"/demo/reports/{waiting.id}/pdf")).status_code == 409  # not counted
-    statuses = [(await client.get(f"/demo/reports/{ready.id}/pdf")).status_code for _ in range(2)]
+    statuses = [(await client.get(f"/demo/reports/{report_id}/pdf")).status_code for report_id in asked]
 
-    assert statuses == [200, 429] and rendered.await_count == 1
+    assert statuses == [200, 429, 200] and rendered.await_count == 1  # the kept one costs no render
 
 
 async def test_the_purge_deletes_the_demo_s_day_old_reports_and_nothing_else(
@@ -384,6 +478,7 @@ async def test_the_purge_deletes_the_demo_s_day_old_reports_and_nothing_else(
     gone = {
         "audio": put(f"{expired.id}/audio.webm"),
         "pdf": put(f"{expired.id}/rendered.pdf"),
+        "preview": put(f"{expired.id}/demo-preview.pdf"),
         "upload": put("inbound_tmp/expired.webm"),
         "photo": put(f"attachments/{tenant_id}/expired.jpg"),
     }
@@ -412,7 +507,10 @@ async def test_the_purge_deletes_the_demo_s_day_old_reports_and_nothing_else(
 
 
 def test_the_demo_is_off_by_default_and_will_not_start_half_configured(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name in ("PUBLIC_DEMO_ENABLED", "PUBLIC_DEMO_USER_EMAIL", "DEMO_USER_EMAIL", "PUBLIC_DEMO_DOCUMENT_TYPE_ES", "PUBLIC_DEMO_DOCUMENT_TYPE_EN"):
+    for name in (
+        "PUBLIC_DEMO_ENABLED", "PUBLIC_DEMO_USER_EMAIL", "DEMO_USER_EMAIL", "PUBLIC_DEMO_DOCUMENT_TYPE_ES",
+        "PUBLIC_DEMO_DOCUMENT_TYPE_EN", "PUBLIC_DEMO_DAILY_SPEND_USD", "DAILY_SPEND_CAP_USD", "SINGLE_TENANT",
+    ):
         monkeypatch.delenv(name, raising=False)
     required: dict[str, Any] = {"POSTGRES_USER": "u", "POSTGRES_PASSWORD": "p", "POSTGRES_DB": "d", "SECRET_KEY": "k"}
     complete = required | {
@@ -422,7 +520,12 @@ def test_the_demo_is_off_by_default_and_will_not_start_half_configured(monkeypat
 
     assert Settings(_env_file=None, **required).PUBLIC_DEMO_ENABLED is False  # type: ignore[call-arg]
     assert Settings(_env_file=None, **complete).PUBLIC_DEMO_ENABLED is True  # type: ignore[call-arg]
+    assert Settings(_env_file=None, **(complete | {"DAILY_SPEND_CAP_USD": 10.0})).DAILY_SPEND_CAP_USD == 10.0  # type: ignore[call-arg]
     for broken in (
+        # A company's own server has no landing: the demo would spend its AI on strangers.
+        {"SINGLE_TENANT": True},
+        # The demo alone would trip the platform's breaker and stop every company for the day.
+        {"DAILY_SPEND_CAP_USD": 2.0},
         {"PUBLIC_DEMO_USER_EMAIL": ""},
         # The one-click demo's account: anyone could sign in and read visitors' recordings.
         {"PUBLIC_DEMO_USER_EMAIL": "Demo@ReportAI.test"},
