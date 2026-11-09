@@ -87,6 +87,7 @@ useMotionScope(root, (c) => {
           <HomeCota :label="t('home.hero.sheet.size')" class="mb-4" />
           <HomeActaSheet
             :company="t('home.hero.sheet.company')"
+            :mark="t('home.hero.sheet.mark')"
             :title="t('home.hero.sheet.title')"
             :rows="rows"
             tagged

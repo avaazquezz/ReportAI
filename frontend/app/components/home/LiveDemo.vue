@@ -242,6 +242,7 @@ onBeforeUnmount(() => {
           <HomeActaSheet
             v-if="phase === 'ready' && report"
             :company="t('home.hero.sheet.company')"
+            :mark="t('home.hero.sheet.mark')"
             :title="report.document_type"
             :rows="rows"
             :empty-label="t('home.demo.empty')"
@@ -264,6 +265,7 @@ onBeforeUnmount(() => {
             class="demo-blank"
             :class="busy ? 'is-working' : 'hidden lg:block'"
             :company="t('home.hero.sheet.company')"
+            :mark="t('home.hero.sheet.mark')"
             :title="t('home.hero.sheet.title')"
             :rows="blankRows"
             empty-label=""

@@ -164,9 +164,9 @@ useMotionScope(root, (c) => {
 
         <div class="doc m-hide absolute right-0 top-9 w-[88%] max-w-[460px] min-h-[42rem] rounded-[3px] bg-surface-0 pb-24 pl-12 pr-6 pt-7 shadow-page sm:w-[72%] sm:pl-14 sm:pr-8">
           <div class="flex items-center gap-3">
-            <!-- The client's own logo, as in the real demo report (PL = Prevención Levante, NS = Northline Safety). -->
-            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-doc-700 font-body text-[13px] font-semibold text-capture-500" aria-hidden="true">
-              {{ locale === 'es' ? 'PL' : 'NS' }}
+            <!-- Where the client's own logo goes, as in the real demo report. -->
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[6px] bg-doc-700 font-body text-[10px] font-semibold text-capture-500" aria-hidden="true">
+              LOGO
             </span>
             <div>
               <p class="font-body text-[1.15rem] font-bold leading-none tracking-tight text-doc-700">{{ t('landing.hero.stage.docTitle') }}</p>
