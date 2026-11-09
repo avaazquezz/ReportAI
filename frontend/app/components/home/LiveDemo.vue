@@ -131,6 +131,9 @@ async function send() {
 }
 
 function outcomeOf(error: unknown): Phase {
+  // No answer (no network, the API down, a browser that won't let the page read it): the visitor's
+  // recording isn't what failed, so it isn't blamed; the recorded sample is offered instead.
+  if (isUnreachable(error)) return 'unavailable'
   const response = (error as { response?: Response }).response
   if (!response) return 'failed'
   // 404: switched off. 402: the platform can't take it right now (its daily spend cap, AI not set
@@ -274,7 +277,7 @@ onBeforeUnmount(() => {
           <button type="button" class="u-field cursor-pointer border-0 bg-transparent p-0 font-semibold" @click="toggleSample">
             {{ samplePlaying ? t('home.demo.samplePause') : t('home.demo.samplePlay') }}
           </button>
-          <a :href="sample.pdf" class="u-field">{{ t('home.demo.samplePdf') }}</a>
+          <a :href="sample.pdf" target="_blank" rel="noopener" class="u-field">{{ t('home.demo.samplePdf') }}</a>
           <audio ref="samplePlayer" :src="sample.audio" preload="none" @play="samplePlaying = true" @pause="samplePlaying = false" @ended="samplePlaying = false" />
         </div>
       </div>
