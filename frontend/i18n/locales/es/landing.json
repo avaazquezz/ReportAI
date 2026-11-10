@@ -27,6 +27,7 @@
       "tagline": "ReportAI por dentro: un caso de estudio de Adrián Vázquez, AI Engineer.",
       "madeBy": "Un proyecto de",
       "legal": "Aviso legal",
+      "privacy": "Privacidad",
       "code": "Código fuente"
     },
     "legal": {
@@ -57,6 +58,97 @@
       "law": {
         "heading": "Legislación aplicable",
         "body": "Este aviso legal se rige por la legislación española. Las controversias se someterán a los juzgados y tribunales que resulten competentes conforme a la normativa aplicable."
+      }
+    },
+    "privacy": {
+      "title": "Política de privacidad",
+      "seoDescription": "Qué datos personales trata ReportAI, para qué, cuánto tiempo los guarda y cómo ejercer tus derechos.",
+      "updated": "Última actualización: 11 de noviembre de 2026",
+      "intro": "Esta política explica qué datos personales se tratan cuando visitas esta web, pruebas la demo, escribes al correo de contacto o usas ReportAI: para qué, durante cuánto tiempo y qué derechos tienes, conforme al Reglamento General de Protección de Datos (RGPD) y a la Ley Orgánica 3/2018 (LOPDGDD).",
+      "controller": {
+        "heading": "Responsable del tratamiento",
+        "intro": "El responsable de los datos de esta web y de las cuentas de ReportAI es:",
+        "name": "Titular",
+        "email": "Correo electrónico"
+      },
+      "activities": {
+        "heading": "Qué datos se tratan y para qué",
+        "labels": {
+          "data": "Datos",
+          "purpose": "Para qué",
+          "basis": "Base legal",
+          "retention": "Cuánto tiempo"
+        },
+        "web": {
+          "heading": "Visitar la web",
+          "data": "La dirección IP, la fecha y la dirección pedida, que el servidor anota en sus registros técnicos.",
+          "purpose": "Servir la web, mantenerla segura y diagnosticar errores.",
+          "basis": "Interés legítimo en la seguridad y el funcionamiento del servicio (art. 6.1.f RGPD).",
+          "retention": "Los registros se sobrescriben solos cuando alcanzan su tamaño máximo. No se usan para nada más."
+        },
+        "demo": {
+          "heading": "Probar la demo en vivo",
+          "data": "La grabación de voz o el texto que envíes, su transcripción, los datos que se extraen y el acta de prueba. Para limitar los intentos, también tu dirección IP (en IPv6, solo su red /64).",
+          "purpose": "Enseñarte cómo ReportAI convierte tu visita en un acta y evitar el abuso del servicio.",
+          "basis": "Tu consentimiento, que das al enviar la prueba (art. 6.1.a RGPD); para el límite de intentos, el interés legítimo en evitar abusos (art. 6.1.f).",
+          "retention": "24 horas. Pasado ese plazo se borran la grabación, el texto, el acta y el registro de intentos.",
+          "note": "No incluyas datos reales de personas: la demo es solo para probar el producto."
+        },
+        "contact": {
+          "heading": "Escribir al correo de contacto",
+          "data": "Tu dirección de correo, tu nombre si lo indicas y lo que nos cuentes.",
+          "purpose": "Responderte.",
+          "basis": "Interés legítimo en atender a quien escribe (art. 6.1.f RGPD) o, si preguntas por contratar, las medidas precontractuales que pides (art. 6.1.b).",
+          "retention": "Mientras dure la conversación y, después, solo lo necesario para atender posibles responsabilidades legales."
+        },
+        "account": {
+          "heading": "Tener una cuenta o una prueba gratuita",
+          "data": "Nombre, correo, nombre de la empresa, la contraseña guardada de forma irreversible (los técnicos entran sin contraseña, con un enlace por correo), la versión de los términos aceptada y un registro de seguridad de accesos y cambios con la dirección IP.",
+          "purpose": "Darte acceso, prestar el servicio o la prueba que pides, enviarte los correos del servicio (enlaces de acceso y avisos) y proteger las cuentas.",
+          "basis": "El contrato o la prueba que solicitas (art. 6.1.b RGPD); el registro de seguridad, el interés legítimo en proteger las cuentas (art. 6.1.f).",
+          "retention": "Mientras la empresa siga activa. Si pide el borrado, la cuenta se bloquea al momento y todo se borra a los 30 días. El registro de seguridad se guarda 365 días como máximo."
+        }
+      },
+      "customerData": {
+        "heading": "Los informes de tu empresa",
+        "body": "Los datos de los informes que una empresa crea con ReportAI (grabaciones, fotos, transcripciones, actas y los datos de sus técnicos y clientes) son de esa empresa, que es su responsable. ReportAI los trata solo por su encargo y siguiendo sus instrucciones (art. 28 RGPD). Las grabaciones se borran a los 90 días, y la empresa puede exportar o borrar todos sus datos desde el panel.",
+        "subjects": "Si trabajas para una empresa que usa ReportAI, o eres su cliente, dirígete a ella para ejercer tus derechos sobre esos datos. Si nos escribes a nosotros, le haremos llegar tu solicitud."
+      },
+      "recipients": {
+        "heading": "Quién más accede a los datos",
+        "intro": "No vendemos ni cedemos datos a nadie. Solo acceden a ellos los proveedores que hacen falta para prestar el servicio, como encargados del tratamiento y con contrato conforme al artículo 28 del RGPD:",
+        "hetzner": "alojamiento del servidor, en Helsinki (Finlandia).",
+        "groq": "transcripción de las grabaciones, en Estados Unidos.",
+        "anthropic": "interpretación de la visita y redacción del borrador, en Estados Unidos.",
+        "mailgun": "envío de los correos del servicio, desde su región de la Unión Europea.",
+        "zoho": "buzón del correo de contacto, en sus centros de datos de la Unión Europea.",
+        "connectors": "Si una empresa conecta su propio bot de Telegram o un buzón de correo, los mensajes que entran por esa vía pasan también por esos servicios, que contrata la propia empresa.",
+        "authorities": "Fuera de eso, solo se comunicarán datos a una autoridad cuando una ley lo exija."
+      },
+      "transfers": {
+        "heading": "Transferencias fuera de la Unión Europea",
+        "body": "Groq y Anthropic están en Estados Unidos. Esa transferencia se ampara en las cláusulas contractuales tipo de la Comisión Europea (Decisión de Ejecución (UE) 2021/914), incluidas en sus contratos de encargado del tratamiento (art. 46.2.c RGPD). Ninguno de los dos puede usar los datos para entrenar sus modelos."
+      },
+      "automated": {
+        "heading": "Decisiones automatizadas",
+        "body": "ReportAI usa inteligencia artificial para preparar el borrador de cada informe, pero no toma decisiones que te afecten jurídicamente: ningún informe se envía sin que una persona lo revise y lo confirme."
+      },
+      "rights": {
+        "heading": "Tus derechos",
+        "body": "Puedes pedir el acceso a tus datos, su rectificación o supresión y la limitación de su tratamiento, oponerte a él, llevártelos (portabilidad) y retirar tu consentimiento cuando quieras, escribiendo a {email}. Te responderemos en un mes como máximo. Si crees que no hemos atendido bien tu petición, puedes reclamar ante la {authority}.",
+        "authority": "Agencia Española de Protección de Datos"
+      },
+      "storage": {
+        "heading": "Cookies y almacenamiento en el dispositivo",
+        "body": "Esta web no usa cookies de análisis ni de publicidad y no carga nada de terceros. Solo usa lo imprescindible, que no necesita consentimiento (art. 22.2 LSSI): las cookies de sesión del panel mientras la tienes iniciada, una cookie que recuerda el idioma si lo eliges tú (un año) y, en la app de campo, el almacenamiento del móvil que guarda las grabaciones pendientes de subir y tu perfil para que la app abra sin cobertura. El perfil se borra al cerrar la sesión."
+      },
+      "security": {
+        "heading": "Seguridad",
+        "body": "Los datos viajan cifrados (HTTPS), las credenciales de los servicios que conecta cada empresa se guardan cifradas y cada empresa solo puede ver sus propios datos."
+      },
+      "changes": {
+        "heading": "Cambios en esta política",
+        "body": "Si cambia algo importante, se publicará aquí con su nueva fecha y, si tienes cuenta, te avisaremos por correo."
       }
     },
     "architecture": {

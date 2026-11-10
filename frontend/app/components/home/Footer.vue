@@ -6,7 +6,8 @@ const REPO = 'https://github.com/avaazquezz/ReportAI'
 const AUTHOR = 'https://www.vazquezdev.pro'
 
 // Don't link a legal notice that would publish blanks: it appears once the deployment has
-// configured the owner's identity (NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS).
+// configured the owner's identity (NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS). The privacy policy
+// only needs the controller's name (RGPD art. 13.1.a: identity and contact), so it shows sooner.
 const showLegalLink = computed(() => Boolean(config.legalName && config.legalId && config.legalAddress))
 
 const PRODUCT = [
@@ -41,6 +42,7 @@ const PRODUCT = [
           <li class="list-none"><a :href="REPO" target="_blank" rel="noopener" class="u-nav hover:text-ink-900">{{ t('home.footer.code') }}</a></li>
           <li class="list-none"><a :href="`mailto:${CONTACT_EMAIL}`" class="u-nav hover:text-ink-900">{{ t('home.footer.contact') }}</a></li>
           <li v-if="showLegalLink" class="list-none"><NuxtLink to="/aviso-legal" class="u-nav hover:text-ink-900">{{ t('home.footer.legal') }}</NuxtLink></li>
+          <li v-if="config.legalName" class="list-none"><NuxtLink to="/privacidad" class="u-nav hover:text-ink-900">{{ t('home.footer.privacy') }}</NuxtLink></li>
         </ul>
       </nav>
 
