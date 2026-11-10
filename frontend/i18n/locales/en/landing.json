@@ -339,7 +339,7 @@
         },
         "proof": {
           "label": "How it's proven",
-          "body": "622 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
+          "body": "627 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
         }
       },
       "block": {
@@ -525,7 +525,7 @@
       "plain": "“The model is usually right” isn't enough for me. Every change goes through tests, types and CI; extraction through a golden set; and major changes through an independent review.",
       "figures": {
         "tests": {
-          "value": "622",
+          "value": "627",
           "label": "backend tests",
           "source": "pytest against a real Postgres, on every push"
         },
