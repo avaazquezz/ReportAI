@@ -1,0 +1,305 @@
+{
+  "home": {
+    "seo": {
+      "title": "ReportAI — Dictate the visit, sign the report",
+      "description": "Dictate the site visit on your phone and ReportAI fills in the report in your company's own Word template: each hazard with its contractor, action and deadline. You review it and sign it off. Free 14-day trial."
+    },
+    "nav": {
+      "how": "How it works",
+      "demo": "Try it",
+      "pricing": "Pricing",
+      "faq": "Questions",
+      "signIn": "Sign in",
+      "open": "Open menu",
+      "close": "Close menu",
+      "label": "Main"
+    },
+    "cta": {
+      "trial": "Start free",
+      "trialTerms": "14 days · 30 reports · no card",
+      "requestAccess": "Request access",
+      "requestSubject": "I'd like to try ReportAI",
+      "tryVoice": "Try it with your voice"
+    },
+    "hero": {
+      "line1": "Dictate the visit.",
+      "line2": "Sign the report.",
+      "sub": "Say what you see on site and ReportAI writes it into your company's own Word template: each hazard with the contractor, the action and the deadline. If something required is missing, it asks. You review it and sign it off.",
+      "voiceLabel": "Voice note",
+      "voiceLength": "0:19",
+      "said": {
+        "site": "“Site visit at 12 High Street.",
+        "deficiency": "On the third floor the north edge guardrail is missing.",
+        "action": "Levante Structures to fit it before anyone works in that area again.”"
+      },
+      "sheet": {
+        "company": "Your company",
+        "mark": "LOGO",
+        "title": "Health and safety site visit",
+        "size": "A4 · 210 mm",
+        "template": "Company template",
+        "ready": "Ready for review",
+        "fields": {
+          "site": "Site",
+          "date": "Date",
+          "deficiency": "Hazard",
+          "company": "Responsible contractor",
+          "measure": "Corrective action",
+          "deadline": "Deadline"
+        },
+        "values": {
+          "site": "12 High Street",
+          "date": "Today, 10:42",
+          "deficiency": "North edge guardrail missing on the third floor",
+          "company": "Levante Structures",
+          "measure": "Fit the guardrail",
+          "deadline": "Before work resumes in the area"
+        },
+        "tags": {
+          "site": "site",
+          "date": "date",
+          "deficiency": "hazard",
+          "company": "contractor",
+          "measure": "action",
+          "deadline": "deadline"
+        }
+      },
+      "example": "Sample data."
+    },
+    "facts": {
+      "label": "The essentials",
+      "items": {
+        "template": {
+          "title": "Your Word template",
+          "body": "Your logo, your layout."
+        },
+        "offline": {
+          "title": "Records with no signal",
+          "body": "It sends itself once you're back in coverage."
+        },
+        "review": {
+          "title": "Nothing goes out unreviewed",
+          "body": "Every report is approved before it's sent."
+        },
+        "team": {
+          "title": "Unlimited technicians",
+          "body": "On every plan."
+        }
+      }
+    },
+    "night": {
+      "time": "11:14 pm",
+      "heading": "The report gets written at night.",
+      "body": "The visit takes an hour. The report takes another: typing up the notebook and the photos at home, long after the site has emptied. And the report the client expected today arrives tomorrow.",
+      "turn": "ReportAI swaps the order: the report is written while you talk, on site, and all that's left for the evening is signing it. Or not even that."
+    },
+    "steps": {
+      "heading": "Three steps. The last one is yours.",
+      "items": {
+        "dictate": {
+          "title": "Dictate on site",
+          "body": "Open the app on your phone and talk through the visit the way you'd tell a colleague. Add photos if you like. With no signal, the recording waits on the phone and sends itself once you're back in coverage."
+        },
+        "review": {
+          "title": "Check what it understood",
+          "body": "In under a minute you have the draft with every field filled in and, next to each one, the sentence it came from. Anything missing is flagged for you to fill in, by voice or by typing."
+        },
+        "sign": {
+          "title": "Approve and send",
+          "body": "Approving it builds the PDF in your template and emails it to whoever you've set up. Who approved it, and when, is on record."
+        }
+      },
+      "states": {
+        "dictate": "Recording",
+        "review": "Draft",
+        "sign": "Approved"
+      },
+      "panel": {
+        "newReport": "New report",
+        "reportType": "Health and safety site visit",
+        "recording": "Recording",
+        "evidence": "“…the north edge guardrail is missing.”",
+        "sent": "Sent by email · 10:51",
+        "approvedBy": "Approved by Lucía Ferrer"
+      }
+    },
+    "demo": {
+      "heading": "Try it with your voice.",
+      "sub": "Describe a short visit, about thirty seconds: where you are, what you've seen, who needs to fix it and by when. You'll watch the report fill in with what you say.",
+      "hint": "For example: “12 High Street site. The scaffold on the front elevation has no debris netting. Soler Scaffolding to fit it today before five.”",
+      "record": "Record",
+      "stop": "Stop",
+      "recording": "Recording",
+      "again": "Record again",
+      "orType": "or type it",
+      "typeLabel": "The visit, in writing",
+      "typePlaceholder": "Type the visit here…",
+      "send": "Fill in the report",
+      "sending": "Sending…",
+      "limit": "3 tries a day. No sign-up.",
+      "states": {
+        "working": "Transcribing and reading the visit…",
+        "ready": "Here's what it understood.",
+        "failed": "We couldn't process this one. Try again with a bit more detail.",
+        "perIp": "You've used today's tries. Three more tomorrow, or start the free trial.",
+        "full": "The live demo is full for today. Come back tomorrow or start the free trial.",
+        "unavailable": "The live demo isn't available right now. Listen to the sample visit instead.",
+        "noMic": "This browser can't use the microphone. Type the visit instead.",
+        "denied": "No microphone permission. You can type the visit instead."
+      },
+      "missing": "Missing",
+      "empty": "Not given",
+      "transcript": "What it heard",
+      "pdf": "Open the report as a PDF",
+      "reset": "Try another one",
+      "privacy": "The recording is transcribed by Groq, interpreted by Anthropic's Claude and deleted after 24 hours. Please don't include real people's details.",
+      "sample": "No microphone to hand? Listen to a real sample visit",
+      "samplePlay": "Play the sample",
+      "samplePause": "Pause the sample",
+      "samplePdf": "See the sample report (PDF)",
+      "resultTitle": "Your report",
+      "yes": "Yes",
+      "no": "No",
+      "timer": "Recording time"
+    },
+    "template": {
+      "heading": "Your Word file, not ours.",
+      "body": "Upload the template you already use, logo and layout included. An assistant suggests which fields it has and where each one goes; you correct them and test it before going live. Your clients get the same document as always.",
+      "starters": "No template? Start with one of ours: health and safety visit, site visit report, work order or incident report.",
+      "file": "site_visit.docx",
+      "tagCaption": "How ReportAI sees your template",
+      "valueCaption": "How your client receives it"
+    },
+    "review": {
+      "heading": "The AI doesn't sign for you.",
+      "points": {
+        "evidence": {
+          "title": "Every detail, with its sentence.",
+          "body": "Next to each field you see the part of the recording that supports it. Whatever wasn't said stays blank: nothing is filled in on a hunch."
+        },
+        "missing": {
+          "title": "What's missing gets asked for.",
+          "body": "If your template marks a detail as required (the date, who made the visit) and you didn't say it, it asks for it. In the app, the report can't be approved until you add it. Whatever wasn't said stays blank, in plain sight."
+        },
+        "approval": {
+          "title": "You decide when it goes.",
+          "body": "No report is sent until someone with permission approves it. Who and when is on record."
+        }
+      },
+      "quote": "“…Levante Structures to fit it before anyone works in that area again.”",
+      "marginNote": "Deadline missing",
+      "stamp": "Approved"
+    },
+    "savings": {
+      "heading": "What it gives back, in hours.",
+      "sub": "Plug in your team's numbers. The starting values are assumptions, not measurements: use your own.",
+      "inputs": "Your team",
+      "technicians": "Technicians writing reports",
+      "reportsPerWeek": "Reports per technician per week",
+      "minutesBefore": "Minutes per report today",
+      "minutesAfter": "Minutes per report with ReportAI",
+      "hourlyCost": "Technician's hourly cost",
+      "unitTechnicians": "people",
+      "unitReports": "reports",
+      "unitMinutes": "min",
+      "unitHour": "€/h",
+      "result": "hours a month no longer spent writing reports",
+      "value": "€{value} of time a month",
+      "days": "{days} eight-hour days",
+      "assumption": "Starting assumption: 3 technicians, 6 reports a week each and 35 minutes per report, against 8 reviewing."
+    },
+    "pricing": {
+      "heading": "Launch pricing.",
+      "sub": "Unlimited technicians and the AI included on every plan. You pay for the reports you make each month.",
+      "perMonth": "€/month",
+      "vat": "+ VAT",
+      "reports": "{count} reports a month",
+      "plans": {
+        "solo": {
+          "name": "Solo",
+          "for": "An independent coordinator, around five visits a week."
+        },
+        "starter": {
+          "name": "Starter",
+          "for": "One full-time technician."
+        },
+        "pro": {
+          "name": "Pro",
+          "for": "A safety consultancy with several technicians."
+        },
+        "business": {
+          "name": "Business",
+          "for": "Several teams or offices."
+        }
+      },
+      "choose": "Start with {plan}",
+      "trial": "Every plan starts with a 14-day trial: 30 reports, no card. When it ends, you choose a plan.",
+      "pilot": {
+        "title": "Pilot programme",
+        "body": "60 days with me alongside you, your template set up together, in exchange for your honest feedback.",
+        "left": "{left} of {total} places left",
+        "full": "All places taken",
+        "cta": "I'd like to be a pilot",
+        "subject": "I'd like to be a ReportAI pilot"
+      },
+      "enterprise": {
+        "title": "On your own server",
+        "body": "For companies that can't let their data leave the building: installed on your server, using your own AI account. Priced on volume.",
+        "cta": "Let's talk",
+        "subject": "ReportAI on our own server"
+      }
+    },
+    "faq": {
+      "heading": "Questions before you start.",
+      "items": {
+        "invent": {
+          "q": "Can it make things up?",
+          "a": "It can mishear a sentence, like anyone taking quick notes. That's why every field shows the sentence it came from, whatever wasn't said stays blank, and no report goes out until you approve it."
+        },
+        "data": {
+          "q": "Where is my data?",
+          "a": "On a server in the European Union. Groq and Anthropic transcribe and interpret the visit, under a data processing agreement. Recordings are deleted after 90 days, and you can export or delete all of your company's data from the dashboard."
+        },
+        "template": {
+          "q": "Will it work with my template?",
+          "a": "If it's a Word file (.docx), yes. Upload yours and an assistant marks where each detail goes; you check it and run a test before using it with clients."
+        },
+        "offline": {
+          "q": "What if there's no signal on site?",
+          "a": "The app keeps the recording on the phone and sends it once the signal is back. If you've signed in on that phone before, it opens even offline."
+        },
+        "install": {
+          "q": "Is there anything to install?",
+          "a": "No. It's a web app you add to your home screen like any other app. Technicians sign in with a link sent by email, no passwords. You can also send the visit over Telegram or by email."
+        },
+        "book": {
+          "q": "Does it replace the site incident book?",
+          "a": "No. ReportAI writes the visit report. The incident book, the construction phase plan and contractor coordination follow their own process."
+        },
+        "responsibility": {
+          "q": "Who is responsible for what the report says?",
+          "a": "Whoever approves it, as with any report. ReportAI prepares the draft; the technical judgement and the signature are yours."
+        },
+        "selfhost": {
+          "q": "Can we run it on our own server?",
+          "a": "Yes, on the Enterprise plan: it's installed on your server with your own AI provider account, and data only leaves your infrastructure to reach that provider."
+        }
+      }
+    },
+    "closing": {
+      "heading": "Your next visit, with the report done before you're back at the car.",
+      "sub": "14 days free, 30 reports, no card."
+    },
+    "footer": {
+      "tagline": "From dictation on site to a report in your template.",
+      "product": "Product",
+      "company": "ReportAI",
+      "architecture": "How it's built",
+      "code": "Source code",
+      "legal": "Legal notice",
+      "contact": "Contact",
+      "madeBy": "Made by"
+    },
+    "skip": "Skip to content"
+  }
+}

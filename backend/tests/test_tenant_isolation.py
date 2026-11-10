@@ -63,6 +63,9 @@ ID_ROUTES: dict[tuple[str, str], dict[str, Any]] = {
     ("GET", "/reports/{report_id}/download"): {},
     ("GET", "/reports/{report_id}/audio"): {},
     ("GET", "/reports/{report_id}/photos/{photo_id}"): {},
+    # The landing's live demo shows only its own reports (tests/test_public_demo.py covers it on).
+    ("GET", "/demo/reports/{report_id}"): {},
+    ("GET", "/demo/reports/{report_id}/pdf"): {},
     ("PATCH", "/team/{member_id}"): {"json": {"is_active": False}},
     ("POST", "/team/{member_id}/invite"): {},
     ("POST", "/team/{member_id}/sign-out"): {},

@@ -1,0 +1,305 @@
+{
+  "home": {
+    "seo": {
+      "title": "ReportAI — Dicta la visita, firma el acta",
+      "description": "Dicta la visita de obra en el móvil y ReportAI rellena el acta con la plantilla Word de tu empresa: deficiencias, empresa, medida y plazo. Tú lo revisas y lo firmas. Prueba gratis 14 días."
+    },
+    "nav": {
+      "how": "Cómo funciona",
+      "demo": "Pruébalo",
+      "pricing": "Precios",
+      "faq": "Preguntas",
+      "signIn": "Entrar",
+      "open": "Abrir menú",
+      "close": "Cerrar menú",
+      "label": "Principal"
+    },
+    "cta": {
+      "trial": "Empieza gratis",
+      "trialTerms": "14 días · 30 informes · sin tarjeta",
+      "requestAccess": "Pide acceso",
+      "requestSubject": "Quiero probar ReportAI",
+      "tryVoice": "Pruébalo con tu voz"
+    },
+    "hero": {
+      "line1": "Dicta la visita.",
+      "line2": "Firma el acta.",
+      "sub": "Cuentas en la obra lo que ves y ReportAI lo escribe en la plantilla Word de tu empresa: cada deficiencia con su empresa, su medida y su plazo. Si falta un dato obligatorio, te lo pide. Tú lo revisas y lo firmas.",
+      "voiceLabel": "Nota de voz",
+      "voiceLength": "0:21",
+      "said": {
+        "site": "«Visita a la obra de la calle Mayor, 12.",
+        "deficiency": "En la tercera planta falta la barandilla del borde norte.",
+        "action": "Que Estructuras Levante la coloque antes de seguir trabajando en esa zona.»"
+      },
+      "sheet": {
+        "company": "Tu empresa",
+        "mark": "LOGO",
+        "title": "Visita de seguridad y salud",
+        "size": "A4 · 210 mm",
+        "template": "Plantilla de la empresa",
+        "ready": "Listo para revisar",
+        "fields": {
+          "site": "Obra",
+          "date": "Fecha",
+          "deficiency": "Deficiencia",
+          "company": "Empresa responsable",
+          "measure": "Medida correctora",
+          "deadline": "Plazo"
+        },
+        "values": {
+          "site": "Calle Mayor, 12",
+          "date": "Hoy, 10:42",
+          "deficiency": "Falta la barandilla del borde norte de la tercera planta",
+          "company": "Estructuras Levante",
+          "measure": "Colocar la barandilla",
+          "deadline": "Antes de seguir trabajando en la zona"
+        },
+        "tags": {
+          "site": "obra",
+          "date": "fecha",
+          "deficiency": "deficiencia",
+          "company": "empresa",
+          "measure": "medida",
+          "deadline": "plazo"
+        }
+      },
+      "example": "Datos de ejemplo."
+    },
+    "facts": {
+      "label": "Lo esencial",
+      "items": {
+        "template": {
+          "title": "Tu plantilla de Word",
+          "body": "Con tu logotipo y tu formato."
+        },
+        "offline": {
+          "title": "Graba sin cobertura",
+          "body": "Se envía sola al recuperar la señal."
+        },
+        "review": {
+          "title": "Nada sale sin tu revisión",
+          "body": "Cada informe se aprueba antes de enviarse."
+        },
+        "team": {
+          "title": "Técnicos ilimitados",
+          "body": "En todos los planes."
+        }
+      }
+    },
+    "night": {
+      "time": "23:14",
+      "heading": "El informe se escribe de noche.",
+      "body": "La visita dura una hora. El informe, otra más: pasar a Word la libreta y las fotos, en casa, cuando en la obra ya no queda nadie. Y el acta que el promotor esperaba hoy llega mañana.",
+      "turn": "ReportAI cambia el orden: el informe se escribe mientras hablas, en la obra, y por la noche solo queda firmarlo. O ni eso."
+    },
+    "steps": {
+      "heading": "Tres pasos. El último es tuyo.",
+      "items": {
+        "dictate": {
+          "title": "Dicta en la obra",
+          "body": "Abres la app en el móvil y cuentas la visita como se la contarías a un compañero. Puedes añadir fotos. Si no hay cobertura, la grabación se guarda en el móvil y sale sola al recuperar la señal."
+        },
+        "review": {
+          "title": "Revisa lo que ha entendido",
+          "body": "En menos de un minuto tienes el borrador con cada campo relleno y, al lado, la frase de la que sale. Lo que falta queda marcado para que lo completes con la voz o escribiendo."
+        },
+        "sign": {
+          "title": "Aprueba y envía",
+          "body": "Al aprobarlo se genera el PDF con tu plantilla y se envía por correo a quien tengas configurado. Queda registrado quién lo aprobó y cuándo."
+        }
+      },
+      "states": {
+        "dictate": "Grabando",
+        "review": "Borrador",
+        "sign": "Aprobado"
+      },
+      "panel": {
+        "newReport": "Nuevo informe",
+        "reportType": "Visita de seguridad y salud",
+        "recording": "Grabando",
+        "evidence": "«…falta la barandilla del borde norte.»",
+        "sent": "Enviado por correo · 10:51",
+        "approvedBy": "Aprobado por Lucía Ferrer"
+      }
+    },
+    "demo": {
+      "heading": "Pruébalo con tu voz.",
+      "sub": "Cuenta una visita corta, de medio minuto: dónde estás, qué has visto, quién tiene que corregirlo y para cuándo. Verás el acta rellenarse con lo que digas.",
+      "hint": "Por ejemplo: «Obra de la calle Mayor, 12. En el andamio de la fachada falta la red. Montajes Soler la coloca hoy antes de las cinco.»",
+      "record": "Grabar",
+      "stop": "Parar",
+      "recording": "Grabando",
+      "again": "Grabar otra vez",
+      "orType": "o escríbela",
+      "typeLabel": "La visita, por escrito",
+      "typePlaceholder": "Escribe aquí la visita…",
+      "send": "Rellenar el acta",
+      "sending": "Enviando…",
+      "limit": "3 pruebas al día. Sin registro.",
+      "states": {
+        "working": "Transcribiendo y leyendo la visita…",
+        "ready": "Esto es lo que ha entendido.",
+        "failed": "No hemos podido procesar esta prueba. Prueba otra vez con más detalle.",
+        "perIp": "Ya has hecho las pruebas de hoy. Mañana tendrás tres más; o empieza la prueba gratis.",
+        "full": "La demo en vivo está completa por hoy. Vuelve mañana o empieza la prueba gratis.",
+        "unavailable": "La demo en vivo no está disponible ahora mismo. Escucha la visita de ejemplo.",
+        "noMic": "No se puede usar el micrófono en este navegador. Escribe la visita.",
+        "denied": "Sin permiso para el micrófono. Puedes escribir la visita."
+      },
+      "missing": "Falta",
+      "empty": "Sin dato",
+      "transcript": "Lo que se ha oído",
+      "pdf": "Ver el acta en PDF",
+      "reset": "Hacer otra prueba",
+      "privacy": "La grabación se transcribe con Groq y se interpreta con Claude, de Anthropic, y se borra a las 24 horas. No incluyas datos reales de personas.",
+      "sample": "¿Sin micrófono a mano? Escucha una visita real de ejemplo",
+      "samplePlay": "Escuchar el ejemplo",
+      "samplePause": "Pausar el ejemplo",
+      "samplePdf": "Ver el acta de ejemplo (PDF)",
+      "resultTitle": "Tu acta",
+      "yes": "Sí",
+      "no": "No",
+      "timer": "Tiempo de grabación"
+    },
+    "template": {
+      "heading": "Tu Word, no el nuestro.",
+      "body": "Subes la plantilla que ya usas, con tu logotipo y tu formato. Un asistente propone qué campos tiene y dónde va cada uno; los corriges y lo pruebas antes de usarlo. Tus clientes reciben el mismo documento de siempre.",
+      "starters": "¿Sin plantilla? Empieza con una de las nuestras: visita de seguridad y salud, informe de visita, parte de trabajo o informe de incidencia.",
+      "file": "visita_obra.docx",
+      "tagCaption": "Así ve ReportAI tu plantilla",
+      "valueCaption": "Así la recibe tu cliente"
+    },
+    "review": {
+      "heading": "La IA no firma por ti.",
+      "points": {
+        "evidence": {
+          "title": "Cada dato, con su frase.",
+          "body": "Junto a cada campo ves la parte de la grabación que lo justifica. Lo que no se dijo se queda vacío: nada se rellena por intuición."
+        },
+        "missing": {
+          "title": "Lo que falta, se pide.",
+          "body": "Si tu plantilla marca un dato como obligatorio —la fecha, quién hizo la visita— y no lo dijiste, te lo pide. En la app, el informe no se puede aprobar hasta que lo completes. Lo que no se dijo queda en blanco, a la vista."
+        },
+        "approval": {
+          "title": "Tú decides cuándo sale.",
+          "body": "Ningún informe se envía sin que alguien con permiso lo apruebe. Quién y cuándo, queda registrado."
+        }
+      },
+      "quote": "«…que Estructuras Levante la coloque antes de seguir trabajando en esa zona.»",
+      "marginNote": "Falta el plazo",
+      "stamp": "Aprobado"
+    },
+    "savings": {
+      "heading": "Lo que te devuelve, en horas.",
+      "sub": "Mueve los datos de tu equipo. Los valores de partida son supuestos, no mediciones: pon los tuyos.",
+      "inputs": "Tu equipo",
+      "technicians": "Técnicos que hacen informes",
+      "reportsPerWeek": "Informes por técnico y semana",
+      "minutesBefore": "Minutos por informe hoy",
+      "minutesAfter": "Minutos por informe con ReportAI",
+      "hourlyCost": "Coste por hora del técnico",
+      "unitTechnicians": "técnicos",
+      "unitReports": "informes",
+      "unitMinutes": "min",
+      "unitHour": "€/h",
+      "result": "horas al mes que dejan de ir a escribir informes",
+      "value": "{value} € de tiempo al mes",
+      "days": "{days} jornadas de 8 horas",
+      "assumption": "Supuesto de partida: 3 técnicos, 6 informes por semana cada uno y 35 minutos por informe, frente a 8 revisando."
+    },
+    "pricing": {
+      "heading": "Precios de lanzamiento.",
+      "sub": "Técnicos ilimitados y la IA incluida en todos los planes. Pagas por los informes que haces al mes.",
+      "perMonth": "€/mes",
+      "vat": "+ IVA",
+      "reports": "{count} informes al mes",
+      "plans": {
+        "solo": {
+          "name": "Solo",
+          "for": "Un coordinador por libre, unas cinco visitas a la semana."
+        },
+        "starter": {
+          "name": "Starter",
+          "for": "Un técnico a jornada completa."
+        },
+        "pro": {
+          "name": "Pro",
+          "for": "Un servicio de prevención con varios técnicos."
+        },
+        "business": {
+          "name": "Business",
+          "for": "Varios equipos o delegaciones."
+        }
+      },
+      "choose": "Empezar con {plan}",
+      "trial": "Todos empiezan con 14 días de prueba: 30 informes y sin tarjeta. Al terminar, eliges plan.",
+      "pilot": {
+        "title": "Programa piloto",
+        "body": "60 días acompañados por mí, con la plantilla configurada contigo, a cambio de tu opinión sincera.",
+        "left": "Quedan {left} plazas de {total}",
+        "full": "Plazas completas",
+        "cta": "Quiero ser piloto",
+        "subject": "Quiero ser piloto de ReportAI"
+      },
+      "enterprise": {
+        "title": "En tu propio servidor",
+        "body": "Para empresas que no pueden sacar los datos de casa: se instala en tu servidor y usa tu propia cuenta de IA. Precio según volumen.",
+        "cta": "Hablemos",
+        "subject": "ReportAI en nuestro servidor"
+      }
+    },
+    "faq": {
+      "heading": "Preguntas antes de empezar.",
+      "items": {
+        "invent": {
+          "q": "¿Se puede inventar datos?",
+          "a": "Puede entender mal una frase, como cualquiera que toma notas deprisa. Por eso cada campo enseña la frase de la que sale, lo que no se dijo se queda vacío y ningún informe se envía sin que lo apruebes."
+        },
+        "data": {
+          "q": "¿Dónde están mis datos?",
+          "a": "En un servidor en la Unión Europea. Para transcribir y entender la visita se usan Groq y Anthropic, con contrato de encargado del tratamiento. Las grabaciones se borran a los 90 días y puedes exportar o borrar todos los datos de tu empresa desde el panel."
+        },
+        "template": {
+          "q": "¿Funciona con mi plantilla?",
+          "a": "Si es un Word (.docx), sí. Subes el tuyo y un asistente marca dónde va cada dato; lo revisas y haces una prueba antes de usarlo con clientes."
+        },
+        "offline": {
+          "q": "¿Y si en la obra no hay cobertura?",
+          "a": "La app guarda la grabación en el móvil y la envía sola cuando vuelve la señal. Si ya entraste antes en el móvil, se abre aunque estés sin conexión."
+        },
+        "install": {
+          "q": "¿Hay que instalar algo?",
+          "a": "No. Es una web que se añade a la pantalla de inicio como una app. Los técnicos entran con un enlace que les llega por correo, sin contraseñas. También puedes enviar la visita por Telegram o por correo electrónico."
+        },
+        "book": {
+          "q": "¿Sustituye al libro de incidencias?",
+          "a": "No. ReportAI escribe el informe de la visita. El libro de incidencias, el plan de seguridad y salud y la coordinación de actividades siguen su propio cauce."
+        },
+        "responsibility": {
+          "q": "¿Quién responde del contenido del informe?",
+          "a": "Quien lo aprueba, como con cualquier informe. ReportAI prepara el borrador; el criterio técnico y la firma son tuyos."
+        },
+        "selfhost": {
+          "q": "¿Podemos tenerlo en nuestro propio servidor?",
+          "a": "Sí, con el plan Enterprise: se instala en tu servidor, con tu propia cuenta del proveedor de IA, y los datos no salen de tu infraestructura salvo hacia ese proveedor."
+        }
+      }
+    },
+    "closing": {
+      "heading": "Tu próxima visita, con el acta hecha antes de llegar al coche.",
+      "sub": "14 días gratis, 30 informes, sin tarjeta."
+    },
+    "footer": {
+      "tagline": "Del dictado en obra al acta en tu plantilla.",
+      "product": "Producto",
+      "company": "ReportAI",
+      "architecture": "Cómo está construido",
+      "code": "Código fuente",
+      "legal": "Aviso legal",
+      "contact": "Contacto",
+      "madeBy": "Hecho por"
+    },
+    "skip": "Saltar al contenido"
+  }
+}

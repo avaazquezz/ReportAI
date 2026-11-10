@@ -1,11 +1,26 @@
-from typing import Literal
+import re
+import uuid
+from collections.abc import Iterator
+from typing import Any, Literal
 
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# A setting is a secret when its name says so; DATABASE_URL carries the database password. Matched
+# by name, so a new *_API_KEY or *_TOKEN is covered the day it is added.
+_SECRET_NAME = re.compile(r"KEY|SECRET|PASSWORD|TOKEN|DSN|DATABASE_URL")
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # A refused configuration doesn't echo what it was given: the environment's keys are in it.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
+
+    def __repr_args__(self) -> Iterator[tuple[str | None, Any]]:
+        """What repr() and str() show, so a traceback, a failed test or a log line never prints a
+        secret in clear. Read by name, a setting is its real value as always."""
+        for name, value in super().__repr_args__():
+            hidden = isinstance(value, str) and value and name is not None and _SECRET_NAME.search(name)
+            yield name, "**********" if hidden else value
 
     # ── PostgreSQL ───────────────────────────────────────────────────────
     POSTGRES_HOST: str = "postgres"
@@ -88,6 +103,20 @@ class Settings(BaseSettings):
     DEMO_USER_PASSWORD: str = ""
     DEMO_TELEGRAM_BOT_TOKEN: str = ""
     DEMO_NOTIFICATION_EMAIL: str = ""
+    # The landing's live demo (api/public_demo.py): an anonymous visitor dictates a short visit and
+    # the real pipeline fills a report in PUBLIC_DEMO_USER_EMAIL's company, never approved or sent.
+    # That company must not be the one-click demo's (DEMO_USER_EMAIL): anyone can sign into that
+    # one and would read and hear other visitors' recordings. The types are document type ids of
+    # the live demo's company (English falls back to the Spanish one). Each try costs AI, so few
+    # per visitor's IP and a ceiling for everyone, both per 24 hours, and a budget of its own per
+    # UTC day (a long recording costs more than the average try).
+    PUBLIC_DEMO_ENABLED: bool = False
+    PUBLIC_DEMO_USER_EMAIL: str = ""
+    PUBLIC_DEMO_DOCUMENT_TYPE_ES: str = ""
+    PUBLIC_DEMO_DOCUMENT_TYPE_EN: str = ""
+    PUBLIC_DEMO_PER_IP_DAILY: int = 3
+    PUBLIC_DEMO_DAILY_LIMIT: int = 50
+    PUBLIC_DEMO_DAILY_SPEND_USD: float = 2.0
 
     # ── AI provider for extraction — chosen per installation, in the panel (Settings → AI) or
     #    here; a value saved in the panel wins. "anthropic" uses the
@@ -142,6 +171,38 @@ class Settings(BaseSettings):
     def _signup_needs_several_companies(self) -> "Settings":
         if self.SIGNUP_ENABLED and self.SINGLE_TENANT:
             raise ValueError("SIGNUP_ENABLED=true needs SINGLE_TENANT=false: a one-company installation has no signup")
+        return self
+
+    @model_validator(mode="after")
+    def _public_demo_needs_its_company_and_type(self) -> "Settings":
+        if not self.PUBLIC_DEMO_ENABLED:
+            return self
+        if self.SINGLE_TENANT:
+            raise ValueError(
+                "PUBLIC_DEMO_ENABLED=true needs SINGLE_TENANT=false: the live demo belongs to the hosted "
+                "service's landing, and a company's own server would spend its AI on strangers"
+            )
+        if 0 < self.DAILY_SPEND_CAP_USD <= self.PUBLIC_DEMO_DAILY_SPEND_USD:
+            raise ValueError(
+                "DAILY_SPEND_CAP_USD must be above PUBLIC_DEMO_DAILY_SPEND_USD: the demo's spend counts "
+                "towards the platform's cap, and the demo alone must not stop every company for the day"
+            )
+        if not self.PUBLIC_DEMO_USER_EMAIL or not self.PUBLIC_DEMO_DOCUMENT_TYPE_ES:
+            raise ValueError(
+                "PUBLIC_DEMO_ENABLED=true needs PUBLIC_DEMO_USER_EMAIL and PUBLIC_DEMO_DOCUMENT_TYPE_ES: "
+                "the demo's reports are made in that account's company, as that document type"
+            )
+        if self.PUBLIC_DEMO_USER_EMAIL.strip().lower() == self.DEMO_USER_EMAIL.strip().lower():
+            raise ValueError(
+                "PUBLIC_DEMO_USER_EMAIL must not be DEMO_USER_EMAIL: anyone can sign into the one-click "
+                "demo and would read other visitors' recordings"
+            )
+        for name in ("PUBLIC_DEMO_DOCUMENT_TYPE_ES", "PUBLIC_DEMO_DOCUMENT_TYPE_EN"):
+            if value := getattr(self, name):
+                try:
+                    uuid.UUID(value)
+                except ValueError as exc:
+                    raise ValueError(f"{name} must be a document type id (a UUID)") from exc
         return self
 
     @computed_field  # type: ignore[prop-decorator]

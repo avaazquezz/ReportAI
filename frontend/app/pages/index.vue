@@ -1,34 +1,35 @@
 <script setup lang="ts">
-// The first screen paints with these two faces: fetch them before the stylesheet asks.
+// The commercial landing: for the health-and-safety technicians and coordinators who would buy
+// ReportAI. Concept "the report fills itself in" (docs: the Fase 6 brief). How it is built lives
+// at /arquitectura.
 import archivo from '~/assets/fonts/archivo-w112.5-700-800-latin.woff2?url'
-import plexMono from '~/assets/fonts/ibm-plex-mono-400-latin.woff2?url'
 
 const { t } = useI18n()
 
-useHead({
-  link: [archivo, plexMono].map((href) => ({ rel: 'preload', as: 'font', type: 'font/woff2', href, crossorigin: '' }) as const)
-})
+// The headline paints in Archivo: fetch it before the stylesheet asks for it.
+useHead({ link: [{ rel: 'preload', as: 'font', type: 'font/woff2', href: archivo, crossorigin: '' }] })
 
 useSeoMeta({
-  description: () => t('landing.seo.description'),
-  ogTitle: () => t('landing.seo.title'),
-  ogDescription: () => t('landing.seo.description'),
+  title: () => t('home.seo.title'),
+  description: () => t('home.seo.description'),
+  ogTitle: () => t('home.seo.title'),
+  ogDescription: () => t('home.seo.description'),
   ogType: 'website'
 })
 </script>
 
 <template>
   <div>
-    <LandingHeroSection />
-    <LandingStackStrip />
-    <LandingRealDemoSection />
-    <LandingArchitectureSection />
-    <LandingDifferentiatorSection />
-    <LandingSavingsSection />
-    <LandingUseCasesSection />
-    <LandingTemplateFidelitySection />
-    <LandingApprovalSection />
-    <LandingDecisionsSection />
-    <LandingFinalCtaSection />
+    <HomeHero />
+    <HomeFacts />
+    <HomeNight />
+    <HomeSteps />
+    <HomeLiveDemo />
+    <HomeTemplate />
+    <HomeReview />
+    <HomeSavings />
+    <HomePricing />
+    <HomeFaq />
+    <HomeClosing />
   </div>
 </template>
