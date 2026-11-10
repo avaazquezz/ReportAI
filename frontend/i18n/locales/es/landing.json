@@ -339,7 +339,7 @@
         },
         "proof": {
           "label": "Cómo se demuestra",
-          "body": "622 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
+          "body": "627 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
         }
       },
       "block": {
@@ -525,7 +525,7 @@
       "plain": "No me basta con que el modelo «suele acertar». Cada cambio pasa por tests, tipos y CI; la extracción, por un golden set; y los cambios grandes, por una revisión independiente.",
       "figures": {
         "tests": {
-          "value": "622",
+          "value": "627",
           "label": "tests de backend",
           "source": "pytest contra Postgres real, en cada push"
         },
