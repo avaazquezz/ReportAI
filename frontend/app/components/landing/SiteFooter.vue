@@ -74,6 +74,10 @@ const NAV = (['system', 'agent', 'quality', 'revisions'] as const).map((key) => 
             ·
             <NuxtLink to="/aviso-legal" class="text-ink-900/80 hover:text-capture-600">{{ t('landing.footer.legal') }}</NuxtLink>
           </template>
+          <template v-if="config.legalName">
+            ·
+            <NuxtLink to="/privacidad" class="text-ink-900/80 hover:text-capture-600">{{ t('landing.footer.privacy') }}</NuxtLink>
+          </template>
         </span>
         <span>
           {{ t('landing.footer.madeBy') }}

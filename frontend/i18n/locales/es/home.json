@@ -152,7 +152,8 @@
       "transcript": "Lo que se ha oído",
       "pdf": "Ver el acta en PDF",
       "reset": "Hacer otra prueba",
-      "privacy": "La grabación se transcribe con Groq y se interpreta con Claude, de Anthropic, y se borra a las 24 horas. No incluyas datos reales de personas.",
+      "privacy": "La grabación se transcribe con Groq y se interpreta con Claude, de Anthropic, y se borra a las 24 horas. No incluyas datos reales de personas. {policy}",
+      "privacyLink": "Política de privacidad",
       "sample": "¿Sin micrófono a mano? Escucha una visita real de ejemplo",
       "samplePlay": "Escuchar el ejemplo",
       "samplePause": "Pausar el ejemplo",
@@ -297,6 +298,7 @@
       "architecture": "Cómo está construido",
       "code": "Código fuente",
       "legal": "Aviso legal",
+      "privacy": "Privacidad",
       "contact": "Contacto",
       "madeBy": "Hecho por"
     },

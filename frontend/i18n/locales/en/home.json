@@ -152,7 +152,8 @@
       "transcript": "What it heard",
       "pdf": "Open the report as a PDF",
       "reset": "Try another one",
-      "privacy": "The recording is transcribed by Groq, interpreted by Anthropic's Claude and deleted after 24 hours. Please don't include real people's details.",
+      "privacy": "The recording is transcribed by Groq, interpreted by Anthropic's Claude and deleted after 24 hours. Please don't include real people's details. {policy}",
+      "privacyLink": "Privacy policy",
       "sample": "No microphone to hand? Listen to a real sample visit",
       "samplePlay": "Play the sample",
       "samplePause": "Pause the sample",
@@ -297,6 +298,7 @@
       "architecture": "How it's built",
       "code": "Source code",
       "legal": "Legal notice",
+      "privacy": "Privacy",
       "contact": "Contact",
       "madeBy": "Made by"
     },
