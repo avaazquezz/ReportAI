@@ -1,7 +1,5 @@
 """Ready-made document types a company can start from (app/services/templates/starters.py)."""
 
-import asyncio
-
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -15,8 +13,7 @@ from app.models.document_type import DocumentType
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.schemas.document_type import DocumentTypeResponse
-from app.services.templates import starters
-from app.services.templates.library import activate_template, new_template_path
+from app.services.templates import library, starters
 
 router = APIRouter(prefix="/starter-templates", tags=["admin:starter-templates"])
 
@@ -55,26 +52,7 @@ async def install_starter(
     name, n = starter.name[language], 2
     while name in taken:  # installed twice: "Parte de trabajo (2)"
         name, n = f"{starter.name[language]} ({n})", n + 1
-    path = new_template_path(tenant_id)
-    field_schema = await asyncio.to_thread(starters.build, key, language, str(path))
-    doc_type = DocumentType(
-        tenant_id=tenant_id,
-        name=name,
-        description=starter.description[language],
-        field_schema=field_schema,
-        prompt_instructions=starter.instructions[language],
-        notification_emails=[],
-        is_active=True,
+    doc_type = await library.install_starter(
+        db, tenant_id=tenant_id, key=key, language=language, name=name, uploaded_by=current_user.id
     )
-    db.add(doc_type)
-    await db.flush()
-    await activate_template(
-        db,
-        tenant_id=tenant_id,
-        document_type_id=doc_type.id,
-        file_path=str(path),
-        original_filename=f"{name}.docx",
-        uploaded_by=current_user.id,
-    )
-    await db.refresh(doc_type)
     return DocumentTypeResponse.model_validate(doc_type)
