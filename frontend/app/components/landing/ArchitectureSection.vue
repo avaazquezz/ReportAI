@@ -122,11 +122,17 @@ const nodeClass = (i: number) =>
 </script>
 
 <template>
-  <section id="como-funciona" ref="root" class="grid-plano relative bg-plano-900 text-white">
+  <section :id="SHEET_IDS.agent" ref="root" class="grid-plano relative scroll-mt-20 border-t border-plano-700/70 bg-plano-900 pb-12 text-white lg:pb-16" data-tone="dark">
+    <!-- Only this block is pinned, and only when it fits the screen: keep its own padding small. -->
     <div ref="pinEl" class="mx-auto max-w-[1240px] px-6 pb-6 pt-20 lg:pt-6">
       <header class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
         <LandingSectionHeading tone="dark" size="sm" class="lg:whitespace-nowrap">{{ t('landing.architecture.heading') }}</LandingSectionHeading>
-        <p class="m-0 max-w-sm font-body text-[14px] leading-snug text-white/70">{{ t('landing.architecture.sub') }}</p>
+        <div class="max-w-sm">
+          <p class="m-0 font-body text-[14px] leading-snug text-white/75">{{ t('landing.architecture.sub') }}</p>
+          <p class="mb-0 mt-1.5 font-mono text-[12px] text-plano-line">
+            {{ t('landing.sheet.sheet') }} {{ sheetNumber('agent') }} / {{ SHEETS.length }} · {{ t('landing.sheet.scale') }} {{ t('landing.sheets.agent.scale') }}
+          </p>
+        </div>
       </header>
 
       <!-- Rail: five stages, the ficha rides above the one in play. --t is 0..4 (set by scroll or by a click). -->
@@ -134,7 +140,7 @@ const nodeClass = (i: number) =>
         <div class="pointer-events-none absolute left-[10%] right-[10%] top-[59px] h-px bg-plano-700" />
         <div class="pointer-events-none absolute left-[10%] top-[59px] h-px bg-capture-500" style="width: calc(var(--t) / 4 * 80%)" />
         <div class="pointer-events-none absolute top-0 z-10 -translate-x-1/2" style="left: clamp(54px, calc(10% + var(--t) / 4 * 80%), calc(100% - 54px))" aria-hidden="true">
-          <div class="relative rounded border border-capture-500 bg-plano-950 px-2 py-0.5 font-mono text-[11px] whitespace-nowrap text-capture-500">
+          <div class="relative rounded border border-capture-500 bg-plano-950 px-2 py-0.5 font-mono text-[12px] whitespace-nowrap text-capture-500">
             <Transition name="ficha" mode="out-in">
               <span :key="active" class="block">{{ t(`landing.architecture.stages.${STAGES[active]}.artifact`) }}</span>
             </Transition>
@@ -150,6 +156,7 @@ const nodeClass = (i: number) =>
               role="tab"
               :aria-selected="i === active"
               :aria-controls="`arch-panel-${key}`"
+              :aria-label="t(`landing.architecture.stages.${key}.name`)"
               :tabindex="i === active ? 0 : -1"
               class="group flex cursor-pointer flex-col items-center border-0 bg-transparent p-0 text-center"
               @click="select(i)"
@@ -185,7 +192,7 @@ const nodeClass = (i: number) =>
           <div>
             <div class="flex items-baseline justify-between gap-4">
               <h3 class="m-0 font-plan text-[1.5rem] font-extrabold leading-tight tracking-[-0.03em]">{{ t(`landing.architecture.stages.${key}.name`) }}</h3>
-              <p class="m-0 shrink-0 font-mono text-[11px] text-capture-500">{{ t('landing.architecture.stageOf', { n: i + 1, total: STAGES.length }) }}</p>
+              <p class="m-0 shrink-0 font-mono text-[12px] text-capture-500">{{ t('landing.architecture.stageOf', { n: i + 1, total: STAGES.length }) }}</p>
             </div>
             <p class="mb-0 mt-2 font-body text-[14.5px] leading-snug text-white/85">{{ t(`landing.architecture.stages.${key}.plain`) }}</p>
             <ul class="mb-0 mt-3 list-none space-y-1.5 pl-0 font-body text-[13px] leading-[1.42] text-white/70">
@@ -195,14 +202,14 @@ const nodeClass = (i: number) =>
               </li>
             </ul>
             <div class="mt-3 border-l-2 border-capture-500 bg-plano-800/70 py-2 pl-4 pr-3">
-              <p class="m-0 font-mono text-[11px] text-capture-500">{{ t('landing.architecture.whyLabel') }}</p>
-              <p class="mb-0 mt-0.5 font-body text-[13px] leading-[1.42] text-white/90">{{ t(`landing.architecture.stages.${key}.why`) }}</p>
+              <p class="m-0 font-mono text-[12px] text-capture-500">{{ t('landing.architecture.whyLabel') }}</p>
+              <p class="mb-0 mt-0.5 max-w-[66ch] font-body text-[13px] leading-[1.42] text-white/90">{{ t(`landing.architecture.stages.${key}.why`) }}</p>
             </div>
           </div>
 
           <div class="flex flex-col">
             <div class="vcard rounded-xl border border-plano-700 bg-plano-800/80 p-4 font-mono text-[12.5px] leading-relaxed">
-              <p class="m-0 text-[11px] text-plano-line">{{ t(`landing.architecture.visual.${key}.meta`) }}</p>
+              <p class="m-0 text-[12px] text-plano-line">{{ t(`landing.architecture.visual.${key}.meta`) }}</p>
 
               <template v-if="key === 'dictate'">
                 <div class="v-in ml-auto mt-4 flex w-fit items-center gap-2 rounded-2xl rounded-br-md bg-capture-600 px-3 py-2 text-white" style="--i: 0">
@@ -210,11 +217,11 @@ const nodeClass = (i: number) =>
                   <span class="v-wave flex h-4 items-end gap-[3px]" aria-hidden="true">
                     <i v-for="(h, n) in WAVE" :key="n" class="block w-[2px] origin-bottom rounded-full bg-white/80" :style="{ height: `${h}px` }" />
                   </span>
-                  <span class="text-[11px]">{{ t('landing.hero.stage.voiceDuration') }}</span>
+                  <span class="text-[12px]">{{ t('landing.architecture.visual.dictate.duration') }}</span>
                 </div>
                 <div class="v-in mx-auto my-3 h-6 w-px bg-plano-line/50" style="--i: 1" aria-hidden="true" />
-                <div class="v-in rounded-lg border border-plano-700 bg-plano-950/60 p-3" style="--i: 2">
-                  <p class="m-0 text-[11px] text-white/50">{{ t('landing.architecture.visual.dictate.job') }}</p>
+                <div class="v-in border-l-2 border-plano-700 py-1 pl-3" style="--i: 2">
+                  <p class="m-0 text-[12px] text-white/50">{{ t('landing.architecture.visual.dictate.job') }}</p>
                   <div class="mt-2 flex flex-wrap gap-2 text-[11.5px]">
                     <span class="rounded border border-plano-700 px-2 py-0.5 text-white/85">kind: <b class="font-medium text-capture-500">run</b></span>
                     <span class="rounded border border-plano-700 px-2 py-0.5 text-white/85">status: <b class="font-medium text-capture-500">queued</b></span>
@@ -229,13 +236,13 @@ const nodeClass = (i: number) =>
                   <i v-for="(h, n) in [...WAVE, ...WAVE, ...WAVE]" :key="n" class="block w-[3px] origin-bottom rounded-full bg-plano-line/60" :style="{ height: `${h + 6}px` }" />
                 </div>
                 <div class="v-in mx-auto my-3 h-5 w-px bg-plano-line/50" style="--i: 1" aria-hidden="true" />
-                <p class="v-in m-0 rounded-lg border border-plano-700 bg-plano-950/60 p-3 text-[12.5px] leading-[1.7] text-white/80" style="--i: 2">
+                <p class="v-in m-0 border-l-2 border-plano-700 py-1 pl-3 text-[12.5px] leading-[1.7] text-white/80" style="--i: 2">
                   {{ t('landing.architecture.visual.transcribe.before') }}<mark class="v-mark rounded-sm px-0.5 text-white">{{ t('landing.architecture.visual.transcribe.mark') }}</mark>{{ t('landing.architecture.visual.transcribe.after') }}
                 </p>
               </template>
 
               <template v-else-if="key === 'extract'">
-                <div class="mt-3 rounded-lg border border-plano-700 bg-plano-950/60 p-3 text-[12px] leading-[1.6] text-white/80">
+                <div class="mt-3 border-l-2 border-plano-700 py-1 pl-3 text-[12px] leading-[1.6] text-white/80">
                   <div class="v-in text-white/50" style="--i: 0">{</div>
                   <div class="v-in pl-3" style="--i: 1">"{{ t('landing.architecture.visual.extract.keys.list') }}": [{</div>
                   <div v-for="(row, n) in EXTRACT_ROWS" :key="row.key" class="v-in pl-6" :style="{ '--i': n + 2 }">
@@ -277,7 +284,7 @@ const nodeClass = (i: number) =>
                   <span class="v-in rounded border border-capture-500 px-2 py-1 text-capture-500" style="--i: 4">{{ t('landing.architecture.visual.deliver.pdf') }}</span>
                 </div>
                 <ul class="mb-0 mt-5 list-none space-y-2 pl-0 text-[12px]">
-                  <li v-for="(copy, n) in ['telegram', 'email1', 'email2']" :key="copy" class="v-in flex items-center gap-2 text-white/85" :style="{ '--i': n + 6 }">
+                  <li v-for="(copy, n) in ['history', 'email1', 'email2']" :key="copy" class="v-in flex items-center gap-2 text-white/85" :style="{ '--i': n + 6 }">
                     <svg viewBox="0 0 20 20" fill="none" stroke="#5FD3A6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0" aria-hidden="true"><path d="M4 10.5l4 4 8-9" /></svg>
                     {{ t(`landing.architecture.visual.deliver.${copy}`) }}
                   </li>
@@ -286,7 +293,7 @@ const nodeClass = (i: number) =>
             </div>
 
             <p class="mb-0 mt-2.5 flex items-start gap-2.5 font-body text-[12.5px] leading-snug" :class="LEAVES[key] ? 'text-white/75' : 'text-[#5FD3A6]'">
-              <span class="mt-0.5 shrink-0 font-mono text-[11px] text-white/55">{{ t('landing.architecture.dataLabel') }}</span>
+              <span class="mt-0.5 shrink-0 font-mono text-[12px] text-white/55">{{ t('landing.architecture.dataLabel') }}</span>
               <span>{{ t(`landing.architecture.stages.${key}.data`) }}</span>
             </p>
           </div>
@@ -294,7 +301,7 @@ const nodeClass = (i: number) =>
       </div>
 
       <div class="mt-4 flex items-center justify-between gap-4">
-        <p class="m-0 font-mono text-[11px] text-white/55">{{ pinned ? t('landing.architecture.hintPinned') : t('landing.architecture.hintTabs') }}</p>
+        <p class="m-0 font-mono text-[12px] text-white/55">{{ pinned ? t('landing.architecture.hintPinned') : t('landing.architecture.hintTabs') }}</p>
         <div class="flex gap-2">
           <button
             type="button"
@@ -315,8 +322,6 @@ const nodeClass = (i: number) =>
         </div>
       </div>
     </div>
-
-    <LandingArchitectureTopology />
   </section>
 </template>
 

@@ -2,16 +2,11 @@
 const { t } = useI18n()
 const contactHref = useContactHref()
 
-const NAV = [
-  { hash: '#ejemplo-real', key: 'realExample' },
-  { hash: '#como-funciona', key: 'howItWorks' },
-  { hash: '#impacto', key: 'impact' },
-  { hash: '#decisiones', key: 'faq' }
-] as const
+const NAV = (['system', 'agent', 'quality', 'revisions'] as const).map((key) => ({ hash: `#${SHEET_IDS[key]}`, key }))
 
 const scrolled = ref(false)
 const open = ref(false)
-// Over the blueprint-blue architecture block the header turns dark with it.
+// Over a blueprint-blue sheet (data-tone="dark") the header turns dark with it.
 const dark = ref(false)
 // The section in view, for the nav, and how far down the page the visitor is.
 const current = ref('')
@@ -46,10 +41,19 @@ onMounted(() => {
     const el = document.querySelector(hash)
     if (el) spy.observe(el)
   }
-  // The band under the header (the top ~8% of the viewport).
-  const tone = new IntersectionObserver(([e]) => (dark.value = !!e?.isIntersecting), { rootMargin: '0px 0px -92% 0px' })
-  const plano = document.querySelector('#como-funciona')
-  if (plano) tone.observe(plano)
+  // The band under the header (the top ~8% of the viewport): dark while any dark sheet is in it.
+  const underHeader = new Set<Element>()
+  const tone = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) underHeader.add(e.target)
+        else underHeader.delete(e.target)
+      }
+      dark.value = underHeader.size > 0
+    },
+    { rootMargin: '0px 0px -92% 0px' }
+  )
+  document.querySelectorAll('[data-tone="dark"]').forEach((sheet) => tone.observe(sheet))
   observers = [spy, tone]
 })
 
