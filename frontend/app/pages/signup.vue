@@ -5,10 +5,12 @@ definePageMeta({
   layout: 'auth',
   titleKey: 'auth.signup.title',
   // Only the hosted service lets anyone sign up (SIGNUP_ENABLED); elsewhere the API says 404.
+  // defineNuxtRouteMiddleware keeps Nuxt's context after the await (Nuxt restores it for a bare
+  // function under `middleware`, not inside an array): without it the server-side redirect is a 500.
   middleware: [
-    async () => {
+    defineNuxtRouteMiddleware(async () => {
       if (!(await useInstance().load())?.signup_enabled) return navigateTo('/login')
-    }
+    })
   ]
 })
 
