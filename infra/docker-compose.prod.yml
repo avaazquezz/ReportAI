@@ -99,6 +99,17 @@ services:
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.X-Frame-Options=DENY"
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
       - "traefik.http.middlewares.reportai-api-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
+      # The public live demo takes uploads from anyone, without an account. FastAPI reads the whole
+      # multipart body before the handler can check its 3 MB limit or the per-IP tries, so the
+      # proxy turns away anything bigger first (413). Only here: a field capture is legitimately
+      # up to 10 photos of 15 MB plus the audio.
+      - "traefik.http.routers.reportai-demo.rule=Host(`${APP_DOMAIN}`) && PathPrefix(`/api/demo`)"
+      - "traefik.http.routers.reportai-demo.entrypoints=websecure"
+      - "traefik.http.routers.reportai-demo.tls.certresolver=le"
+      - "traefik.http.routers.reportai-demo.priority=20"
+      - "traefik.http.routers.reportai-demo.service=reportai-api"
+      - "traefik.http.routers.reportai-demo.middlewares=reportai-demo-body@docker,reportai-api-strip@docker,reportai-api-headers@docker"
+      - "traefik.http.middlewares.reportai-demo-body.buffering.maxRequestBodyBytes=4194304"
 
   # Runs the reports: transcription, the model, rendering, delivery. A deploy stops it gracefully
   # (it finishes the job in hand); whatever it cannot finish resumes on the next worker.
@@ -154,6 +165,10 @@ services:
       - "traefik.http.routers.reportai-web.entrypoints=websecure"
       - "traefik.http.routers.reportai-web.tls.certresolver=le"
       - "traefik.http.routers.reportai-web.priority=1"
+      # The build pre-compresses its static assets; the server-rendered HTML (150 KB for the case
+      # study) goes out raw without this. Responses that already carry an encoding pass untouched.
+      - "traefik.http.routers.reportai-web.middlewares=reportai-web-compress@docker"
+      - "traefik.http.middlewares.reportai-web-compress.compress=true"
       - "traefik.http.services.reportai-web.loadbalancer.server.port=3000"
       # One http→https redirect for the whole host — /api requests redirect here
       # too, then the https routers split them by prefix.
