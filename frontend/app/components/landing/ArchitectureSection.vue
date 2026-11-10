@@ -100,6 +100,11 @@ useMotionScope(
               if (i !== active.value) active.value = i
             }
           })
+          // ScrollTrigger refreshes in creation order and only shifts a trigger for the pins
+          // refreshed before it. This pin is created last (after the fonts), so the sheets below
+          // would measure their start without its spacer and play off-screen: put every trigger
+          // back in page order before the refresh the pin has queued.
+          ScrollTrigger.sort()
           goTo = (i) => window.scrollTo({ top: st.start + (i / LAST) * (st.end - st.start), behavior: 'smooth' })
         })
       })
