@@ -1,5 +1,6 @@
-// The hosted service's own pages: the commercial landing and the engineering case study.
-const MARKETING_PAGES = new Set(['/', '/arquitectura'])
+// The hosted service's own pages: the commercial landing and the engineering case study (and its
+// English alias).
+const MARKETING_PAGES = new Set(['/', '/arquitectura', '/architecture'])
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const instance = useInstance()

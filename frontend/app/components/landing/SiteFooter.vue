@@ -6,12 +6,7 @@ const { public: config } = useRuntimeConfig()
 // configured the owner's identity (NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS).
 const showLegalLink = computed(() => Boolean(config.legalName && config.legalId && config.legalAddress))
 
-const NAV = [
-  { hash: '#ejemplo-real', key: 'realExample' },
-  { hash: '#como-funciona', key: 'howItWorks' },
-  { hash: '#impacto', key: 'impact' },
-  { hash: '#decisiones', key: 'faq' }
-] as const
+const NAV = (['system', 'agent', 'quality', 'revisions'] as const).map((key) => ({ hash: `#${SHEET_IDS[key]}`, key }))
 </script>
 
 <template>
