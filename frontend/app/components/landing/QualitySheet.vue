@@ -119,7 +119,7 @@ useMotionScope(root, (c) => {
             :disabled="replaying"
             @click="play()"
           >
-            {{ t('landing.incident.viz.replay') }}
+            {{ t('landing.sheet.replay') }}
           </button>
         </figure>
       </article>
