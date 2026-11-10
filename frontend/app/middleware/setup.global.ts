@@ -1,6 +1,6 @@
-// The hosted service's own pages: the commercial landing and the engineering case study (and its
-// English alias).
-const MARKETING_PAGES = new Set(['/', '/arquitectura', '/architecture'])
+// The hosted service's own pages: the commercial landing and the engineering case study. By route
+// name, not path: the router also matches /architecture (the alias), a trailing slash and any case.
+const MARKETING_PAGES = new Set(['index', 'arquitectura'])
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const instance = useInstance()
@@ -17,5 +17,5 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (status.needs_setup) return to.path === '/setup' ? undefined : navigateTo('/setup')
   if (to.path === '/setup') return navigateTo('/login')
   // A company's own server has no marketing page: its address opens the panel.
-  if (status.single_tenant && MARKETING_PAGES.has(to.path)) return navigateTo('/dashboard')
+  if (status.single_tenant && MARKETING_PAGES.has(String(to.name))) return navigateTo('/dashboard')
 })
