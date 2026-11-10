@@ -112,7 +112,9 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
             incoming_text=text,
             source_text=text,
             media_reference=job.payload.get("media_reference"),
-            language=tenant.language,
+            # A report may carry its own language (the landing's live demo, in the visitor's):
+            # it is transcribed, read and rendered in it rather than in the company's.
+            language=(report.channel_meta or {}).get("locale") or tenant.language,
             timezone=tenant.timezone,
             received_at=report.received_at,
             sender_label=job.payload.get("sender_label"),

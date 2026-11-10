@@ -1,205 +1,30 @@
 {
   "landing": {
     "seo": {
-      "title": "ReportAI — De la nota de voz al informe, explicado por dentro",
-      "description": "Un agente de IA que convierte la nota de voz de una visita en el informe de una plantilla Word. Demo real, arquitectura interactiva (LangGraph, Pydantic, Postgres, Gotenberg) y decisiones de diseño."
+      "title": "ReportAI — De la nota de voz al informe, explicado por dentro"
     },
     "header": {
       "nav": {
-        "realExample": "Demo",
-        "howItWorks": "Arquitectura",
-        "faq": "Decisiones",
-        "impact": "Impacto"
+        "system": "Sistema",
+        "agent": "Agente",
+        "quality": "Calidad",
+        "revisions": "Decisiones"
       },
       "openMenu": "Abrir menú",
       "closeMenu": "Cerrar menú"
     },
     "cta": {
       "mailSubject": "Hablemos sobre ReportAI",
-      "listenExample": "Escuchar la demo",
       "talk": "Hablemos",
-      "seeHow": "Ver cómo funciona por dentro",
-      "seeCode": "Ver el código"
-    },
-    "hero": {
-      "placeholderTag": "informe_de_visita",
-      "eyebrow": "Caso práctico · un agente de IA con humano en el bucle",
-      "headlineLine1": "Dicta la visita.",
-      "headlineLine2": "Recibe el informe.",
-      "subheadline": "ReportAI convierte la nota de voz de una visita en el informe de una plantilla Word, listo para aprobar y enviar. Esta página enseña cómo está construido, con el sistema real: del audio al PDF.",
-      "note": "Construido de punta a punta: backend, agente, panel y despliegue. Código público en GitHub.",
-      "replay": "Ver otra vez",
-      "stage": {
-        "voiceDuration": "1:19",
-        "transcribing": "Transcribiendo…",
-        "extracting": "Rellenando la plantilla…",
-        "draftReady": "Borrador listo para revisar",
-        "approve": "✓ Aprobar",
-        "sent": "Enviado a contrata y promotor",
-        "filename": "visita_las_acacias.pdf",
-        "docTitle": "VISITA DE SEGURIDAD Y SALUD",
-        "company": "Residencial Las Acacias · Paterna",
-        "dateLabel": "Fecha:",
-        "stageLabel": "Fase:",
-        "companiesLabel": "Empresas presentes",
-        "issueLabel": "Deficiencias detectadas",
-        "tags": {
-          "date": "fecha",
-          "stage": "fase",
-          "company1": "empresas_presentes[0]",
-          "company2": "empresas_presentes[1]",
-          "company3": "empresas_presentes[2]",
-          "issue": "deficiencias[0]"
-        },
-        "values": {
-          "date": "01/10/2026",
-          "stage": "Estructura",
-          "company1": "Construcciones Albufera (contrata principal)",
-          "company2": "Estructuras Levante (encofrado)",
-          "company3": "Montajes Soler (andamio)",
-          "issue": "Falta la barandilla del borde norte del forjado de tercera. Estructuras Levante · Inmediato."
-        },
-        "stamp": "APROBADO"
-      },
-      "proof": {
-        "caption": "Medido en la demo de más abajo",
-        "audio": {
-          "label": "de audio"
-        },
-        "page": {
-          "value": "1 PDF A4",
-          "label": "en la plantilla de la empresa"
-        },
-        "cost": {
-          "value": "< 3 céntimos",
-          "label": "de IA"
-        }
-      }
-    },
-    "realDemo": {
-      "heading": "Esto no es una maqueta.",
-      "paragraph": "Una visita de obra dictada y pasada por el sistema real: transcripción, extracción y relleno de la plantilla. No se ha retocado nada después, ni siquiera las erratas de la transcripción. Dale a reproducir.",
-      "play": "Reproducir",
-      "pause": "Pausar",
-      "seek": "Posición del audio",
-      "transcriptLabel": "Transcripción",
-      "playPlaceholder": "La transcripción aparece aquí, al ritmo del audio.",
-      "fieldsLabel": "Campos extraídos",
-      "documentLabel": "Documento generado",
-      "pageMeta": "1 página A4 · plantilla «Visita de seguridad y salud»",
-      "downloadPdf": "Descargar el PDF",
-      "pageAlt": "Informe de visita de seguridad y salud generado por ReportAI a partir de la nota de voz",
-      "note": "La voz es sintética y la obra, las empresas y las personas son ficticias. Lo demás es la salida real del sistema, que costó menos de 3 céntimos de IA."
-    },
-    "useCases": {
-      "heading": "Un motor, cualquier plantilla.",
-      "sub": "El sistema no sabe de visitas de seguridad: sabe de esquemas. Cada tipo de documento es configuración, una lista de campos y un Word con etiquetas, no código.",
-      "fieldsLabel": "campos",
-      "items": {
-        "safetyVisit": {
-          "title": "Visitas e inspecciones de seguridad",
-          "body": "Deficiencias con su responsable, medida correctora y plazo, paralizaciones y observaciones. Es la plantilla de la demo.",
-          "fields": "deficiencias · paralizacion · observaciones · proxima_visita"
-        },
-        "incident": {
-          "title": "Incidentes y accidentes",
-          "body": "Qué ha pasado, dónde, cómo de grave y qué se ha hecho ya. Se dicta en caliente y se revisa con calma.",
-          "fields": "fecha · lugar · descripcion · gravedad · acciones"
-        },
-        "custom": {
-          "title": "Lo que hoy se rellena a mano",
-          "body": "Partes de mantenimiento, listas de comprobación, actas. Un asistente lee el Word y propone los campos; basta con corregirlos.",
-          "fields": "los que defina cada plantilla"
-        }
-      }
-    },
-    "differentiator": {
-      "heading": "El problema: el informe se escribe de noche.",
-      "paragraph": "La visita son notas en la libreta y fotos en el móvil, y el informe se pasa a Word al acabar el día. Es trabajo repetitivo en el que se pierden datos por el camino: un plazo, un responsable. Justo lo que un agente con validación y aprobación humana puede hacer bien.",
-      "table": {
-        "caption": "Cómo se hace hoy frente a cómo se hace con ReportAI",
-        "before": "Hoy",
-        "after": "Con ReportAI",
-        "rows": {
-          "notes": {
-            "before": "Notas en la libreta y fotos sueltas",
-            "after": "Un audio al salir, con las fotos en el mismo chat"
-          },
-          "word": {
-            "before": "Pasarlo a Word por la noche",
-            "after": "El borrador llega al chat en un par de minutos"
-          },
-          "missing": {
-            "before": "Se olvida el plazo o el responsable de una medida",
-            "after": "Si falta un dato obligatorio, el bot lo pregunta"
-          },
-          "send": {
-            "before": "Reenviar el PDF al cliente y a cada responsable",
-            "after": "Se envía solo a quien toca en cada tipo de informe"
-          },
-          "find": {
-            "before": "Buscar en el correo qué se vio hace un mes",
-            "after": "Historial con búsqueda, el audio y la transcripción"
-          }
-        }
-      },
-      "kicker": "Lo único nuevo en el día del técnico: un audio de un minuto."
-    },
-    "templateFidelity": {
-      "heading": "La plantilla es un dato, no código.",
-      "paragraph": "Se sube el Word que la empresa ya usa, con su logotipo y su formato. Un asistente propone qué campos tiene y dónde va cada uno; se corrigen, se ven en PDF con datos de ejemplo y se activan. Al generar el documento, docxtpl sustituye cada etiqueta por su valor, así que el resultado es el de la empresa, no un PDF genérico con un logotipo encima.",
-      "check": "Sin plantilla propia hay plantillas de inicio: visita de seguridad y salud, parte de trabajo, informe de visita e informe de incidencia.",
-      "filename": "visita_obra.docx",
-      "docTitle": "VISITA DE SEGURIDAD Y SALUD",
-      "labels": {
-        "date": "Fecha:",
-        "site": "Obra:",
-        "companies": "Empresas presentes",
-        "issue": "Deficiencias detectadas"
-      },
-      "values": {
-        "date": "1 de octubre de 2026",
-        "site": "Residencial Las Acacias, Paterna",
-        "companies": "Construcciones Albufera, Estructuras Levante, Montajes Soler, Grúas Martínez",
-        "issue": "Falta la barandilla del borde norte del forjado de tercera · Estructuras Levante · Inmediato"
-      },
-      "tags": {
-        "date": "fecha",
-        "site": "obra",
-        "issue": "deficiencias[0].deficiencia",
-        "companies": "empresas_presentes"
-      }
-    },
-    "approval": {
-      "heading": "Humano en el bucle, de verdad.",
-      "paragraph1": "Cada informe llega primero al chat como borrador. Si falta un dato obligatorio, como el plazo de una medida, el bot lo pregunta y el grafo espera la respuesta. Si algo no cuadra, se corrige respondiendo y se vuelve a generar.",
-      "paragraph2": "El canal es Telegram: cada técnico habla con el bot de la empresa como con cualquier contacto. Quien aprueba también puede revisar, corregir y aprobar desde el panel.",
-      "defaultChannelBadge": "Telegram",
-      "otherChannelNote": "Revisión también desde el panel",
-      "mockup": {
-        "channel": "Telegram",
-        "question": "¿Qué plazo tiene el cambio del cuadro eléctrico?",
-        "answer": "Antes del viernes 9",
-        "draftReady": "Borrador de la visita listo:",
-        "approve": "✓ Aprobar",
-        "correct": "Corregir",
-        "filename": "visita_las_acacias.pdf",
-        "sentTo": "Enviado a la contrata y al promotor ✓",
-        "site": "Residencial Las Acacias",
-        "date": "01/10/2026",
-        "siteLabel": "Obra",
-        "dateLabel": "Fecha",
-        "issuesLabel": "Deficiencias"
-      }
-    },
-    "finalCta": {
-      "placeholderTag": "siguiente_paso",
-      "headline": "Si esto es lo que buscas, hablemos.",
-      "sub": "Un agente con estado, validación y humano en el bucle, de punta a punta: backend, interfaz y despliegue. Escríbeme o mira el código.",
-      "or": "o escribe a"
+      "seeCode": "Ver el código",
+      "demo": "Probarlo en vivo",
+      "cv": "Descargar CV",
+      "cvHref": "https://vazquezdev.pro/CV_AdrianVazquez_ES.pdf",
+      "linkedin": "LinkedIn",
+      "portfolio": "Portfolio"
     },
     "footer": {
-      "tagline": "Del audio al informe, explicado por dentro.",
+      "tagline": "ReportAI por dentro: un caso de estudio de Adrián Vázquez, AI Engineer.",
       "madeBy": "Un proyecto de",
       "legal": "Aviso legal",
       "code": "Código fuente"
@@ -235,30 +60,29 @@
       }
     },
     "architecture": {
-      "heading": "Del audio al informe, por dentro.",
-      "sub": "Cinco etapas, un solo recorrido. Elige una para ver qué hace, con qué lo hace y qué sale del servidor.",
+      "heading": "Del audio al acta, por dentro.",
+      "plain": "Lo que dictas recorre cinco etapas hasta ser un PDF, y una persona lo aprueba antes de que salga.",
+      "sub": "Por dentro, un grafo de LangGraph de 25 nodos. Elige una etapa para ver qué hace, con qué y qué sale del servidor.",
       "railLabel": "Etapas del recorrido del informe",
       "hintPinned": "Desliza: el dato avanza solo. También puedes pulsar una etapa.",
       "hintTabs": "Pulsa una etapa o usa las flechas del teclado.",
       "stageOf": "Etapa {n} de {total}",
       "prev": "Anterior",
       "next": "Siguiente",
-      "plainLabel": "En corto",
-      "insideLabel": "Por dentro",
       "dataLabel": "Qué sale del servidor",
       "whyLabel": "Decisión de diseño",
       "stages": {
         "dictate": {
           "name": "Dictas",
-          "artifact": "nota_de_voz.ogg",
-          "plain": "Mandas un audio por Telegram, como a cualquier contacto. Si quieres, con fotos.",
+          "artifact": "visita.webm",
+          "plain": "Grabas la visita en la app del móvil, con fotos si quieres. Sin cobertura, se guarda en el teléfono y sube sola.",
           "tech": [
-            "Telegram avisa al servidor por webhook. Si la instalación no tiene dirección pública, es el worker (el proceso que ejecuta los informes) quien consulta a Telegram.",
-            "Cada mensaje se deduplica por su identificador: un reintento de Telegram no crea dos informes.",
-            "El informe y su trabajo en cola se crean en una sola transacción de Postgres: existen los dos o ninguno."
+            "La app genera el id del informe antes de subirlo y lo envía como Idempotency-Key: un reintento devuelve el mismo informe, nunca dos.",
+            "El informe y su trabajo en cola se crean en una sola transacción de Postgres: existen los dos o ninguno.",
+            "Telegram y el correo entran por el mismo camino, deduplicados por el identificador de cada mensaje."
           ],
-          "why": "Una cola en Postgres, sin Redis ni broker: cada pieza de más es una llamada de soporte en un servidor ajeno. El trabajo se reclama con FOR UPDATE SKIP LOCKED y una reserva temporal (lease); si el worker muere, otro lo recoge.",
-          "data": "El mensaje viaja por Telegram, como cualquier chat. Nada más."
+          "why": "Una cola en Postgres, sin Redis ni broker: una pieza menos que operar en el servidor de cada cliente. El trabajo se reclama con FOR UPDATE SKIP LOCKED y una reserva temporal (lease); si el worker muere, otro lo recoge.",
+          "data": "La grabación viaja del móvil al servidor. Nada más."
         },
         "transcribe": {
           "name": "Se transcribe",
@@ -266,7 +90,7 @@
           "plain": "El audio pasa a texto, en español o en inglés, con el servicio de voz configurado.",
           "tech": [
             "Un modelo Whisper tras cualquier endpoint compatible con OpenAI (/audio/transcriptions). Por defecto, whisper-large-v3-turbo en Groq.",
-            "Temperatura 0 y el idioma de la empresa como pista: salida repetible, sin que un audio en inglés se transcriba como si fuera español.",
+            "Temperatura 0 y el idioma del informe como pista: salida repetible, y un audio en inglés no se transcribe como si fuera español.",
             "Si el trabajo se corta a mitad, se reanuda desde su último punto guardado en vez de volver a transcribir."
           ],
           "why": "Un endpoint compatible con OpenAI en vez del SDK de un proveedor concreto: cambiar de proveedor es cambiar la URL y la clave, no el código.",
@@ -278,8 +102,8 @@
           "plain": "El modelo lee la transcripción y rellena los apartados de la plantilla. Lo que no se ha dicho queda vacío: no se inventa.",
           "tech": [
             "Un grafo de LangGraph con estado tipado en Pydantic: cada etapa es un nodo y cada decisión, una arista condicional.",
-            "El esquema se genera al vuelo desde los campos de la plantilla y se pide al modelo como salida estructurada. Cada campo lleva la cita literal de lo dictado, comprobada contra la transcripción.",
-            "Si la validación falla, el error vuelve al modelo y reintenta, con tope. Si falta un dato obligatorio, el grafo se pausa y el bot lo pregunta."
+            "El esquema se genera al vuelo desde los campos de la plantilla y se pide al modelo como salida estructurada. Cada campo trae la cita literal de lo dictado, comprobada contra la transcripción.",
+            "Si la validación falla, el error vuelve al modelo, con tope de reintentos. Si falta un dato obligatorio, por chat el grafo se pausa y lo pregunta; en la app queda marcado y no deja aprobar."
           ],
           "why": "Mejor vacío (null) que inventado. En un documento formal, una fecha verosímil que nadie dijo es peor que un hueco: lo obligatorio que falta se pregunta, no se rellena.",
           "data": "El texto transcrito va al modelo de IA configurado (Claude u otro), con la clave de la empresa."
@@ -287,33 +111,34 @@
         "approve": {
           "name": "Lo apruebas",
           "artifact": "aprobado ✓",
-          "plain": "El borrador llega al chat. Confirmas, corriges con un audio o un texto, o cancelas. Sin tu visto bueno no sale nada.",
+          "plain": "El borrador llega a la app o al chat. Confirmas, corriges hablando o escribiendo, o cancelas. Sin tu visto bueno no sale nada.",
           "tech": [
-            "El grafo se detiene con interrupt() de LangGraph y su estado se guarda en Postgres: puede esperar horas y sobrevive a un reinicio.",
-            "Un «vale» o un 👍 se resuelven por reglas, sin llamar al modelo. Una respuesta larga la clasifica el modelo y, ante la duda, cuenta como corrección, nunca como aprobación.",
-            "Una corrección vuelve a la extracción con lo que se añada, con un tope de intentos. También se puede revisar y aprobar desde el panel."
+            "El grafo se detiene con interrupt() de LangGraph y su estado se guarda en Postgres: puede esperar días y sobrevive a un reinicio.",
+            "En la app, aprobar es un botón que comprueba los obligatorios: nada dicho o escrito cuenta como aprobación. Por chat, un «vale» se resuelve por reglas y una respuesta larga la clasifica el modelo; ante la duda, es una corrección.",
+            "Una corrección vuelve a la extracción con lo que se añada, con un tope de intentos."
           ],
           "why": "Un agente no debería enviar nada en nombre de otra persona sin un punto de control humano. Aquí es una arista del grafo, no un aviso en la interfaz.",
-          "data": "Con los botones o un «vale», nada sale. Solo una respuesta larga pasa al modelo para clasificarla."
+          "data": "Aprobar no envía nada a la IA. Solo una respuesta larga por chat pasa al modelo para clasificarla."
         },
         "deliver": {
           "name": "Se entrega",
           "artifact": "informe_visita.pdf",
-          "plain": "La plantilla Word se rellena y se convierte a PDF. Llega al chat y, por correo, a quien esté configurado, y queda en el historial.",
+          "plain": "La plantilla Word se rellena y se convierte a PDF. Sale por correo a quien esté configurado, por el chat si vino de ahí, y queda en el historial.",
           "tech": [
             "docxtpl rellena el .docx de la plantilla con los campos aprobados, en un entorno Jinja2 aislado y con escapado automático de caracteres: «García & Hijos» no rompe el documento.",
             "Gotenberg (LibreOffice) convierte el .docx a PDF en un contenedor del propio servidor.",
             "Cada copia, la del chat y la de cada correo, es una fila en el registro de entregas: si una falla, solo se reintenta esa."
           ],
           "why": "Una entrega por copia: si un correo falla, no se reenvía el chat ni se vuelve a generar el PDF.",
-          "data": "Solo sale lo que se envía: el PDF por Telegram y por el servidor de correo configurado."
+          "data": "Solo sale lo que se envía: el PDF por el correo configurado y, si el informe vino por chat, por ese chat."
         }
       },
       "visual": {
         "dictate": {
-          "meta": "entrada · telegram → webhook → backend",
+          "meta": "entrada · app → POST /capture → backend",
           "job": "trabajo en cola",
-          "tx": "una transacción: informe + trabajo"
+          "tx": "una transacción: informe + trabajo",
+          "duration": "1:19"
         },
         "transcribe": {
           "meta": "whisper-large-v3-turbo · temperature 0 · es",
@@ -357,29 +182,22 @@
           "template": "visita_obra.docx",
           "filled": "rendered.docx",
           "pdf": "visita_las_acacias.pdf",
-          "telegram": "Telegram",
           "email1": "correo · contrata principal",
-          "email2": "correo · promotor"
+          "email2": "correo · promotor",
+          "history": "Historial del informe, con audio y transcripción"
         }
       },
       "topology": {
         "heading": "Qué corre en el servidor y qué sale de él.",
-        "sub": "Todo vive en un único servidor de la empresa, con Docker. Solo cuatro cosas hablan con el exterior, y la empresa elige las cuatro.",
+        "sub": "Los mismos contenedores en los dos modos. Solo cuatro servicios externos reciben datos de los informes: la transcripción, el modelo, el correo de salida y los chats conectados.",
         "insideLabel": "Servidor de la empresa",
         "insideHint": "o un VPS a su nombre",
-        "outsideLabel": "Fuera del servidor",
         "toggleOn": "Resaltar lo que sale",
         "toggleOff": "Mostrar todo",
         "captionHint": "Pulsa cualquier pieza para ver qué hace.",
         "sends": "Qué sale",
         "stays": "Se queda en el servidor",
         "outside": {
-          "telegram": {
-            "name": "Telegram",
-            "role": "Canal",
-            "body": "El audio entra y el borrador y el PDF vuelven por aquí.",
-            "sends": "Mensajes, fotos y el PDF, como en cualquier chat de Telegram."
-          },
           "smtp": {
             "name": "Servidor de correo",
             "role": "Entrega",
@@ -390,30 +208,31 @@
             "name": "Proveedor de voz",
             "role": "Transcripción",
             "body": "Un endpoint compatible con OpenAI. Whisper en Groq por defecto.",
-            "sends": "El audio de cada nota de voz, con la clave de la empresa."
+            "sends": "El audio de cada nota de voz."
           },
           "model": {
             "name": "Modelo de IA",
             "role": "Extracción",
             "body": "Anthropic de forma nativa o cualquier endpoint compatible con OpenAI.",
-            "sends": "La transcripción y los campos de la plantilla, con la clave de la empresa."
+            "sends": "La transcripción y la lista de campos de la plantilla."
+          },
+          "chats": {
+            "name": "Chats conectados",
+            "role": "Canal opcional",
+            "body": "Telegram y correo entrante, para quien prefiere dictar por chat.",
+            "sends": "Mensajes, fotos y el PDF, por el canal de cada empresa."
           }
         },
         "inside": {
-          "caddy": {
-            "name": "Caddy",
-            "role": "HTTPS",
-            "body": "Entrada con certificado automático cuando la instalación tiene dominio."
-          },
           "frontend": {
-            "name": "Panel",
+            "name": "Panel y app",
             "role": "Nuxt",
-            "body": "Plantillas, equipo, destinatarios e historial con audio y transcripción."
+            "body": "El panel de la oficina y la app de campo (PWA) en el mismo build, con una Content-Security-Policy que usa un nonce nuevo en cada página."
           },
           "backend": {
             "name": "API",
             "role": "FastAPI",
-            "body": "Recibe los mensajes de Telegram y sirve el panel."
+            "body": "Recibe capturas, mensajes y webhooks, y aplica la empresa y el rol de cada petición."
           },
           "worker": {
             "name": "Worker",
@@ -423,7 +242,7 @@
           "postgres": {
             "name": "Postgres",
             "role": "Datos",
-            "body": "Informes, cola de trabajos y estado del grafo. Sin Redis ni broker."
+            "body": "Datos, cola de trabajos, estado del grafo y límites de uso. Sin Redis ni broker."
           },
           "gotenberg": {
             "name": "Gotenberg",
@@ -431,16 +250,30 @@
             "body": "Convierte el Word de la plantilla en PDF con LibreOffice, sin salir del servidor."
           },
           "storage": {
-            "name": "Almacenamiento",
+            "name": "Ficheros",
             "role": "Volumen",
-            "body": "Audios, fotos, plantillas e informes en un volumen propio."
+            "body": "Plantillas, audios y PDF, en una carpeta por empresa y por informe."
           },
           "keys": {
             "name": "Claves",
             "role": "Cifradas",
-            "body": "Las claves de IA y de correo se guardan cifradas en la base de datos."
+            "body": "Las claves de IA, de correo y de cada canal, cifradas en la base de datos."
+          },
+          "proxy": {
+            "nameSaas": "Traefik",
+            "nameSelf": "Caddy",
+            "role": "HTTPS",
+            "bodySaas": "Entrada con certificados automáticos, compartida con otros servicios del mismo servidor.",
+            "bodySelf": "Entrada con certificado automático cuando la instalación tiene dominio."
           }
-        }
+        },
+        "modeLabel": "Modo de instalación",
+        "modes": {
+          "saas": "Alojado",
+          "self": "En tu servidor"
+        },
+        "insideLabelSaas": "Servidor de ReportAI",
+        "insideHintSaas": "Hetzner · Docker Compose"
       }
     },
     "stack": {
@@ -448,7 +281,7 @@
       "items": {
         "fastapi": {
           "name": "FastAPI",
-          "role": "API y webhooks"
+          "role": "API, capturas y webhooks"
         },
         "langgraph": {
           "name": "LangGraph",
@@ -460,7 +293,7 @@
         },
         "postgres": {
           "name": "PostgreSQL 16",
-          "role": "datos, cola y puntos de guardado"
+          "role": "datos, cola y estado del grafo"
         },
         "models": {
           "name": "Claude u otro modelo",
@@ -476,112 +309,403 @@
         },
         "nuxt": {
           "name": "Nuxt 4 + Vue 3",
-          "role": "panel y esta web"
+          "role": "panel, app de campo y esta web"
+        },
+        "pwa": {
+          "name": "PWA",
+          "role": "service worker propio, cola offline"
         },
         "docker": {
-          "name": "Docker Compose + Caddy",
-          "role": "despliegue"
+          "name": "Docker Compose",
+          "role": "Traefik en el SaaS, Caddy en self-host"
         }
       }
     },
-    "impact": {
-      "heading": "El problema, con números.",
-      "sub": "Un técnico de campo dedica horas a pasar visitas a Word. Mueve los datos de un equipo y mira qué cambia. Los valores iniciales son supuestos del modelo, no mediciones.",
-      "inputsLabel": "Datos del equipo",
-      "resultLabel": "Lo que cambia",
-      "fields": {
-        "technicians": {
-          "label": "Técnicos que hacen informes",
-          "unit": "técnicos"
+    "cover": {
+      "seoTitle": "ReportAI por dentro — caso de estudio de un agente de IA en producción",
+      "seoDescription": "Cómo está construido ReportAI: un agente de LangGraph que convierte la visita dictada en el acta Word de la empresa. Multiempresa, con app offline, evals y revisión humana. Por Adrián Vázquez, AI Engineer.",
+      "line1": "Un agente de IA que escribe actas.",
+      "line2": "Así está construido.",
+      "lead": "ReportAI convierte lo que un técnico dicta en una obra en el acta Word de su empresa, lista para revisar y firmar. Lo he diseñado, construido y desplegado de punta a punta: el agente, el backend, la app de campo y los servidores.",
+      "summaryTitle": "En 60 segundos",
+      "summary": {
+        "what": {
+          "label": "Qué hace",
+          "body": "Voz → acta en la plantilla Word de cada cliente. Nada sale sin que una persona lo apruebe."
         },
-        "reportsPerWeek": {
-          "label": "Informes por técnico y semana",
-          "unit": "informes"
+        "hard": {
+          "label": "Qué tiene de difícil",
+          "body": "Un modelo de lenguaje que no puede inventar un dato en un documento que se firma. Muchas empresas en el mismo servidor sin que una vea a otra. Grabar sin cobertura. Y el gasto de IA, con tope."
         },
-        "minutesBefore": {
-          "label": "Minutos por informe hoy",
-          "unit": "min"
-        },
-        "minutesAfter": {
-          "label": "Minutos por informe con ReportAI",
-          "unit": "min"
-        },
-        "hourlyCost": {
-          "label": "Coste por hora del técnico",
-          "unit": "€/h"
+        "proof": {
+          "label": "Cómo se demuestra",
+          "body": "627 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
         }
       },
-      "advanced": "Otros supuestos",
-      "advancedFields": {
-        "aiCostPerReport": {
-          "label": "Coste de IA por informe",
-          "unit": "€"
-        },
-        "serverPerMonth": {
-          "label": "Servidor al mes",
-          "unit": "€"
-        },
-        "weeksPerYear": {
-          "label": "Semanas de trabajo al año",
-          "unit": "sem."
-        }
+      "block": {
+        "project": "Proyecto",
+        "author": "Autor",
+        "authorValue": "Adrián Vázquez · AI Engineer",
+        "status": "Estado",
+        "statusValue": "En producción",
+        "rev": "Revisión",
+        "revValue": "10 nov 2026"
       },
-      "token": "horas_liberadas_al_mes",
-      "hoursUnit": "h al mes",
-      "before": "Hoy",
-      "after": "Con ReportAI",
-      "hoursPerMonth": "h/mes",
-      "saved": "liberadas",
-      "stats": {
-        "reports": "Informes al mes",
-        "days": "Jornadas de 8 h al mes",
-        "gross": "Valor del tiempo, al mes",
-        "running": "Coste de IA y servidor, al mes",
-        "net": "Neto al mes",
-        "netYear": "Neto al año"
-      },
-      "live": "Se liberan {hours} horas al mes: {net} € netos al año.",
-      "howHeading": "Cómo se calcula",
-      "how": [
-        "Informes al mes = técnicos × informes por semana × semanas al año ÷ 12.",
-        "Horas liberadas = informes × (minutos hoy − minutos con ReportAI) ÷ 60.",
-        "Valor del tiempo = horas liberadas × coste por hora.",
-        "Neto = valor del tiempo − (informes × coste de IA + servidor)."
-      ],
-      "disclaimer": "Los valores iniciales son supuestos de este modelo, no resultados medidos en clientes. La IA se estima en céntimos por informe (la demo costó menos de 3 céntimos) y el servidor en unos 9 € al mes. No incluye costes de implantación ni de mantenimiento."
+      "indexLabel": "Índice de láminas"
     },
-    "decisions": {
-      "heading": "Decisiones de diseño y sus límites.",
+    "sheet": {
+      "sheet": "Lámina",
+      "scale": "Escala",
+      "plain": "En corto",
+      "why": "Decisión de diseño",
+      "detail": "Detalle",
+      "toSheet": "ver lámina {n}",
+      "newTab": "(se abre en otra pestaña)",
+      "replay": "Repetir"
+    },
+    "sheets": {
+      "system": {
+        "title": "El sistema",
+        "scale": "1:1000"
+      },
+      "server": {
+        "title": "El servidor",
+        "scale": "1:100"
+      },
+      "agent": {
+        "title": "El agente",
+        "scale": "1:10"
+      },
+      "tenancy": {
+        "title": "Muchas empresas, un código",
+        "scale": "1:10"
+      },
+      "fieldApp": {
+        "title": "La app de campo",
+        "scale": "1:10"
+      },
+      "quality": {
+        "title": "Cómo sé que funciona",
+        "scale": "1:1"
+      },
+      "revisions": {
+        "title": "Tabla de revisiones",
+        "scale": "S/E"
+      }
+    },
+    "system": {
+      "heading": "Quién lo usa, qué entra y qué sale.",
+      "plain": "Un técnico dicta la visita en el móvil, aunque no haya cobertura. ReportAI escribe el acta en la plantilla de su empresa, alguien de la oficina la revisa y el cliente recibe el PDF por correo.",
+      "mapLabel": "Mapa del sistema: el técnico dicta en la app, ReportAI transcribe y rellena la plantilla con dos proveedores de IA, la oficina revisa en el panel y el cliente recibe el PDF por correo.",
+      "nodes": {
+        "tech": {
+          "name": "Técnico en obra",
+          "via": "App en el móvil, o Telegram y correo"
+        },
+        "office": {
+          "name": "Oficina",
+          "via": "Panel: revisa, corrige y aprueba"
+        },
+        "client": {
+          "name": "Cliente final",
+          "via": "Recibe el PDF por correo"
+        },
+        "core": {
+          "name": "ReportAI",
+          "via": "API, agente y cola de trabajos"
+        },
+        "voice": {
+          "name": "Transcripción",
+          "via": "Whisper"
+        },
+        "model": {
+          "name": "Extracción",
+          "via": "Claude u otro modelo"
+        }
+      },
+      "steps": {
+        "dictate": {
+          "name": "Dicta",
+          "body": "El técnico graba la visita en la app. Sin señal, se guarda en el móvil y sube sola."
+        },
+        "fill": {
+          "name": "Se rellena",
+          "body": "El audio pasa a texto y un modelo rellena los campos de la plantilla, cada uno con la frase de la que sale."
+        },
+        "review": {
+          "name": "Se revisa",
+          "body": "Lo que falta queda marcado. Una persona lo completa y aprueba."
+        },
+        "deliver": {
+          "name": "Se entrega",
+          "body": "Sale el PDF con la plantilla Word de la empresa, a los destinatarios configurados."
+        }
+      },
+      "markers": {
+        "agent": "Del audio al acta",
+        "server": "Qué corre y dónde",
+        "tenancy": "Una empresa no ve a otra",
+        "fieldApp": "Sin cobertura"
+      },
+      "modes": {
+        "title": "Dos formas de instalarlo, un solo código",
+        "saas": {
+          "name": "Alojado",
+          "body": "Multiempresa, en mi servidor, por suscripción."
+        },
+        "self": {
+          "name": "En el servidor del cliente",
+          "body": "Una sola empresa, instalado con un comando y un asistente de configuración."
+        },
+        "note": "Una variable, SINGLE_TENANT, decide el modo. El mismo código y los mismos tests sirven a los dos."
+      },
+      "flow": {
+        "audio": "audio",
+        "text": "texto · campos",
+        "draft": "borrador",
+        "pdf": "PDF"
+      }
+    },
+    "tenancy": {
+      "heading": "Muchas empresas, un solo código.",
+      "plain": "Cada empresa ve solo lo suyo, tiene un tope de lo que puede gastar y puede llevarse sus datos o borrarlos. Y el mismo código se instala, con una sola empresa, en el servidor de un cliente.",
       "items": {
-        "graph": {
-          "q": "¿Por qué un grafo y no una sola llamada al modelo?",
-          "a": "Porque el flujo tiene estado y pausas: espera una respuesta humana, pregunta lo que falta, reintenta y se reanuda tras un reinicio. Con LangGraph cada paso es un nodo con estado tipado y cada decisión, una arista explícita, así que se puede probar y razonar sobre cada transición."
+        "isolation": {
+          "title": "Aislamiento en el código, probado ruta a ruta",
+          "body": "Cada ruta toma la empresa del usuario autenticado, nunca de la petición, y carga las filas con un solo helper que filtra por ella. Un informe de otra empresa responde 404, no 403: un 403 confirmaría que el id existe. Un test recorre el OpenAPI con dos empresas, prueba las 29 rutas con id y falla si aparece una ruta nueva sin clasificar."
+        },
+        "spend": {
+          "title": "Planes y gasto con tope",
+          "body": "La cuota es un count(*) sobre los informes del periodo. Cada plan a la venta tiene un tope de gasto diario de IA, y la plataforma, un freno global. Cada llamada al modelo deja su coste y sus tokens."
+        },
+        "data": {
+          "title": "Los datos son de la empresa",
+          "body": "Exportación completa en un zip. Tras pedir la baja hay 30 días de gracia; después se borra en orden (estado del grafo, ficheros y filas), así que una caída a mitad no deja nada huérfano. La retención de los audios es configurable."
+        },
+        "access": {
+          "title": "Cada uno, su acceso",
+          "body": "Tres roles de oficina (admin, aprobador y lector) y el técnico, que solo ve lo suyo. El técnico entra con un enlace mágico o un código de 8 caracteres, porque la app instalada en un iPhone no comparte sesión con Safari, y la sesión dura 30 días sin contraseña."
+        }
+      },
+      "codeLabel": "backend/app/core/scoping.py",
+      "matrixLabel": "Matriz de aislamiento",
+      "matrixCaption": "29 rutas con id, pedidas por el administrador de otra empresa: 29 respuestas 404 y nada cambiado. Con un técnico, 403 o 404: nunca un 2xx.",
+      "why": "Aislamiento en el código y no con RLS de Postgres, por ahora: un solo sitio que revisar y un test que lo cubre entero. RLS llegará con el primer cliente Enterprise que lo pida."
+    },
+    "fieldApp": {
+      "heading": "Grabar donde no hay cobertura.",
+      "plain": "En una obra, la cobertura va y viene. La app graba igual, guarda la visita en el móvil y la sube sola al volver la señal, sin duplicarla aunque se reintente.",
+      "steps": {
+        "record": {
+          "name": "Graba",
+          "body": "Opus a 32 kbps (AAC en iPhone; unos 240 KB por minuto) y la pantalla encendida con Wake Lock mientras graba."
         },
         "queue": {
-          "q": "¿Por qué una cola en Postgres y no Redis o Celery?",
-          "a": "Porque cada instalación vive en el servidor de una empresa y cada pieza de más es soporte. Postgres ya está: el worker reclama los trabajos con FOR UPDATE SKIP LOCKED, una reserva temporal (lease) y reintentos con espera creciente. El coste es un techo de caudal más bajo que el de un broker dedicado: vale para informes de visita, no para miles de eventos por segundo."
+          "name": "Guarda en el móvil",
+          "body": "Cada captura va a IndexedDB, ligada al usuario del token de la sesión y no al perfil en memoria: en una tablet compartida, lo de una persona nunca sube como de otra."
         },
-        "hallucination": {
-          "q": "¿Cómo se evita que la IA invente datos?",
-          "a": "En capas. El modelo deja vacío (null) lo que no se dijo. Cada campo rellenado trae la cita literal, que se comprueba contra la transcripción. Pydantic valida tipos y formatos: una fecha tiene que ser una fecha. Si falta un dato obligatorio, el bot lo pregunta. Y nada sale sin aprobación humana. Ninguna capa es perfecta; juntas acotan el riesgo."
+        "sync": {
+          "name": "Sube sola",
+          "body": "Al volver la red, la cola se vacía con un tiempo de espera según el tamaño. El id del informe viaja como Idempotency-Key: un reintento devuelve el mismo informe."
         },
-        "crash": {
-          "q": "¿Qué pasa si el servidor se cae a mitad de un informe?",
-          "a": "Cada trabajo tiene una reserva temporal (lease) que un latido va renovando. Si el worker muere, la reserva caduca y otro worker recoge el trabajo, que se reanuda desde el último punto de guardado (checkpoint) de LangGraph en Postgres, sin repetir la transcripción ni la extracción. Un despliegue detiene el worker con calma: termina el trabajo en curso."
+        "boot": {
+          "name": "Abre sin red",
+          "body": "Un service worker escrito a mano (83 líneas) guarda la carcasa de la app. Con una sola raya de cobertura, la página espera a la red como mucho 4 segundos, y cada llamada a la API del arranque, 3; luego la app abre con lo que guardó."
+        }
+      },
+      "security": "La misma app sirve una Content-Security-Policy con un nonce nuevo en cada página desde el propio servidor de Nuxt, idéntica en el SaaS y en el self-host. Un smoke test en CI arranca el servidor compilado y la comprueba.",
+      "why": "Service worker a mano y no {'@'}vite-pwa/nuxt: el plugin tenía abierto un error que dejaba el manifest en 404 con nuestro preset y metía Workbox en el build. Hacían falta menos de cien líneas.",
+      "signal": {
+        "label": "cobertura",
+        "none": "sin señal"
+      }
+    },
+    "quality": {
+      "heading": "Cómo sé que funciona.",
+      "plain": "No me basta con que el modelo «suele acertar». Cada cambio pasa por tests, tipos y CI; la extracción, por un golden set; y los cambios grandes, por una revisión independiente.",
+      "figures": {
+        "tests": {
+          "value": "627",
+          "label": "tests de backend",
+          "source": "pytest contra Postgres real, en cada push"
         },
-        "providers": {
-          "q": "¿Cómo se cambia de proveedor de IA?",
-          "a": "La IA es configuración, no código. Hay dos adaptadores: Anthropic con salida estructurada nativa y cualquier endpoint compatible con OpenAI mediante llamadas a funciones. La transcripción es otro ajuste, sobre un endpoint compatible con OpenAI. Cada empresa pone sus propias claves."
+        "frontend": {
+          "value": "44",
+          "label": "tests de frontend",
+          "source": "más un smoke test del servidor compilado"
         },
-        "newdoc": {
-          "q": "¿Cómo se añade un tipo de documento nuevo?",
-          "a": "Es configuración: una lista de campos con su tipo (texto, número, fecha, hora, correo, teléfono, lista, opción única, tabla o foto) y un Word con etiquetas. El esquema de Pydantic se genera al vuelo a partir de esa lista, así que no hay que tocar código ni volver a desplegar."
+        "invented": {
+          "value": "0",
+          "label": "datos inventados en el golden set",
+          "source": "83 casos, 3 pasadas: 99,8 %, 100 % y 99,7 % de campos correctos"
         },
-        "limits": {
-          "q": "¿Qué límites tiene hoy?",
-          "a": "Telegram es el canal oficial y WhatsApp está en pruebas. Una instalación atiende a una empresa. Los idiomas son español e inglés. Y la calidad de la extracción depende del modelo elegido y de lo bien dictada que esté la visita."
+        "a11y": {
+          "value": "100",
+          "label": "accesibilidad en Lighthouse",
+          "source": "móvil, build de producción"
+        },
+        "cost": {
+          "value": "≈ 0,03 USD",
+          "label": "de IA por acta",
+          "source": "el acta de ejemplo: 0,028 USD de extracción con Claude Sonnet 5, más la transcripción"
+        }
+      },
+      "method": {
+        "title": "Cómo lo construyo",
+        "steps": {
+          "spec": {
+            "who": "Yo",
+            "name": "Especifico",
+            "body": "Requisitos, arquitectura y el contrato de cada tarea: alcance, interfaces y los tests que debe pasar."
+          },
+          "build": {
+            "who": "Agentes de IA",
+            "name": "Implementan",
+            "body": "Cada uno en su rama, con sus tests."
+          },
+          "review": {
+            "who": "Yo y una revisión independiente",
+            "name": "Reviso",
+            "body": "Leo cada diff. Los cambios grandes pasan además por una revisión que no conoce mi razonamiento."
+          },
+          "ci": {
+            "who": "CI",
+            "name": "Lo demuestra",
+            "body": "Lint, tipos, migraciones contra los modelos, tests, build de la imagen y smoke test de la CSP."
+          }
+        },
+        "motto": "La IA escribe buena parte del código. De cada línea respondo yo."
+      }
+    },
+    "incident": {
+      "title": "Incidencia: la demo pública dejaba pasar ráfagas",
+      "context": "La demo de la landing es anónima y cada intento gasta IA, así que tiene 3 intentos por visitante y un techo diario.",
+      "rows": {
+        "found": {
+          "label": "Detectada",
+          "body": "Una revisión independiente vio que el límite se comprobaba al principio de la petición y se apuntaba al final, con varias consultas en medio."
+        },
+        "repro": {
+          "label": "Reproducida",
+          "body": "Con un test: 20 peticiones simultáneas desde la misma IP, 20 aceptadas."
+        },
+        "cause": {
+          "label": "Causa",
+          "body": "Comprobar y apuntar eran dos pasos, y todas las peticiones veían el contador a cero."
+        },
+        "fix": {
+          "label": "Arreglo",
+          "body": "Un solo paso bajo un candado de Postgres (pg_advisory_xact_lock): cada petición cuenta cuando la anterior ya ha apuntado. Además, un presupuesto de IA propio por día."
+        },
+        "result": {
+          "label": "Resultado",
+          "body": "El mismo test: exactamente 3 aceptadas, en 6 de 6 repeticiones."
+        }
+      },
+      "viz": {
+        "label": "Veinte peticiones simultáneas contra un límite de 3",
+        "before": "Antes",
+        "after": "Después",
+        "limit": "límite: 3",
+        "beforeCount": "20 de 20 aceptadas",
+        "afterCount": "3 de 20 aceptadas"
+      },
+      "others": {
+        "title": "Otras cosas que se cazaron antes de producción",
+        "items": {
+          "xss": {
+            "by": "Revisión independiente",
+            "body": "Una prueba de concepto de XSS que atravesaba la propia CSP: el nonce se firmaba con una expresión regular que también firmaba «<script» dentro de un atributo. Ahora lo firma un escáner que entiende etiquetas."
+          },
+          "tablet": {
+            "by": "Revisión independiente",
+            "body": "En una tablet compartida, la grabación de un técnico podía subir con la sesión de otro. La cola pasó a ligarse al usuario del token."
+          },
+          "audio": {
+            "by": "Prueba de punta a punta",
+            "body": "Un audio enviado junto a texto se perdía sin avisar, en todos los canales. Ahora se transcribe y se suma al texto."
+          }
         }
       }
+    },
+    "revisions": {
+      "heading": "Tabla de revisiones.",
+      "plain": "Las decisiones que dan forma al sistema, con lo que cuestan. Cada una tiene una alternativa seria que se descartó a propósito.",
+      "columns": {
+        "date": "Fecha",
+        "decision": "Decisión",
+        "why": "Por qué",
+        "rejected": "Descartado, y su coste"
+      },
+      "rows": {
+        "graph": {
+          "date": "11 ago 2026",
+          "decision": "Un grafo de LangGraph, no una llamada al modelo",
+          "why": "El flujo tiene estado y pausas: espera a una persona, pregunta lo que falta, reintenta y sobrevive a un reinicio.",
+          "rejected": "Una cadena de llamadas: cada pausa sería código a mano y un reinicio perdería el informe."
+        },
+        "queue": {
+          "date": "1 oct 2026",
+          "decision": "La cola de trabajos, en Postgres",
+          "why": "Postgres ya está; cada pieza de más es operación en el servidor de un cliente.",
+          "rejected": "Redis con Celery: más rendimiento del que hace falta y una pieza más que vigilar."
+        },
+        "empty": {
+          "date": "1 oct 2026",
+          "decision": "Mejor vacío que inventado",
+          "why": "En un documento que se firma, una fecha verosímil que nadie dijo es peor que un hueco.",
+          "rejected": "Dejar que el modelo complete: más campos llenos, y algunos falsos."
+        },
+        "onecode": {
+          "date": "6 nov 2026",
+          "decision": "Un solo código para el SaaS y el self-host",
+          "why": "Una sola batería de tests; una variable decide el modo.",
+          "rejected": "Dos productos: el doble de mantenimiento."
+        },
+        "rls": {
+          "date": "6 nov 2026",
+          "decision": "Aislamiento en código con una matriz de tests",
+          "why": "Un solo sitio que revisar y un test que falla si una ruta se queda fuera.",
+          "rejected": "RLS desde el primer día: más defensa en profundidad, sin un cliente que la exija todavía."
+        },
+        "pwa": {
+          "date": "6 nov 2026",
+          "decision": "La app (PWA) como canal principal",
+          "why": "Sin depender de Meta ni de Telegram, alta sin fricción y revisión en un formulario.",
+          "rejected": "Un bot compartido de Telegram o WhatsApp: cada empresa dependería de una cuenta ajena."
+        },
+        "login": {
+          "date": "6 nov 2026",
+          "decision": "Enlace mágico y código de 8 caracteres",
+          "why": "Sin contraseñas en obra; el código, porque la app instalada en un iPhone no comparte sesión con Safari.",
+          "rejected": "Correo y contraseña."
+        },
+        "sw": {
+          "date": "8 nov 2026",
+          "decision": "Service worker escrito a mano",
+          "why": "Menos de cien líneas que hacen exactamente lo que hace falta.",
+          "rejected": "{'@'}vite-pwa/nuxt: un manifest en 404 con nuestro preset y Workbox en el build."
+        },
+        "lock": {
+          "date": "9 nov 2026",
+          "decision": "Los límites de la demo, en un solo paso bajo candado",
+          "why": "Una ráfaga recibe los mismos intentos que alguien que pulsa de uno en uno.",
+          "rejected": "El «se pasa por poco» del limitador del login: aquí una ráfaga colaba 20 intentos con un límite de 3."
+        }
+      },
+      "limitsTitle": "Lo que todavía no hace",
+      "limits": {
+        "billing": "No cobra solo: los planes existen, y el pago con Stripe es la siguiente fase.",
+        "cycle": "No gestiona el ciclo de la obra (hallazgos, acciones y seguimiento en la visita siguiente).",
+        "languages": "Habla español e inglés.",
+        "ios": "La grabación con la pantalla bloqueada está probada en Android, no en iPhone.",
+        "rls": "Aísla por código; sin RLS de Postgres todavía."
+      }
+    },
+    "closing": {
+      "headline": "Si buscas a alguien que lleve la IA a producción, hablemos.",
+      "sub": "ReportAI es uno de mis proyectos. Los demás, mi experiencia y cómo trabajo están en mi portfolio.",
+      "or": "o escribe a"
     }
   }
 }

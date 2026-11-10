@@ -1,7 +1,7 @@
 html {
   font-family: 'IBM Plex Sans', sans-serif;
-  /* Sticky header is ~68px tall — without this, anchor nav (#como-funciona,
-     #diferencia, #ejemplo-real) lands section content underneath it. */
+  /* Sticky header is ~68px tall — without this, an anchor link lands the section's content
+     underneath it. */
   scroll-padding-top: 88px;
   scroll-behavior: smooth;
 }
@@ -31,6 +31,21 @@ a {
 :root {
   /* Brand ease: dry start, long brake. Same curve as the GSAP CustomEase "ra" (useMotion.ts). */
   --ease-ra: cubic-bezier(0.22, 0.8, 0.12, 1);
+}
+
+/* Tailwind's Preflight is off (Vuetify owns the base styles), so a `border-2` alone sets a width on
+   a border whose style is still `none`. The case study (layouts/architecture.vue) gets the reset
+   Preflight would give, at zero specificity so any utility wins — as the buyer landing does in
+   home.css. */
+:where(.case-study) *,
+:where(.case-study) ::before,
+:where(.case-study) ::after {
+  border-style: solid;
+  border-width: 0;
+}
+/* No word left alone on the last line of a paragraph. */
+:where(.case-study) :is(p, dd, li) {
+  text-wrap: pretty;
 }
 
 /* The headline face is requested from Google Fonts at 112.5% width (app.vue). */
