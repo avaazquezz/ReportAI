@@ -92,7 +92,7 @@ useMotionScope(root, (c) => {
             :aria-pressed="selected === `outside.${key}`"
             @click="pick(`outside.${key}`)"
           >
-            <span class="block font-mono text-[11.5px] text-capture-500">{{ t(`${base}.outside.${key}.role`) }}</span>
+            <span class="block font-body text-[12px] font-semibold text-capture-500">{{ t(`${base}.outside.${key}.role`) }}</span>
             <span class="mt-1 block font-plan text-[15px] font-bold leading-tight text-white">{{ t(`${base}.outside.${key}.name`) }}</span>
             <span class="mt-1.5 block font-body text-[12.5px] leading-snug text-white/70">{{ t(`${base}.outside.${key}.body`) }}</span>
           </button>
@@ -117,9 +117,10 @@ useMotionScope(root, (c) => {
               :aria-pressed="selected === `inside.${key}`"
               @click="pick(`inside.${key}`)"
             >
-              <span class="block transition-opacity duration-300" :class="onlyOutside ? 'opacity-30' : ''">
+              <!-- Dimmed, still readable (AA): the tiles stay buttons with something to say. -->
+              <span class="block transition-opacity duration-300" :class="onlyOutside ? 'opacity-75' : ''">
                 <span class="block font-plan text-[13.5px] font-bold leading-tight text-white">{{ insideName(key) }}</span>
-                <span class="mt-1 block font-mono text-[11.5px] text-plano-line">{{ t(`${base}.inside.${key}.role`) }}</span>
+                <span class="mt-1 block font-body text-[12px] text-plano-line">{{ t(`${base}.inside.${key}.role`) }}</span>
               </span>
             </button>
           </div>
@@ -132,12 +133,12 @@ useMotionScope(root, (c) => {
           </span>
           <button
             type="button"
-            class="out-node mt-3 cursor-pointer rounded-xl border bg-plano-800/70 p-4 text-left transition-[border-color,box-shadow,background-color] duration-300 first:mt-6 lg:col-start-5 lg:mt-0 lg:first:mt-0"
-            :class="[i === 0 ? 'lg:row-start-1' : 'lg:row-start-2', selected === `outside.${key}` || onlyOutside ? 'border-capture-500' : 'border-plano-700 hover:border-plano-line', selected === `outside.${key}` ? 'shadow-[0_0_0_4px_rgba(255,106,69,0.14)]' : '']"
+            class="out-node cursor-pointer rounded-xl border bg-plano-800/70 p-4 text-left transition-[border-color,box-shadow,background-color] duration-300 lg:col-start-5 lg:mt-0"
+            :class="[i === 0 ? 'mt-6 lg:row-start-1' : 'lg:row-start-2', selected === `outside.${key}` || onlyOutside ? 'border-capture-500' : 'border-plano-700 hover:border-plano-line', selected === `outside.${key}` ? 'shadow-[0_0_0_4px_rgba(255,106,69,0.14)]' : '']"
             :aria-pressed="selected === `outside.${key}`"
             @click="pick(`outside.${key}`)"
           >
-            <span class="block font-mono text-[11.5px] text-capture-500">{{ t(`${base}.outside.${key}.role`) }}</span>
+            <span class="block font-body text-[12px] font-semibold text-capture-500">{{ t(`${base}.outside.${key}.role`) }}</span>
             <span class="mt-1 block font-plan text-[15px] font-bold leading-tight text-white">{{ t(`${base}.outside.${key}.name`) }}</span>
             <span class="mt-1.5 block font-body text-[12.5px] leading-snug text-white/70">{{ t(`${base}.outside.${key}.body`) }}</span>
           </button>
@@ -149,11 +150,11 @@ useMotionScope(root, (c) => {
         <template v-else>
           <p class="m-0 flex flex-wrap items-baseline gap-x-3 font-body text-[14px] text-white/80">
             <b class="font-plan text-[15px] font-bold text-white">{{ caption.name }}</b>
-            <span class="font-mono text-[12px] text-plano-line">{{ caption.role }}</span>
+            <span class="font-body text-[13px] text-plano-line">{{ caption.role }}</span>
           </p>
           <p class="mb-0 mt-1.5 font-body text-[14px] leading-snug text-white/80">{{ caption.body }}</p>
           <p class="mb-0 mt-2 font-body text-[13.5px] leading-snug" :class="caption.leaves ? 'text-capture-500' : 'text-[#5FD3A6]'">
-            <span v-if="caption.leaves" class="font-mono text-[12px] text-white/60">{{ t(`${base}.sends`) }} </span>
+            <span v-if="caption.leaves" class="font-body text-[13px] text-white/60">{{ t(`${base}.sends`) }} </span>
             <span v-else aria-hidden="true">✓ </span>{{ caption.detail }}
           </p>
         </template>
@@ -163,7 +164,7 @@ useMotionScope(root, (c) => {
 </template>
 
 <style scoped>
-/* Data moving along a link: a few passes when the diagram comes into view or is touched, then still. */
+/* Data moving along a link: a few passes the first time the diagram comes into view or is touched, then still. */
 .dot {
   opacity: 0;
   left: 0;

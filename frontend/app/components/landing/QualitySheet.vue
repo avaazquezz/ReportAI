@@ -66,7 +66,7 @@ useMotionScope(root, (c) => {
         <h3 class="m-0 font-plan text-[1.35rem] font-extrabold tracking-[-0.02em] text-white">{{ t('landing.quality.method.title') }}</h3>
         <ol class="m-0 mt-6 grid list-none gap-6 p-0 sm:grid-cols-2 lg:grid-cols-4">
           <li v-for="(step, i) in METHOD" :key="step" class="border-t-2 border-plano-line/60 pt-3">
-            <p class="m-0 font-mono text-[12px] text-plano-line">{{ i + 1 }} · {{ t(`landing.quality.method.steps.${step}.who`) }}</p>
+            <p class="m-0 font-body text-[13px] font-semibold text-plano-line">{{ i + 1 }} · {{ t(`landing.quality.method.steps.${step}.who`) }}</p>
             <p class="mb-0 mt-1.5 font-plan text-[1.05rem] font-bold text-white">{{ t(`landing.quality.method.steps.${step}.name`) }}</p>
             <p class="mb-0 mt-1 font-body text-[14px] leading-snug text-white/75">{{ t(`landing.quality.method.steps.${step}.body`) }}</p>
           </li>
@@ -128,7 +128,7 @@ useMotionScope(root, (c) => {
         <h3 class="m-0 font-plan text-[1.15rem] font-extrabold tracking-[-0.02em] text-white">{{ t('landing.incident.others.title') }}</h3>
         <ul class="m-0 mt-5 grid list-none gap-6 p-0 lg:grid-cols-3">
           <li v-for="item in OTHERS" :key="item" class="border-t border-plano-line/40 pt-3">
-            <p class="m-0 font-mono text-[12px] text-plano-line">{{ t(`landing.incident.others.items.${item}.by`) }}</p>
+            <p class="m-0 font-body text-[13px] font-semibold text-plano-line">{{ t(`landing.incident.others.items.${item}.by`) }}</p>
             <p class="mb-0 mt-1.5 font-body text-[14px] leading-relaxed text-white/85">{{ t(`landing.incident.others.items.${item}.body`) }}</p>
           </li>
         </ul>

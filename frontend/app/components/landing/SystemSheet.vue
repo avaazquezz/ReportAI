@@ -147,7 +147,7 @@ useMotionScope(root, (c) => {
               <a :href="`#${SHEET_IDS[mark.sheet]}`" class="flex items-center gap-3 border-b border-ink-900/10 py-2.5 text-ink-900 transition-colors hover:text-capture-600">
                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-capture-600 font-plan text-[12px] font-extrabold text-capture-600" aria-hidden="true">{{ mark.letter }}</span>
                 <span class="flex-1 font-body text-[15px] font-medium">{{ t(`landing.system.markers.${mark.key}`) }}</span>
-                <span class="font-mono text-[12px] text-ink-900/60">{{ t('landing.sheet.toSheet', { n: sheetNumber(mark.sheet) }) }}</span>
+                <span class="font-body text-[13px] text-ink-900/60">{{ t('landing.sheet.toSheet', { n: sheetNumber(mark.sheet) }) }}</span>
               </a>
             </li>
           </ul>

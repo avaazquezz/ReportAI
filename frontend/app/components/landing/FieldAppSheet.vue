@@ -21,8 +21,8 @@ const SIGNAL = 'M0 22 C70 18 140 24 200 30 S280 62 300 72 L540 72 C580 70 610 40
             <line x1="0" y1="72" x2="1000" y2="72" stroke="#12151C" stroke-opacity="0.2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke" />
             <path :d="SIGNAL" fill="none" stroke="#223552" stroke-width="2" vector-effect="non-scaling-stroke" />
           </svg>
-          <span class="absolute left-0 top-0 font-mono text-[12px] text-ink-900/60">{{ t('landing.fieldApp.signal.label') }}</span>
-          <span class="absolute left-[30%] top-1 w-[24%] text-center font-mono text-[12px] text-ink-900/60">{{ t('landing.fieldApp.signal.none') }}</span>
+          <span class="absolute left-0 top-0 font-body text-[13px] text-ink-900/60">{{ t('landing.fieldApp.signal.label') }}</span>
+          <span class="absolute left-[30%] top-1 w-[24%] text-center font-body text-[13px] text-ink-900/60">{{ t('landing.fieldApp.signal.none') }}</span>
         </div>
 
         <ol class="m-0 mt-4 grid list-none gap-8 p-0 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
