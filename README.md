@@ -2,6 +2,10 @@
 
 **Turn a voice note into a finished corporate report.**
 
+**How it's built:** the engineering case study — architecture, agent, multi-tenancy, offline field
+app, evals and the decisions behind them — is at
+[reportai.vazquezlabs.com/architecture](https://reportai.vazquezlabs.com/architecture).
+
 ReportAI is an AI agent that converts a voice note or a chat message into a
 correctly formatted corporate document — meeting minutes, commercial visit
 reports, and other structured report types — filled into your own template
