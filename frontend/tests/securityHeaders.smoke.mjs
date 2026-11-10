@@ -69,6 +69,15 @@ test('HSTS only when the proxy says the browser used HTTPS', async () => {
   assert.equal(secure.response.headers.get('strict-transport-security'), 'max-age=31536000')
 })
 
+// A page middleware that awaits and then redirects, rendered on the server: it must keep Nuxt's
+// context after the await (wrapped in defineNuxtRouteMiddleware), or the redirect is a 500. With the
+// API down, as here, sign-up reads as off.
+test('/signup sends the visitor to the login when sign-up is off', async () => {
+  const { response } = await page('/signup')
+  assert.equal(response.status, 302)
+  assert.equal(new URL(response.headers.get('location'), base).pathname, '/login')
+})
+
 test('static files get the headers but no policy, and nothing names the framework', async () => {
   const asset = await fetch(`${base}/manifest.webmanifest`)
   assert.equal(asset.headers.get('x-content-type-options'), 'nosniff')

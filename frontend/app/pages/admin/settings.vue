@@ -4,13 +4,14 @@ definePageMeta({
   titleKey: 'admin.layout.nav.settings',
   middleware: [
     'auth',
-    async () => {
-      // Composables first: after an await there is no Nuxt context to resolve them in.
+    // defineNuxtRouteMiddleware keeps Nuxt's context after the await (Nuxt restores it for a bare
+    // function under `middleware`, not inside an array): navigateTo needs it on the server.
+    defineNuxtRouteMiddleware(async () => {
       const instance = useInstance()
       const { isAdmin, isInstanceAdmin } = useRole()
       await instance.load()
       if (!isAdmin.value && !isInstanceAdmin.value) return navigateTo('/dashboard')
-    }
+    })
   ]
 })
 
