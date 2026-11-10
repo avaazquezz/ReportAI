@@ -10,10 +10,10 @@ const AUTHOR = 'https://www.vazquezdev.pro'
 const showLegalLink = computed(() => Boolean(config.legalName && config.legalId && config.legalAddress))
 
 const PRODUCT = [
-  { hash: '#como-funciona', key: 'how' },
-  { hash: '#pruebalo', key: 'demo' },
-  { hash: '#precios', key: 'pricing' },
-  { hash: '#preguntas', key: 'faq' }
+  { href: '/#como-funciona', key: 'how' },
+  { href: '/#pruebalo', key: 'demo' },
+  { href: '/#precios', key: 'pricing' },
+  { href: '/#preguntas', key: 'faq' }
 ] as const
 </script>
 
@@ -28,8 +28,8 @@ const PRODUCT = [
       <nav class="col-span-6 md:col-span-3" :aria-label="t('home.footer.product')">
         <p class="text-sm font-semibold">{{ t('home.footer.product') }}</p>
         <ul class="mt-4 space-y-2.5 p-0 text-[0.95rem] text-ink-900/75">
-          <li v-for="item in PRODUCT" :key="item.hash" class="list-none">
-            <a :href="item.hash" class="u-nav hover:text-ink-900">{{ t(`home.nav.${item.key}`) }}</a>
+          <li v-for="item in PRODUCT" :key="item.href" class="list-none">
+            <a :href="item.href" class="u-nav hover:text-ink-900">{{ t(`home.nav.${item.key}`) }}</a>
           </li>
         </ul>
       </nav>

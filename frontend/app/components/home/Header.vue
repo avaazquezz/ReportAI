@@ -3,10 +3,10 @@ const { t } = useI18n()
 const cta = useTrialCta()
 
 const NAV = [
-  { hash: '#como-funciona', key: 'how' },
-  { hash: '#pruebalo', key: 'demo' },
-  { hash: '#precios', key: 'pricing' },
-  { hash: '#preguntas', key: 'faq' }
+  { href: '/#como-funciona', key: 'how' },
+  { href: '/#pruebalo', key: 'demo' },
+  { href: '/#precios', key: 'pricing' },
+  { href: '/#preguntas', key: 'faq' }
 ] as const
 
 const open = ref(false)
@@ -65,7 +65,7 @@ onUnmounted(() => {
       </NuxtLink>
 
       <nav class="col-span-6 hidden items-center justify-center gap-8 md:flex" :aria-label="t('home.nav.label')">
-        <a v-for="item in NAV" :key="item.hash" :href="item.hash" class="u-nav text-[0.95rem]">
+        <a v-for="item in NAV" :key="item.href" :href="item.href" class="u-nav text-[0.95rem]">
           {{ t(`home.nav.${item.key}`) }}
         </a>
       </nav>
@@ -101,8 +101,8 @@ onUnmounted(() => {
       <nav class="home-grid py-4" :aria-label="t('home.nav.label')">
         <a
           v-for="item in NAV"
-          :key="item.hash"
-          :href="item.hash"
+          :key="item.href"
+          :href="item.href"
           class="border-hair col-span-12 border-b py-3.5 text-lg"
           @click="close()"
         >{{ t(`home.nav.${item.key}`) }}</a>
