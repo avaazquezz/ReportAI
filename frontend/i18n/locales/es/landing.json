@@ -1,8 +1,7 @@
 {
   "landing": {
     "seo": {
-      "title": "ReportAI — De la nota de voz al informe, explicado por dentro",
-      "description": "Un agente de IA que convierte la nota de voz de una visita en el informe de una plantilla Word. Demo real, arquitectura interactiva (LangGraph, Pydantic, Postgres, Gotenberg) y decisiones de diseño."
+      "title": "ReportAI — De la nota de voz al informe, explicado por dentro"
     },
     "header": {
       "nav": {
@@ -62,15 +61,14 @@
     },
     "architecture": {
       "heading": "Del audio al acta, por dentro.",
-      "sub": "Cinco etapas de un grafo de LangGraph de 26 nodos. Elige una para ver qué hace, con qué y qué sale del servidor.",
+      "plain": "Lo que dictas recorre cinco etapas hasta ser un PDF, y una persona lo aprueba antes de que salga.",
+      "sub": "Por dentro, un grafo de LangGraph de 25 nodos. Elige una etapa para ver qué hace, con qué y qué sale del servidor.",
       "railLabel": "Etapas del recorrido del informe",
       "hintPinned": "Desliza: el dato avanza solo. También puedes pulsar una etapa.",
       "hintTabs": "Pulsa una etapa o usa las flechas del teclado.",
       "stageOf": "Etapa {n} de {total}",
       "prev": "Anterior",
       "next": "Siguiente",
-      "plainLabel": "En corto",
-      "insideLabel": "Por dentro",
       "dataLabel": "Qué sale del servidor",
       "whyLabel": "Decisión de diseño",
       "stages": {
@@ -191,10 +189,9 @@
       },
       "topology": {
         "heading": "Qué corre en el servidor y qué sale de él.",
-        "sub": "Los mismos contenedores en los dos modos. Solo cuatro cosas hablan con el exterior: la transcripción, el modelo, el correo de salida y los chats conectados.",
+        "sub": "Los mismos contenedores en los dos modos. Solo cuatro servicios externos reciben datos de los informes: la transcripción, el modelo, el correo de salida y los chats conectados.",
         "insideLabel": "Servidor de la empresa",
         "insideHint": "o un VPS a su nombre",
-        "outsideLabel": "Fuera del servidor",
         "toggleOn": "Resaltar lo que sale",
         "toggleOff": "Mostrar todo",
         "captionHint": "Pulsa cualquier pieza para ver qué hace.",
@@ -230,7 +227,7 @@
           "frontend": {
             "name": "Panel y app",
             "role": "Nuxt",
-            "body": "El panel de la oficina y la app de campo (PWA) en el mismo build, con una Content-Security-Policy con nonce por respuesta."
+            "body": "El panel de la oficina y la app de campo (PWA) en el mismo build, con una Content-Security-Policy que usa un nonce nuevo en cada página."
           },
           "backend": {
             "name": "API",
@@ -346,16 +343,13 @@
         }
       },
       "block": {
-        "label": "Cajetín",
         "project": "Proyecto",
         "author": "Autor",
         "authorValue": "Adrián Vázquez · AI Engineer",
         "status": "Estado",
         "statusValue": "En producción",
-        "set": "Juego",
-        "setValue": "7 láminas",
         "rev": "Revisión",
-        "revValue": "9 nov 2026"
+        "revValue": "10 nov 2026"
       },
       "indexLabel": "Índice de láminas"
     },
@@ -363,11 +357,11 @@
       "sheet": "Lámina",
       "scale": "Escala",
       "plain": "En corto",
-      "inside": "Por dentro",
       "why": "Decisión de diseño",
       "detail": "Detalle",
       "toSheet": "ver lámina {n}",
-      "newTab": "(se abre en otra pestaña)"
+      "newTab": "(se abre en otra pestaña)",
+      "replay": "Repetir"
     },
     "sheets": {
       "system": {
@@ -482,7 +476,7 @@
         },
         "spend": {
           "title": "Planes y gasto con tope",
-          "body": "La cuota es un count(*) sobre los informes del periodo. Cada plan tiene un tope de gasto diario de IA y la plataforma, un freno global. Cada llamada al modelo deja su coste y sus tokens."
+          "body": "La cuota es un count(*) sobre los informes del periodo. Cada plan a la venta tiene un tope de gasto diario de IA, y la plataforma, un freno global. Cada llamada al modelo deja su coste y sus tokens."
         },
         "data": {
           "title": "Los datos son de la empresa",
@@ -504,7 +498,7 @@
       "steps": {
         "record": {
           "name": "Graba",
-          "body": "Opus a 32 kbps (unos 240 KB por minuto) y la pantalla encendida con Wake Lock mientras graba."
+          "body": "Opus a 32 kbps (AAC en iPhone; unos 240 KB por minuto) y la pantalla encendida con Wake Lock mientras graba."
         },
         "queue": {
           "name": "Guarda en el móvil",
@@ -516,10 +510,10 @@
         },
         "boot": {
           "name": "Abre sin red",
-          "body": "Un service worker escrito a mano (83 líneas) guarda la carcasa de la app. Con una sola raya de cobertura, ninguna llamada de arranque espera más de 3 segundos."
+          "body": "Un service worker escrito a mano (83 líneas) guarda la carcasa de la app. Con una sola raya de cobertura, la página espera a la red como mucho 4 segundos, y cada llamada a la API del arranque, 3; luego la app abre con lo que guardó."
         }
       },
-      "security": "La misma app sirve una Content-Security-Policy con nonce por respuesta desde el propio servidor de Nuxt, idéntica en el SaaS y en el self-host. Un smoke test en CI arranca el servidor compilado y la comprueba.",
+      "security": "La misma app sirve una Content-Security-Policy con un nonce nuevo en cada página desde el propio servidor de Nuxt, idéntica en el SaaS y en el self-host. Un smoke test en CI arranca el servidor compilado y la comprueba.",
       "why": "Service worker a mano y no {'@'}vite-pwa/nuxt: el plugin tenía abierto un error que dejaba el manifest en 404 con nuestro preset y metía Workbox en el build. Hacían falta menos de cien líneas.",
       "signal": {
         "label": "cobertura",
@@ -589,7 +583,7 @@
       "rows": {
         "found": {
           "label": "Detectada",
-          "body": "Una revisión independiente vio que el límite se comprobaba al principio de la petición y se apuntaba al final, con diez consultas en medio."
+          "body": "Una revisión independiente vio que el límite se comprobaba al principio de la petición y se apuntaba al final, con varias consultas en medio."
         },
         "repro": {
           "label": "Reproducida",
@@ -614,8 +608,7 @@
         "after": "Después",
         "limit": "límite: 3",
         "beforeCount": "20 de 20 aceptadas",
-        "afterCount": "3 de 20 aceptadas",
-        "replay": "Repetir"
+        "afterCount": "3 de 20 aceptadas"
       },
       "others": {
         "title": "Otras cosas que se cazaron antes de producción",
@@ -639,65 +632,65 @@
       "heading": "Tabla de revisiones.",
       "plain": "Las decisiones que dan forma al sistema, con lo que cuestan. Cada una tiene una alternativa seria que se descartó a propósito.",
       "columns": {
-        "phase": "Fase",
+        "date": "Fecha",
         "decision": "Decisión",
         "why": "Por qué",
         "rejected": "Descartado, y su coste"
       },
       "rows": {
         "graph": {
-          "phase": "1",
+          "date": "11 ago 2026",
           "decision": "Un grafo de LangGraph, no una llamada al modelo",
           "why": "El flujo tiene estado y pausas: espera a una persona, pregunta lo que falta, reintenta y sobrevive a un reinicio.",
           "rejected": "Una cadena de llamadas: cada pausa sería código a mano y un reinicio perdería el informe."
         },
         "queue": {
-          "phase": "1",
+          "date": "1 oct 2026",
           "decision": "La cola de trabajos, en Postgres",
           "why": "Postgres ya está; cada pieza de más es operación en el servidor de un cliente.",
           "rejected": "Redis con Celery: más rendimiento del que hace falta y una pieza más que vigilar."
         },
         "empty": {
-          "phase": "2",
+          "date": "1 oct 2026",
           "decision": "Mejor vacío que inventado",
           "why": "En un documento que se firma, una fecha verosímil que nadie dijo es peor que un hueco.",
           "rejected": "Dejar que el modelo complete: más campos llenos, y algunos falsos."
         },
         "onecode": {
-          "phase": "4",
+          "date": "6 nov 2026",
           "decision": "Un solo código para el SaaS y el self-host",
           "why": "Una sola batería de tests; una variable decide el modo.",
           "rejected": "Dos productos: el doble de mantenimiento."
         },
         "rls": {
-          "phase": "4",
+          "date": "6 nov 2026",
           "decision": "Aislamiento en código con una matriz de tests",
           "why": "Un solo sitio que revisar y un test que falla si una ruta se queda fuera.",
           "rejected": "RLS desde el primer día: más defensa en profundidad, sin un cliente que la exija todavía."
         },
         "pwa": {
-          "phase": "5",
+          "date": "6 nov 2026",
           "decision": "La app (PWA) como canal principal",
           "why": "Sin depender de Meta ni de Telegram, alta sin fricción y revisión en un formulario.",
           "rejected": "Un bot compartido de Telegram o WhatsApp: cada empresa dependería de una cuenta ajena."
         },
-        "sw": {
-          "phase": "5",
-          "decision": "Service worker escrito a mano",
-          "why": "Menos de cien líneas que hacen exactamente lo que hace falta.",
-          "rejected": "{'@'}vite-pwa/nuxt: un manifest en 404 con nuestro preset y Workbox en el build."
-        },
         "login": {
-          "phase": "5",
+          "date": "6 nov 2026",
           "decision": "Enlace mágico y código de 8 caracteres",
           "why": "Sin contraseñas en obra; el código, porque la app instalada en un iPhone no comparte sesión con Safari.",
           "rejected": "Correo y contraseña."
         },
+        "sw": {
+          "date": "8 nov 2026",
+          "decision": "Service worker escrito a mano",
+          "why": "Menos de cien líneas que hacen exactamente lo que hace falta.",
+          "rejected": "{'@'}vite-pwa/nuxt: un manifest en 404 con nuestro preset y Workbox en el build."
+        },
         "lock": {
-          "phase": "6",
+          "date": "9 nov 2026",
           "decision": "Los límites de la demo, en un solo paso bajo candado",
           "why": "Una ráfaga recibe los mismos intentos que alguien que pulsa de uno en uno.",
-          "rejected": "El «se pasa por poco» del limitador del login: aquí el exceso era de 10×."
+          "rejected": "El «se pasa por poco» del limitador del login: aquí una ráfaga colaba 20 intentos con un límite de 3."
         }
       },
       "limitsTitle": "Lo que todavía no hace",

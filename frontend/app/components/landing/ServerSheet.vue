@@ -2,8 +2,8 @@
 import gsap from 'gsap'
 
 // Sheet 2, the server at 1:100: the containers of an installation (infra/docker-compose.prod.yml
-// hosted, infra/install/docker-compose.yml self-hosted) and the four things that talk to the
-// outside. The mode switch shows the point of the sheet: only the way in changes (Traefik or
+// hosted, infra/install/docker-compose.yml self-hosted) and the four outside services that receive
+// report data. The mode switch shows the point of the sheet: only the way in changes (Traefik or
 // Caddy); everything else is the same code. Click a piece to read what it does; the toggle dims
 // the inside so only what leaves the server stays lit.
 const { t } = useI18n()

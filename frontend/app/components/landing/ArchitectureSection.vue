@@ -128,7 +128,10 @@ const nodeClass = (i: number) =>
       <header class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
         <LandingSectionHeading tone="dark" size="sm" class="lg:whitespace-nowrap">{{ t('landing.architecture.heading') }}</LandingSectionHeading>
         <div class="max-w-sm">
-          <p class="m-0 font-body text-[14px] leading-snug text-white/75">{{ t('landing.architecture.sub') }}</p>
+          <p class="m-0 font-body text-[14px] leading-snug text-white/75">
+            <span class="font-semibold text-white">{{ t('landing.sheet.plain') }}.</span> {{ t('landing.architecture.plain') }}
+          </p>
+          <p class="mb-0 mt-1.5 font-body text-[14px] leading-snug text-white/75">{{ t('landing.architecture.sub') }}</p>
           <p class="mb-0 mt-1.5 font-mono text-[12px] text-plano-line">
             {{ t('landing.sheet.sheet') }} {{ sheetNumber('agent') }} / {{ SHEETS.length }} · {{ t('landing.sheet.scale') }} {{ t('landing.sheets.agent.scale') }}
           </p>
