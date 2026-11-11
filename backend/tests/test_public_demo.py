@@ -68,7 +68,7 @@ async def demo(db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> dict[str, A
     tenant = await _tenant(db, "ReportAI Demo")
     account = TenantUser(
         tenant_id=tenant.id, email="demo@reportai.test", hashed_password=_HASH, full_name="Demo technician",
-        role="tenant_admin", is_active=True,
+        role="tenant_admin", is_active=False,  # as scripts/seed_live_demo.py makes it: nobody signs into it
     )
     spanish = DocumentType(
         tenant_id=tenant.id, name="Visita de seguridad", field_schema=_SCHEMA, notification_emails=["boss@demo.test"]

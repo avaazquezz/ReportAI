@@ -35,8 +35,8 @@ cp .env.example .env   # then fill EVERY value with real production secrets
 Production-specific values (see the commented blocks at the bottom of
 `.env.example`): `APP_DOMAIN`, `API_ROOT_PATH=/api`, `FRONTEND_ORIGIN`,
 `PUBLIC_BASE_URL`, `ENVIRONMENT=production` (this is also what closes `/docs` and
-`/openapi.json`), `LEGAL_NAME` / `LEGAL_ID` / `LEGAL_ADDRESS` (published on
-`/aviso-legal`), the `DEMO_*` trio, and the guards (`SENDER_RATE_LIMIT_PER_HOUR`,
+`/openapi.json`), `LEGAL_NAME` (published on `/aviso-legal` and `/privacidad`; `LEGAL_ID` /
+`LEGAL_ADDRESS` only if the site sells something), the `DEMO_*` trio, and the guards (`SENDER_RATE_LIMIT_PER_HOUR`,
 `DAILY_SPEND_CAP_USD`). Generate `SECRET_KEY` and `DEMO_USER_PASSWORD` fresh — never
 reuse dev values. `.env` lives only on the server; it is never committed.
 

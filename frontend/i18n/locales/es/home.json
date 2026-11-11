@@ -2,12 +2,12 @@
   "home": {
     "seo": {
       "title": "ReportAI — Dicta la visita, firma el acta",
-      "description": "Dicta la visita de obra en el móvil y ReportAI rellena el acta con la plantilla Word de tu empresa: deficiencias, empresa, medida y plazo. Tú lo revisas y lo firmas. Prueba gratis 14 días."
+      "description": "Dicta la visita de obra en el móvil y ReportAI rellena el acta con la plantilla Word de tu empresa: deficiencias, empresa, medida y plazo. Tú lo revisas y lo firmas. Pruébalo con tu voz."
     },
     "nav": {
       "how": "Cómo funciona",
       "demo": "Pruébalo",
-      "pricing": "Precios",
+      "built": "Por dentro",
       "faq": "Preguntas",
       "signIn": "Entrar",
       "open": "Abrir menú",
@@ -15,10 +15,10 @@
       "label": "Principal"
     },
     "cta": {
-      "trial": "Empieza gratis",
-      "trialTerms": "14 días · 30 informes · sin tarjeta",
-      "requestAccess": "Pide acceso",
-      "requestSubject": "Quiero probar ReportAI",
+      "write": "Escríbeme para probarlo",
+      "writeShort": "Escríbeme",
+      "mailSubject": "Quiero probar ReportAI",
+      "note": "Aún no está a la venta: escríbeme y lo probamos con tu equipo.",
       "tryVoice": "Pruébalo con tu voz"
     },
     "hero": {
@@ -81,9 +81,9 @@
           "title": "Nada sale sin tu revisión",
           "body": "Cada informe se aprueba antes de enviarse."
         },
-        "team": {
-          "title": "Técnicos ilimitados",
-          "body": "En todos los planes."
+        "code": {
+          "title": "El código, a la vista",
+          "body": "Público en GitHub."
         }
       }
     },
@@ -141,8 +141,8 @@
         "working": "Transcribiendo y leyendo la visita…",
         "ready": "Esto es lo que ha entendido.",
         "failed": "No hemos podido procesar esta prueba. Prueba otra vez con más detalle.",
-        "perIp": "Ya has hecho las pruebas de hoy. Mañana tendrás tres más; o empieza la prueba gratis.",
-        "full": "La demo en vivo está completa por hoy. Vuelve mañana o empieza la prueba gratis.",
+        "perIp": "Ya has hecho las pruebas de hoy. Mañana tendrás tres más; o escríbeme y lo pruebas con tu equipo.",
+        "full": "La demo en vivo está completa por hoy. Vuelve mañana o escríbeme y lo pruebas con tu equipo.",
         "unavailable": "La demo en vivo no está disponible ahora mismo. Escucha la visita de ejemplo.",
         "noMic": "No se puede usar el micrófono en este navegador. Escribe la visita.",
         "denied": "Sin permiso para el micrófono. Puedes escribir la visita."
@@ -152,7 +152,8 @@
       "transcript": "Lo que se ha oído",
       "pdf": "Ver el acta en PDF",
       "reset": "Hacer otra prueba",
-      "privacy": "La grabación se transcribe con Groq y se interpreta con Claude, de Anthropic, y se borra a las 24 horas. No incluyas datos reales de personas.",
+      "privacy": "La grabación se transcribe con Groq y se interpreta con Claude, de Anthropic, y se borra a las 24 horas. No incluyas datos reales de personas. {policy}",
+      "privacyLink": "Política de privacidad",
       "sample": "¿Sin micrófono a mano? Escucha una visita real de ejemplo",
       "samplePlay": "Escuchar el ejemplo",
       "samplePause": "Pausar el ejemplo",
@@ -208,45 +209,59 @@
       "days": "{days} jornadas de 8 horas",
       "assumption": "Supuesto de partida: 3 técnicos, 6 informes por semana cada uno y 35 minutos por informe, frente a 8 revisando."
     },
-    "pricing": {
-      "heading": "Precios de lanzamiento.",
-      "sub": "Técnicos ilimitados y la IA incluida en todos los planes. Pagas por los informes que haces al mes.",
-      "perMonth": "€/mes",
-      "vat": "+ IVA",
-      "reports": "{count} informes al mes",
-      "plans": {
-        "solo": {
-          "name": "Solo",
-          "for": "Un coordinador por libre, unas cinco visitas a la semana."
+    "built": {
+      "heading": "Lo que hay detrás del acta.",
+      "lead": "ReportAI lo he diseñado y construido yo, de la grabación al PDF. Esto es lo que pasa entre que hablas y el acta llega a su destino; cada decisión, con su porqué, está en el caso de estudio.",
+      "flowLabel": "Del audio al acta",
+      "stages": {
+        "capture": {
+          "title": "Captura",
+          "body": "La app de campo graba aunque no haya cobertura y sube la nota cuando vuelve la señal.",
+          "tech": "PWA · IndexedDB"
         },
-        "starter": {
-          "name": "Starter",
-          "for": "Un técnico a jornada completa."
+        "transcribe": {
+          "title": "Transcripción",
+          "body": "La voz pasa a texto en unos segundos.",
+          "tech": "Groq · Whisper"
         },
-        "pro": {
-          "name": "Pro",
-          "for": "Un servicio de prevención con varios técnicos."
+        "agent": {
+          "title": "Agente",
+          "body": "Un grafo de LangGraph de 25 nodos saca cada dato con la frase de la que sale, pide lo que falta y se detiene hasta que alguien lo aprueba.",
+          "tech": "LangGraph · Claude"
         },
-        "business": {
-          "name": "Business",
-          "for": "Varios equipos o delegaciones."
+        "document": {
+          "title": "Documento",
+          "body": "Rellena tu plantilla de Word y la convierte en PDF.",
+          "tech": "docxtpl · Gotenberg"
+        },
+        "delivery": {
+          "title": "Entrega",
+          "body": "Lo envía por correo y deja constancia de quién lo aprobó y cuándo.",
+          "tech": "FastAPI · Postgres"
         }
       },
-      "choose": "Empezar con {plan}",
-      "trial": "Todos empiezan con 14 días de prueba: 30 informes y sin tarjeta. Al terminar, eliges plan.",
-      "pilot": {
-        "title": "Programa piloto",
-        "body": "60 días acompañados por mí, con la plantilla configurada contigo, a cambio de tu opinión sincera.",
-        "left": "Quedan {left} plazas de {total}",
-        "full": "Plazas completas",
-        "cta": "Quiero ser piloto",
-        "subject": "Quiero ser piloto de ReportAI"
+      "facts": {
+        "tenancy": {
+          "title": "Una empresa no ve a otra",
+          "body": "29 rutas con id, pedidas por el administrador de otra empresa: las 29 responden 404."
+        },
+        "eval": {
+          "title": "Medido, no supuesto",
+          "body": "83 visitas de prueba en 3 pasadas: 99,8 %, 100 % y 99,7 % de campos correctos, sin un solo dato inventado."
+        },
+        "install": {
+          "title": "Alojado o en tu servidor",
+          "body": "El mismo código. En tu servidor se instala con un comando."
+        }
       },
-      "enterprise": {
-        "title": "En tu propio servidor",
-        "body": "Para empresas que no pueden sacar los datos de casa: se instala en tu servidor y usa tu propia cuenta de IA. Precio según volumen.",
-        "cta": "Hablemos",
-        "subject": "ReportAI en nuestro servidor"
+      "who": {
+        "label": "Quién lo ha hecho",
+        "role": "AI Engineer",
+        "body": "Lo diseño, lo programo y lo mantengo yo. El código es público: puedes comprobar cómo está hecho.",
+        "caseStudy": "Leer el caso de estudio",
+        "code": "Código en GitHub",
+        "portfolio": "Portfolio",
+        "linkedin": "LinkedIn"
       }
     },
     "faq": {
@@ -282,21 +297,26 @@
         },
         "selfhost": {
           "q": "¿Podemos tenerlo en nuestro propio servidor?",
-          "a": "Sí, con el plan Enterprise: se instala en tu servidor, con tu propia cuenta del proveedor de IA, y los datos no salen de tu infraestructura salvo hacia ese proveedor."
+          "a": "Sí. Se instala en tu servidor con un comando y un asistente de configuración, usa tu propia cuenta del proveedor de IA y los datos no salen de tu infraestructura salvo hacia ese proveedor."
+        },
+        "sale": {
+          "q": "¿Se puede contratar?",
+          "a": "Todavía no: ReportAI es un proyecto en desarrollo y no se vende. Si quieres probarlo con tu equipo, escríbeme y lo preparamos, con datos de ejemplo en una cuenta de prueba o instalado en tu servidor."
         }
       }
     },
     "closing": {
       "heading": "Tu próxima visita, con el acta hecha antes de llegar al coche.",
-      "sub": "14 días gratis, 30 informes, sin tarjeta."
+      "sub": "Te lo preparo con tu propia plantilla."
     },
     "footer": {
       "tagline": "Del dictado en obra al acta en tu plantilla.",
       "product": "Producto",
       "company": "ReportAI",
-      "architecture": "Cómo está construido",
+      "architecture": "Caso de estudio",
       "code": "Código fuente",
       "legal": "Aviso legal",
+      "privacy": "Privacidad",
       "contact": "Contacto",
       "madeBy": "Hecho por"
     },

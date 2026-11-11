@@ -27,6 +27,7 @@
       "tagline": "ReportAI, inside: a case study by Adrián Vázquez, AI Engineer.",
       "madeBy": "A project by",
       "legal": "Legal notice",
+      "privacy": "Privacy",
       "code": "Source code"
     },
     "legal": {
@@ -35,7 +36,7 @@
       "pending": "[not configured yet]",
       "owner": {
         "heading": "Website owner",
-        "intro": "In compliance with article 10 of Spanish Law 34/2002 on Information Society Services and Electronic Commerce (LSSI-CE), the owner's details are:",
+        "intro": "This site is published, in a personal capacity, by:",
         "name": "Owner",
         "id": "Tax ID (NIF/CIF)",
         "address": "Address",
@@ -43,7 +44,7 @@
       },
       "purpose": {
         "heading": "Purpose and terms of use",
-        "body": "This website presents ReportAI and the related installation and maintenance services. Browsing it is free. Whoever uses it agrees to do so lawfully and not to harm the site or third parties."
+        "body": "This website presents ReportAI, a project in development, and lets you try a demo. No product or service is sold through it. Browsing it is free. Whoever uses it agrees to do so lawfully and not to harm the site or third parties."
       },
       "ip": {
         "heading": "Intellectual property",
@@ -57,6 +58,97 @@
       "law": {
         "heading": "Governing law",
         "body": "This legal notice is governed by Spanish law. Disputes will be submitted to the courts that are competent under the applicable rules."
+      }
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "seoDescription": "What personal data ReportAI processes, why, how long it keeps it and how to exercise your rights.",
+      "updated": "Last updated: 11 November 2026",
+      "intro": "This policy explains what personal data is processed when you visit this website, try the demo, write to the contact address or use ReportAI: why, for how long and what your rights are, under the General Data Protection Regulation (GDPR) and Spanish Organic Law 3/2018 (LOPDGDD).",
+      "controller": {
+        "heading": "Data controller",
+        "intro": "The controller of the data of this website and of ReportAI's accounts is:",
+        "name": "Owner",
+        "email": "Email"
+      },
+      "activities": {
+        "heading": "What data is processed and why",
+        "labels": {
+          "data": "Data",
+          "purpose": "Purpose",
+          "basis": "Legal basis",
+          "retention": "How long"
+        },
+        "web": {
+          "heading": "Visiting the website",
+          "data": "Your IP address, the date and the address requested, which the server writes to its technical logs.",
+          "purpose": "Serving the website, keeping it secure and diagnosing errors.",
+          "basis": "Legitimate interest in the security and operation of the service (GDPR art. 6(1)(f)).",
+          "retention": "The logs overwrite themselves once they reach their maximum size. They are used for nothing else."
+        },
+        "demo": {
+          "heading": "Trying the live demo",
+          "data": "The voice recording or the text you send, its transcript, the data extracted from it and the sample report. To limit the tries, also your IP address (for IPv6, only its /64 network).",
+          "purpose": "Showing you how ReportAI turns your visit into a report, and preventing abuse of the service.",
+          "basis": "Your consent, given when you send the try (GDPR art. 6(1)(a)); for the limit on tries, the legitimate interest in preventing abuse (art. 6(1)(f)).",
+          "retention": "24 hours. After that, the recording, the text, the report and the record of tries are deleted.",
+          "note": "Please don't include real people's details: the demo is only for trying the product."
+        },
+        "contact": {
+          "heading": "Writing to the contact address",
+          "data": "Your email address, your name if you give it, and what you tell us.",
+          "purpose": "Replying to you.",
+          "basis": "Legitimate interest in answering whoever writes (GDPR art. 6(1)(f)) or, if you ask to try ReportAI, setting up that trial at your request (art. 6(1)(b)).",
+          "retention": "While the conversation lasts and, after it, only what is needed to deal with possible legal claims."
+        },
+        "account": {
+          "heading": "Having a trial account",
+          "data": "Name, email, company name, your password stored irreversibly (technicians sign in without a password, through an emailed link), and a security log of sign-ins and changes with the IP address.",
+          "purpose": "Giving you access to the trial we agreed, sending the service's emails (sign-in links and notices) and protecting the accounts.",
+          "basis": "The trial you ask for (GDPR art. 6(1)(b)); for the security log, the legitimate interest in protecting the accounts (art. 6(1)(f)).",
+          "retention": "While the company stays active. If it asks for deletion, the account is locked at once and everything is deleted after 30 days. The security log is kept for at most 365 days."
+        }
+      },
+      "customerData": {
+        "heading": "Your company's reports",
+        "body": "The data in the reports a company creates with ReportAI (recordings, photos, transcripts, reports and the details of its technicians and clients) belongs to that company, which is its controller. ReportAI processes it only on the company's behalf and following its instructions (GDPR art. 28). Recordings are deleted after 90 days, and the company can export or delete all of its data from the panel.",
+        "subjects": "If you work for a company that uses ReportAI, or are one of its clients, contact that company to exercise your rights over that data. If you write to us instead, we will pass your request on to it."
+      },
+      "recipients": {
+        "heading": "Who else has access to the data",
+        "intro": "We don't sell or hand over data to anyone. Only the providers needed to run the service have access to it, as processors under a contract that meets GDPR article 28:",
+        "hetzner": "server hosting, in Helsinki (Finland).",
+        "groq": "transcribing recordings, in the United States.",
+        "anthropic": "understanding the visit and drafting the report, in the United States.",
+        "mailgun": "sending the service's emails, from its European Union region.",
+        "zoho": "the contact address's mailbox, in its European Union data centres.",
+        "connectors": "If a company connects its own Telegram bot or mailbox, the messages that arrive that way also go through those services, which the company itself contracts.",
+        "authorities": "Beyond that, data will only be disclosed to an authority when a law requires it."
+      },
+      "transfers": {
+        "heading": "Transfers outside the European Union",
+        "body": "Groq and Anthropic are in the United States. That transfer relies on the European Commission's standard contractual clauses (Implementing Decision (EU) 2021/914), included in their data processing agreements (GDPR art. 46(2)(c)). Neither may use the data to train its models."
+      },
+      "automated": {
+        "heading": "Automated decisions",
+        "body": "ReportAI uses artificial intelligence to prepare the draft of each report, but makes no decisions with legal effects on you: no report is sent until a person has reviewed and confirmed it."
+      },
+      "rights": {
+        "heading": "Your rights",
+        "body": "You can ask for access to your data, its correction or erasure and the restriction of its processing, object to it, take it with you (portability) and withdraw your consent at any time by writing to {email}. We will reply within one month at most. If you think we haven't handled your request properly, you can complain to the {authority}.",
+        "authority": "Spanish Data Protection Agency (AEPD)"
+      },
+      "storage": {
+        "heading": "Cookies and storage on your device",
+        "body": "This website uses no analytics or advertising cookies and loads nothing from third parties. It only uses what is strictly necessary, which needs no consent (art. 22.2 of Spain's LSSI): the panel's session cookies while you are signed in, a cookie that remembers the language if you choose one (one year) and, in the field app, the phone's storage that keeps recordings waiting to upload and your profile so the app opens with no coverage. The profile is deleted when you sign out."
+      },
+      "security": {
+        "heading": "Security",
+        "body": "Data travels encrypted (HTTPS), the credentials of the services each company connects are stored encrypted, and each company can only see its own data."
+      },
+      "changes": {
+        "heading": "Changes to this policy",
+        "body": "If anything important changes, it will be published here with its new date and, if you have an account, we will let you know by email."
       }
     },
     "architecture": {
@@ -451,7 +543,7 @@
         "title": "Two ways to install it, one codebase",
         "saas": {
           "name": "Hosted",
-          "body": "Multi-tenant, on my server, by subscription."
+          "body": "Multi-tenant, on my server."
         },
         "self": {
           "name": "On the client's server",
@@ -475,8 +567,8 @@
           "body": "Every route takes the company from the signed-in user, never from the request, and loads rows through one helper that filters by it. Another company's report answers 404, not 403: a 403 would confirm the id exists. A test walks the OpenAPI with two companies, tries all 29 routes with an id, and fails if a new route shows up unclassified."
         },
         "spend": {
-          "title": "Plans and capped spend",
-          "body": "The quota is a count(*) over the period's reports. Every plan on sale has a daily AI spend cap, and the platform a global breaker. Every model call records its cost and tokens."
+          "title": "Quotas and capped spend",
+          "body": "The quota is a count(*) over the period's reports. Every plan has a daily AI spend cap, and the platform a global breaker. Every model call records its cost and tokens."
         },
         "data": {
           "title": "The data belongs to the company",
@@ -490,7 +582,7 @@
       "codeLabel": "backend/app/core/scoping.py",
       "matrixLabel": "Isolation matrix",
       "matrixCaption": "29 routes with an id, requested by another company's admin: 29 answers of 404 and nothing changed. As a technician, 403 or 404: never a 2xx.",
-      "why": "Isolation in code rather than Postgres RLS, for now: one place to review and one test that covers it all. RLS comes with the first Enterprise client who asks for it."
+      "why": "Isolation in code rather than Postgres RLS, for now: one place to review and one test that covers it all. RLS comes with the first company that asks for it."
     },
     "fieldApp": {
       "heading": "Recording where there's no signal.",
@@ -695,7 +787,7 @@
       },
       "limitsTitle": "What it doesn't do yet",
       "limits": {
-        "billing": "It doesn't charge on its own: the plans exist, and Stripe payments are the next phase.",
+        "billing": "It doesn't charge: the plans and their quotas exist, but there are no payments.",
         "cycle": "It doesn't run the site's follow-up cycle (findings, actions and checking them at the next visit).",
         "languages": "It speaks Spanish and English.",
         "ios": "Recording with the screen locked is tested on Android, not on iPhone.",

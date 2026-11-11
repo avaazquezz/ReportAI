@@ -2,9 +2,9 @@
 const { t } = useI18n()
 const { public: config } = useRuntimeConfig()
 
-// Don't link a legal notice that would publish blanks: it appears once the deployment has
-// configured the owner's identity (NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS).
-const showLegalLink = computed(() => Boolean(config.legalName && config.legalId && config.legalAddress))
+// The legal notice names whoever publishes the site: it appears once the deployment has
+// configured it (NUXT_PUBLIC_LEGAL_NAME). Nothing is sold here, so the name is enough.
+const showLegalLink = computed(() => Boolean(config.legalName))
 
 const NAV = (['system', 'agent', 'quality', 'revisions'] as const).map((key) => ({ hash: `#${SHEET_IDS[key]}`, key }))
 </script>
@@ -73,6 +73,10 @@ const NAV = (['system', 'agent', 'quality', 'revisions'] as const).map((key) => 
           <template v-if="showLegalLink">
             ·
             <NuxtLink to="/aviso-legal" class="text-ink-900/80 hover:text-capture-600">{{ t('landing.footer.legal') }}</NuxtLink>
+          </template>
+          <template v-if="config.legalName">
+            ·
+            <NuxtLink to="/privacidad" class="text-ink-900/80 hover:text-capture-600">{{ t('landing.footer.privacy') }}</NuxtLink>
           </template>
         </span>
         <span>

@@ -3,7 +3,7 @@ import gsap from 'gsap'
 import type { ActaRow } from './ActaSheet.vue'
 
 const { t } = useI18n()
-const cta = useTrialCta()
+const contact = useContactHref('home.cta.mailSubject')
 
 const FIELDS = ['site', 'date', 'deficiency', 'company', 'measure', 'deadline'] as const
 // Which part of the dictated sentence each field comes from: the page's first argument is that
@@ -76,10 +76,10 @@ useMotionScope(root, (c) => {
       <div class="col-span-12 mt-9 md:col-span-6 lg:col-span-5 lg:mt-14">
         <p class="t-lead m-0 max-w-[34rem] text-ink-900/80">{{ t('home.hero.sub') }}</p>
         <div class="mt-9 flex flex-wrap items-center gap-x-7 gap-y-4">
-          <a :href="cta.href" class="btn-primary">{{ cta.label }}</a>
+          <a :href="contact" class="btn-primary">{{ t('home.cta.write') }}</a>
           <a href="#pruebalo" class="u-field font-semibold">{{ t('home.cta.tryVoice') }}</a>
         </div>
-        <p class="mt-4 text-[0.88rem] text-ink-900/60">{{ t('home.cta.trialTerms') }}</p>
+        <p class="mt-4 text-[0.88rem] text-ink-900/60">{{ t('home.cta.note') }}</p>
       </div>
 
       <div class="relative col-span-12 mt-14 md:col-span-6 md:mt-9 lg:col-span-6 lg:col-start-7 lg:mt-14 lg:-mr-[clamp(2rem,9vw,10rem)]">

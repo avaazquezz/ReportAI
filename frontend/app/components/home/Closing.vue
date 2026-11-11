@@ -4,7 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 // The last call, the hero's promise said another way, sealed once with the approval stamp.
 const { t } = useI18n()
-const cta = useTrialCta()
+const contact = useContactHref('home.cta.mailSubject')
 const root = ref<HTMLElement | null>(null)
 
 useMotionScope(root, (c) => {
@@ -27,7 +27,7 @@ useMotionScope(root, (c) => {
         </div>
       </div>
       <div class="col-span-12 mt-12 flex flex-wrap items-center gap-x-7 gap-y-4">
-        <a :href="cta.href" class="btn-primary">{{ cta.label }}</a>
+        <a :href="contact" class="btn-primary">{{ t('home.cta.write') }}</a>
         <span class="text-[0.95rem] text-ink-900/65">{{ t('home.closing.sub') }}</span>
       </div>
     </div>

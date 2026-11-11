@@ -1,6 +1,7 @@
-// The hosted service's own pages: the commercial landing and the engineering case study. By route
-// name, not path: the router also matches /architecture (the alias), a trailing slash and any case.
-const MARKETING_PAGES = new Set(['index', 'arquitectura'])
+// The hosted service's own pages: the commercial landing, the engineering case study and its
+// privacy policy. By route name, not path: the router also matches /architecture and /privacy (the
+// aliases), a trailing slash and any case.
+const MARKETING_PAGES = new Set(['index', 'arquitectura', 'privacidad'])
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const instance = useInstance()

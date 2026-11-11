@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// The commercial landing: for the health-and-safety technicians and coordinators who would buy
-// ReportAI. Concept "the report fills itself in" (docs: the Fase 6 brief). How it is built lives
-// at /arquitectura.
+// The product's page, for the health-and-safety technicians and coordinators it is made for and for
+// whoever wants to see how it is built. Concept "the report fills itself in" (the Fase 6 brief).
+// Nothing is sold here: its one action is an email to try it. The full case study is /arquitectura.
 import archivo from '~/assets/fonts/archivo-w112.5-700-800-latin.woff2?url'
 
 const { t } = useI18n()
@@ -28,7 +28,7 @@ useSeoMeta({
     <HomeTemplate />
     <HomeReview />
     <HomeSavings />
-    <HomePricing />
+    <HomeBuilt />
     <HomeFaq />
     <HomeClosing />
   </div>
