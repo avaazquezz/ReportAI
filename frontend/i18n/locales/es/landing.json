@@ -36,7 +36,7 @@
       "pending": "[pendiente de configurar]",
       "owner": {
         "heading": "Titular del sitio web",
-        "intro": "En cumplimiento del artículo 10 de la Ley 34/2002, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa de los datos del titular:",
+        "intro": "Este sitio lo publica, a título personal, quien figura a continuación:",
         "name": "Titular",
         "id": "NIF/CIF",
         "address": "Domicilio",
@@ -44,7 +44,7 @@
       },
       "purpose": {
         "heading": "Objeto y condiciones de uso",
-        "body": "Este sitio web presenta ReportAI y los servicios de instalación y mantenimiento asociados. Navegar por él es libre y gratuito. Quien lo utiliza se compromete a hacerlo conforme a la ley y a no dañar el sitio ni a terceros."
+        "body": "Este sitio web presenta ReportAI, un proyecto en desarrollo, y permite probar una demostración. A través de él no se vende ningún producto ni servicio. Navegar por él es libre y gratuito. Quien lo utiliza se compromete a hacerlo conforme a la ley y a no dañar el sitio ni a terceros."
       },
       "ip": {
         "heading": "Propiedad intelectual",
@@ -98,14 +98,14 @@
           "heading": "Escribir al correo de contacto",
           "data": "Tu dirección de correo, tu nombre si lo indicas y lo que nos cuentes.",
           "purpose": "Responderte.",
-          "basis": "Interés legítimo en atender a quien escribe (art. 6.1.f RGPD) o, si preguntas por contratar, las medidas precontractuales que pides (art. 6.1.b).",
+          "basis": "Interés legítimo en atender a quien escribe (art. 6.1.f RGPD) o, si pides probar ReportAI, preparar esa prueba a petición tuya (art. 6.1.b).",
           "retention": "Mientras dure la conversación y, después, solo lo necesario para atender posibles responsabilidades legales."
         },
         "account": {
-          "heading": "Tener una cuenta o una prueba gratuita",
-          "data": "Nombre, correo, nombre de la empresa, la contraseña guardada de forma irreversible (los técnicos entran sin contraseña, con un enlace por correo), la versión de los términos aceptada y un registro de seguridad de accesos y cambios con la dirección IP.",
-          "purpose": "Darte acceso, prestar el servicio o la prueba que pides, enviarte los correos del servicio (enlaces de acceso y avisos) y proteger las cuentas.",
-          "basis": "El contrato o la prueba que solicitas (art. 6.1.b RGPD); el registro de seguridad, el interés legítimo en proteger las cuentas (art. 6.1.f).",
+          "heading": "Tener una cuenta de prueba",
+          "data": "Nombre, correo, nombre de la empresa, la contraseña guardada de forma irreversible (los técnicos entran sin contraseña, con un enlace por correo) y un registro de seguridad de accesos y cambios con la dirección IP.",
+          "purpose": "Darte acceso a la prueba que hemos acordado, enviarte los correos del servicio (enlaces de acceso y avisos) y proteger las cuentas.",
+          "basis": "La prueba que pides (art. 6.1.b RGPD); el registro de seguridad, el interés legítimo en proteger las cuentas (art. 6.1.f).",
           "retention": "Mientras la empresa siga activa. Si pide el borrado, la cuenta se bloquea al momento y todo se borra a los 30 días. El registro de seguridad se guarda 365 días como máximo."
         }
       },
@@ -543,7 +543,7 @@
         "title": "Dos formas de instalarlo, un solo código",
         "saas": {
           "name": "Alojado",
-          "body": "Multiempresa, en mi servidor, por suscripción."
+          "body": "Multiempresa, en mi servidor."
         },
         "self": {
           "name": "En el servidor del cliente",
@@ -567,8 +567,8 @@
           "body": "Cada ruta toma la empresa del usuario autenticado, nunca de la petición, y carga las filas con un solo helper que filtra por ella. Un informe de otra empresa responde 404, no 403: un 403 confirmaría que el id existe. Un test recorre el OpenAPI con dos empresas, prueba las 29 rutas con id y falla si aparece una ruta nueva sin clasificar."
         },
         "spend": {
-          "title": "Planes y gasto con tope",
-          "body": "La cuota es un count(*) sobre los informes del periodo. Cada plan a la venta tiene un tope de gasto diario de IA, y la plataforma, un freno global. Cada llamada al modelo deja su coste y sus tokens."
+          "title": "Cuotas y gasto con tope",
+          "body": "La cuota es un count(*) sobre los informes del periodo. Cada plan tiene un tope de gasto diario de IA, y la plataforma, un freno global. Cada llamada al modelo deja su coste y sus tokens."
         },
         "data": {
           "title": "Los datos son de la empresa",
@@ -582,7 +582,7 @@
       "codeLabel": "backend/app/core/scoping.py",
       "matrixLabel": "Matriz de aislamiento",
       "matrixCaption": "29 rutas con id, pedidas por el administrador de otra empresa: 29 respuestas 404 y nada cambiado. Con un técnico, 403 o 404: nunca un 2xx.",
-      "why": "Aislamiento en el código y no con RLS de Postgres, por ahora: un solo sitio que revisar y un test que lo cubre entero. RLS llegará con el primer cliente Enterprise que lo pida."
+      "why": "Aislamiento en el código y no con RLS de Postgres, por ahora: un solo sitio que revisar y un test que lo cubre entero. RLS llegará con la primera empresa que lo pida."
     },
     "fieldApp": {
       "heading": "Grabar donde no hay cobertura.",
@@ -787,7 +787,7 @@
       },
       "limitsTitle": "Lo que todavía no hace",
       "limits": {
-        "billing": "No cobra solo: los planes existen, y el pago con Stripe es la siguiente fase.",
+        "billing": "No cobra: los planes y sus cuotas existen, pero no hay pagos.",
         "cycle": "No gestiona el ciclo de la obra (hallazgos, acciones y seguimiento en la visita siguiente).",
         "languages": "Habla español e inglés.",
         "ios": "La grabación con la pantalla bloqueada está probada en Android, no en iPhone.",

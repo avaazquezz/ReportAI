@@ -2,7 +2,7 @@
 // The objections the rest of the page doesn't settle, written for the buyer's worries. Native
 // <details>: keyboard and screen readers get it for free; no JSON-LD (FAQ rich results are gone).
 const { t } = useI18n()
-const ITEMS = ['invent', 'data', 'template', 'offline', 'install', 'book', 'responsibility', 'selfhost'] as const
+const ITEMS = ['invent', 'data', 'template', 'offline', 'install', 'book', 'responsibility', 'selfhost', 'sale'] as const
 </script>
 
 <template>

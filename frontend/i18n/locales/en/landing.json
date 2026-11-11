@@ -36,7 +36,7 @@
       "pending": "[not configured yet]",
       "owner": {
         "heading": "Website owner",
-        "intro": "In compliance with article 10 of Spanish Law 34/2002 on Information Society Services and Electronic Commerce (LSSI-CE), the owner's details are:",
+        "intro": "This site is published, in a personal capacity, by:",
         "name": "Owner",
         "id": "Tax ID (NIF/CIF)",
         "address": "Address",
@@ -44,7 +44,7 @@
       },
       "purpose": {
         "heading": "Purpose and terms of use",
-        "body": "This website presents ReportAI and the related installation and maintenance services. Browsing it is free. Whoever uses it agrees to do so lawfully and not to harm the site or third parties."
+        "body": "This website presents ReportAI, a project in development, and lets you try a demo. No product or service is sold through it. Browsing it is free. Whoever uses it agrees to do so lawfully and not to harm the site or third parties."
       },
       "ip": {
         "heading": "Intellectual property",
@@ -98,14 +98,14 @@
           "heading": "Writing to the contact address",
           "data": "Your email address, your name if you give it, and what you tell us.",
           "purpose": "Replying to you.",
-          "basis": "Legitimate interest in answering whoever writes (GDPR art. 6(1)(f)) or, if you ask about signing up, the pre-contractual steps you request (art. 6(1)(b)).",
+          "basis": "Legitimate interest in answering whoever writes (GDPR art. 6(1)(f)) or, if you ask to try ReportAI, setting up that trial at your request (art. 6(1)(b)).",
           "retention": "While the conversation lasts and, after it, only what is needed to deal with possible legal claims."
         },
         "account": {
-          "heading": "Having an account or a free trial",
-          "data": "Name, email, company name, your password stored irreversibly (technicians sign in without a password, through an emailed link), the version of the terms you accepted, and a security log of sign-ins and changes with the IP address.",
-          "purpose": "Giving you access, providing the service or trial you ask for, sending the service's emails (sign-in links and notices) and protecting the accounts.",
-          "basis": "The contract or trial you request (GDPR art. 6(1)(b)); for the security log, the legitimate interest in protecting the accounts (art. 6(1)(f)).",
+          "heading": "Having a trial account",
+          "data": "Name, email, company name, your password stored irreversibly (technicians sign in without a password, through an emailed link), and a security log of sign-ins and changes with the IP address.",
+          "purpose": "Giving you access to the trial we agreed, sending the service's emails (sign-in links and notices) and protecting the accounts.",
+          "basis": "The trial you ask for (GDPR art. 6(1)(b)); for the security log, the legitimate interest in protecting the accounts (art. 6(1)(f)).",
           "retention": "While the company stays active. If it asks for deletion, the account is locked at once and everything is deleted after 30 days. The security log is kept for at most 365 days."
         }
       },
@@ -543,7 +543,7 @@
         "title": "Two ways to install it, one codebase",
         "saas": {
           "name": "Hosted",
-          "body": "Multi-tenant, on my server, by subscription."
+          "body": "Multi-tenant, on my server."
         },
         "self": {
           "name": "On the client's server",
@@ -567,8 +567,8 @@
           "body": "Every route takes the company from the signed-in user, never from the request, and loads rows through one helper that filters by it. Another company's report answers 404, not 403: a 403 would confirm the id exists. A test walks the OpenAPI with two companies, tries all 29 routes with an id, and fails if a new route shows up unclassified."
         },
         "spend": {
-          "title": "Plans and capped spend",
-          "body": "The quota is a count(*) over the period's reports. Every plan on sale has a daily AI spend cap, and the platform a global breaker. Every model call records its cost and tokens."
+          "title": "Quotas and capped spend",
+          "body": "The quota is a count(*) over the period's reports. Every plan has a daily AI spend cap, and the platform a global breaker. Every model call records its cost and tokens."
         },
         "data": {
           "title": "The data belongs to the company",
@@ -582,7 +582,7 @@
       "codeLabel": "backend/app/core/scoping.py",
       "matrixLabel": "Isolation matrix",
       "matrixCaption": "29 routes with an id, requested by another company's admin: 29 answers of 404 and nothing changed. As a technician, 403 or 404: never a 2xx.",
-      "why": "Isolation in code rather than Postgres RLS, for now: one place to review and one test that covers it all. RLS comes with the first Enterprise client who asks for it."
+      "why": "Isolation in code rather than Postgres RLS, for now: one place to review and one test that covers it all. RLS comes with the first company that asks for it."
     },
     "fieldApp": {
       "heading": "Recording where there's no signal.",
@@ -787,7 +787,7 @@
       },
       "limitsTitle": "What it doesn't do yet",
       "limits": {
-        "billing": "It doesn't charge on its own: the plans exist, and Stripe payments are the next phase.",
+        "billing": "It doesn't charge: the plans and their quotas exist, but there are no payments.",
         "cycle": "It doesn't run the site's follow-up cycle (findings, actions and checking them at the next visit).",
         "languages": "It speaks Spanish and English.",
         "ios": "Recording with the screen locked is tested on Android, not on iPhone.",
