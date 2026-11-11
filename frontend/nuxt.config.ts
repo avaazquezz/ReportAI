@@ -33,14 +33,12 @@ export default defineNuxtConfig({
       // IP on a private network, without a domain — sets NUXT_PUBLIC_SECURE_COOKIES=false, or the
       // browser would drop them and nobody could sign in.
       secureCookies: true,
-      // Identity published on /aviso-legal (LSSI art. 10). Set per deployment through
-      // NUXT_PUBLIC_LEGAL_NAME / _ID / _ADDRESS; the page flags whatever is missing.
+      // Who publishes the site, on /aviso-legal and /privacidad. Set per deployment through
+      // NUXT_PUBLIC_LEGAL_NAME; _ID and _ADDRESS only if the site comes to sell something (LSSI
+      // art. 10), and the page shows them only when set.
       legalName: '',
       legalId: '',
-      legalAddress: '',
-      // Pilot places on the landing's pricing (NUXT_PUBLIC_PILOT_SPOTS / NUXT_PUBLIC_PILOTS_TAKEN).
-      pilotSpots: 5,
-      pilotsTaken: 3
+      legalAddress: ''
     }
   },
   i18n: {

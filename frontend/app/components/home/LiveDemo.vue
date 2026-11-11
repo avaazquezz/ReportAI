@@ -23,7 +23,7 @@ const GIVE_UP_MS = 120_000
 
 const { t, locale } = useI18n()
 const apiBase = useRuntimeConfig().public.apiBase
-const cta = useTrialCta()
+const contact = useContactHref('home.cta.mailSubject')
 const recorder = useRecorder()
 
 const phase = ref<Phase>('idle')
@@ -225,7 +225,7 @@ onBeforeUnmount(() => {
             <span class="text-[0.85rem] text-ink-900/60">{{ t('home.demo.limit') }}</span>
           </div>
           <!-- A new tab: following the link here must not throw away a recording not yet sent. -->
-          <i18n-t keypath="home.demo.privacy" tag="p" scope="global" class="m-0 mt-6 max-w-md text-[0.8rem] leading-relaxed text-ink-900/60">
+          <i18n-t keypath="home.demo.privacy" tag="p" scope="global" class="m-0 mt-6 max-w-md text-[0.8rem] leading-relaxed text-ink-900/60 [text-wrap:pretty]">
             <template #policy>
               <NuxtLink to="/privacidad" target="_blank" rel="noopener" class="u-field text-ink-900/80">{{ t('home.demo.privacyLink') }}</NuxtLink>
             </template>
@@ -240,7 +240,7 @@ onBeforeUnmount(() => {
         </p>
 
         <div v-if="phase === 'perIp' || phase === 'full'" class="mt-4">
-          <a :href="cta.href" class="btn-primary">{{ cta.label }}</a>
+          <a :href="contact" class="btn-primary">{{ t('home.cta.write') }}</a>
         </div>
 
         <div class="mt-5">

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 const { t } = useI18n()
-const cta = useTrialCta()
+const contact = useContactHref('home.cta.mailSubject')
 
 const NAV = [
   { href: '/#como-funciona', key: 'how' },
   { href: '/#pruebalo', key: 'demo' },
-  { href: '/#precios', key: 'pricing' },
+  { href: '/#por-dentro', key: 'built' },
   { href: '/#preguntas', key: 'faq' }
 ] as const
 
@@ -73,7 +73,7 @@ onUnmounted(() => {
       <div class="col-span-6 flex items-center justify-end gap-3 md:col-span-3">
         <LanguageSwitcher class="hidden sm:inline-flex" />
         <NuxtLink to="/login" class="u-field hidden text-[0.95rem] lg:inline">{{ t('home.nav.signIn') }}</NuxtLink>
-        <a :href="cta.href" class="btn-primary hidden !min-h-[2.5rem] !px-4 text-[0.9rem] sm:inline-flex" :class="{ 'is-inverse': dark }">{{ cta.label }}</a>
+        <a :href="contact" class="btn-primary hidden !min-h-[2.5rem] !px-4 text-[0.9rem] sm:inline-flex" :class="{ 'is-inverse': dark }">{{ t('home.cta.writeShort') }}</a>
         <button
           ref="toggle"
           type="button"
@@ -110,7 +110,7 @@ onUnmounted(() => {
           <NuxtLink to="/login" class="u-field">{{ t('home.nav.signIn') }}</NuxtLink>
           <LanguageSwitcher />
         </div>
-        <a :href="cta.href" class="btn-primary col-span-12 mt-5 w-full" :class="{ 'is-inverse': dark }" @click="close()">{{ cta.label }}</a>
+        <a :href="contact" class="btn-primary col-span-12 mt-5 w-full" :class="{ 'is-inverse': dark }" @click="close()">{{ t('home.cta.write') }}</a>
       </nav>
     </div>
   </header>
