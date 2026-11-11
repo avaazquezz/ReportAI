@@ -3,11 +3,12 @@ const { t } = useI18n()
 const { public: config } = useRuntimeConfig()
 
 // The owner's identity comes from the deployment's environment (NUXT_PUBLIC_LEGAL_*), not
-// the repo: it is personal data, and each installation publishes its own.
+// the repo: it is personal data, and each installation publishes its own. The tax id and the
+// address only appear when set: a site that sells nothing publishes a name and a contact address.
 const owner = computed(() => [
   { key: 'name', value: config.legalName },
-  { key: 'id', value: config.legalId },
-  { key: 'address', value: config.legalAddress },
+  ...(config.legalId ? [{ key: 'id', value: config.legalId }] : []),
+  ...(config.legalAddress ? [{ key: 'address', value: config.legalAddress }] : []),
   { key: 'email', value: CONTACT_EMAIL }
 ])
 

@@ -1,5 +1,6 @@
 """Where a document type's templates live, and how a new one becomes the active version."""
 
+import asyncio
 import uuid
 from pathlib import Path
 
@@ -7,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.document_template import DocumentTemplate
+from app.models.document_type import DocumentType
 from app.repositories.base import BaseRepository
+from app.services.templates import starters
 
 
 def new_template_path(tenant_id: uuid.UUID) -> Path:
@@ -41,3 +44,39 @@ async def activate_template(
         version=version,
         is_active=True,
     )
+
+
+async def install_starter(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    key: str,
+    language: str,
+    name: str,
+    uploaded_by: uuid.UUID | None,
+) -> DocumentType:
+    """A new document type with the starter's fields and its template, ready for reports."""
+    starter = starters.STARTERS[key]
+    path = new_template_path(tenant_id)
+    field_schema = await asyncio.to_thread(starters.build, key, language, str(path))
+    doc_type = DocumentType(
+        tenant_id=tenant_id,
+        name=name,
+        description=starter.description[language],
+        field_schema=field_schema,
+        prompt_instructions=starter.instructions[language],
+        notification_emails=[],
+        is_active=True,
+    )
+    db.add(doc_type)
+    await db.flush()
+    await activate_template(
+        db,
+        tenant_id=tenant_id,
+        document_type_id=doc_type.id,
+        file_path=str(path),
+        original_filename=f"{name}.docx",
+        uploaded_by=uploaded_by,
+    )
+    await db.refresh(doc_type)
+    return doc_type

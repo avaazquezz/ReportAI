@@ -1,12 +1,12 @@
 <script setup lang="ts">
 const { t } = useI18n()
-const cta = useTrialCta()
+const contact = useContactHref('home.cta.mailSubject')
 
 const NAV = [
-  { hash: '#como-funciona', key: 'how' },
-  { hash: '#pruebalo', key: 'demo' },
-  { hash: '#precios', key: 'pricing' },
-  { hash: '#preguntas', key: 'faq' }
+  { href: '/#como-funciona', key: 'how' },
+  { href: '/#pruebalo', key: 'demo' },
+  { href: '/#por-dentro', key: 'built' },
+  { href: '/#preguntas', key: 'faq' }
 ] as const
 
 const open = ref(false)
@@ -65,7 +65,7 @@ onUnmounted(() => {
       </NuxtLink>
 
       <nav class="col-span-6 hidden items-center justify-center gap-8 md:flex" :aria-label="t('home.nav.label')">
-        <a v-for="item in NAV" :key="item.hash" :href="item.hash" class="u-nav text-[0.95rem]">
+        <a v-for="item in NAV" :key="item.href" :href="item.href" class="u-nav text-[0.95rem]">
           {{ t(`home.nav.${item.key}`) }}
         </a>
       </nav>
@@ -73,7 +73,7 @@ onUnmounted(() => {
       <div class="col-span-6 flex items-center justify-end gap-3 md:col-span-3">
         <LanguageSwitcher class="hidden sm:inline-flex" />
         <NuxtLink to="/login" class="u-field hidden text-[0.95rem] lg:inline">{{ t('home.nav.signIn') }}</NuxtLink>
-        <a :href="cta.href" class="btn-primary hidden !min-h-[2.5rem] !px-4 text-[0.9rem] sm:inline-flex" :class="{ 'is-inverse': dark }">{{ cta.label }}</a>
+        <a :href="contact" class="btn-primary hidden !min-h-[2.5rem] !px-4 text-[0.9rem] sm:inline-flex" :class="{ 'is-inverse': dark }">{{ t('home.cta.writeShort') }}</a>
         <button
           ref="toggle"
           type="button"
@@ -101,8 +101,8 @@ onUnmounted(() => {
       <nav class="home-grid py-4" :aria-label="t('home.nav.label')">
         <a
           v-for="item in NAV"
-          :key="item.hash"
-          :href="item.hash"
+          :key="item.href"
+          :href="item.href"
           class="border-hair col-span-12 border-b py-3.5 text-lg"
           @click="close()"
         >{{ t(`home.nav.${item.key}`) }}</a>
@@ -110,7 +110,7 @@ onUnmounted(() => {
           <NuxtLink to="/login" class="u-field">{{ t('home.nav.signIn') }}</NuxtLink>
           <LanguageSwitcher />
         </div>
-        <a :href="cta.href" class="btn-primary col-span-12 mt-5 w-full" :class="{ 'is-inverse': dark }" @click="close()">{{ cta.label }}</a>
+        <a :href="contact" class="btn-primary col-span-12 mt-5 w-full" :class="{ 'is-inverse': dark }" @click="close()">{{ t('home.cta.write') }}</a>
       </nav>
     </div>
   </header>

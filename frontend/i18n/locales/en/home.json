@@ -2,12 +2,12 @@
   "home": {
     "seo": {
       "title": "ReportAI — Dictate the visit, sign the report",
-      "description": "Dictate the site visit on your phone and ReportAI fills in the report in your company's own Word template: each hazard with its contractor, action and deadline. You review it and sign it off. Free 14-day trial."
+      "description": "Dictate the site visit on your phone and ReportAI fills in the report in your company's own Word template: each hazard with its contractor, action and deadline. You review it and sign it off. Try it with your voice."
     },
     "nav": {
       "how": "How it works",
       "demo": "Try it",
-      "pricing": "Pricing",
+      "built": "Inside",
       "faq": "Questions",
       "signIn": "Sign in",
       "open": "Open menu",
@@ -15,10 +15,10 @@
       "label": "Main"
     },
     "cta": {
-      "trial": "Start free",
-      "trialTerms": "14 days · 30 reports · no card",
-      "requestAccess": "Request access",
-      "requestSubject": "I'd like to try ReportAI",
+      "write": "Email me to try it",
+      "writeShort": "Email me",
+      "mailSubject": "I'd like to try ReportAI",
+      "note": "Not for sale yet: email me and we'll try it with your team.",
       "tryVoice": "Try it with your voice"
     },
     "hero": {
@@ -81,9 +81,9 @@
           "title": "Nothing goes out unreviewed",
           "body": "Every report is approved before it's sent."
         },
-        "team": {
-          "title": "Unlimited technicians",
-          "body": "On every plan."
+        "code": {
+          "title": "The code, in the open",
+          "body": "Public on GitHub."
         }
       }
     },
@@ -141,8 +141,8 @@
         "working": "Transcribing and reading the visit…",
         "ready": "Here's what it understood.",
         "failed": "We couldn't process this one. Try again with a bit more detail.",
-        "perIp": "You've used today's tries. Three more tomorrow, or start the free trial.",
-        "full": "The live demo is full for today. Come back tomorrow or start the free trial.",
+        "perIp": "You've used today's tries. Three more tomorrow, or email me and try it with your team.",
+        "full": "The live demo is full for today. Come back tomorrow, or email me and try it with your team.",
         "unavailable": "The live demo isn't available right now. Listen to the sample visit instead.",
         "noMic": "This browser can't use the microphone. Type the visit instead.",
         "denied": "No microphone permission. You can type the visit instead."
@@ -152,7 +152,8 @@
       "transcript": "What it heard",
       "pdf": "Open the report as a PDF",
       "reset": "Try another one",
-      "privacy": "The recording is transcribed by Groq, interpreted by Anthropic's Claude and deleted after 24 hours. Please don't include real people's details.",
+      "privacy": "The recording is transcribed by Groq, interpreted by Anthropic's Claude and deleted after 24 hours. Please don't include real people's details. {policy}",
+      "privacyLink": "Privacy policy",
       "sample": "No microphone to hand? Listen to a real sample visit",
       "samplePlay": "Play the sample",
       "samplePause": "Pause the sample",
@@ -208,45 +209,59 @@
       "days": "{days} eight-hour days",
       "assumption": "Starting assumption: 3 technicians, 6 reports a week each and 35 minutes per report, against 8 reviewing."
     },
-    "pricing": {
-      "heading": "Launch pricing.",
-      "sub": "Unlimited technicians and the AI included on every plan. You pay for the reports you make each month.",
-      "perMonth": "€/month",
-      "vat": "+ VAT",
-      "reports": "{count} reports a month",
-      "plans": {
-        "solo": {
-          "name": "Solo",
-          "for": "An independent coordinator, around five visits a week."
+    "built": {
+      "heading": "What's behind the report.",
+      "lead": "I designed and built ReportAI, from the recording to the PDF. This is what happens between you speaking and the report reaching its recipient; every decision, with its reasons, is in the case study.",
+      "flowLabel": "From audio to report",
+      "stages": {
+        "capture": {
+          "title": "Capture",
+          "body": "The field app records with no signal and uploads the note once coverage is back.",
+          "tech": "PWA · IndexedDB"
         },
-        "starter": {
-          "name": "Starter",
-          "for": "One full-time technician."
+        "transcribe": {
+          "title": "Transcription",
+          "body": "The voice becomes text in a few seconds.",
+          "tech": "Groq · Whisper"
         },
-        "pro": {
-          "name": "Pro",
-          "for": "A safety consultancy with several technicians."
+        "agent": {
+          "title": "Agent",
+          "body": "A LangGraph graph of 25 nodes takes each detail with the sentence it came from, asks for what's missing and stops until someone approves it.",
+          "tech": "LangGraph · Claude"
         },
-        "business": {
-          "name": "Business",
-          "for": "Several teams or offices."
+        "document": {
+          "title": "Document",
+          "body": "It fills in your Word template and turns it into a PDF.",
+          "tech": "docxtpl · Gotenberg"
+        },
+        "delivery": {
+          "title": "Delivery",
+          "body": "It emails the report and records who approved it, and when.",
+          "tech": "FastAPI · Postgres"
         }
       },
-      "choose": "Start with {plan}",
-      "trial": "Every plan starts with a 14-day trial: 30 reports, no card. When it ends, you choose a plan.",
-      "pilot": {
-        "title": "Pilot programme",
-        "body": "60 days with me alongside you, your template set up together, in exchange for your honest feedback.",
-        "left": "{left} of {total} places left",
-        "full": "All places taken",
-        "cta": "I'd like to be a pilot",
-        "subject": "I'd like to be a ReportAI pilot"
+      "facts": {
+        "tenancy": {
+          "title": "One company never sees another",
+          "body": "29 routes with an id, requested by another company's admin: all 29 answer 404."
+        },
+        "eval": {
+          "title": "Measured, not assumed",
+          "body": "83 test visits over 3 runs: 99.8%, 100% and 99.7% of fields right, with not a single invented detail."
+        },
+        "install": {
+          "title": "Hosted or on your server",
+          "body": "The same code. On your server it installs with one command."
+        }
       },
-      "enterprise": {
-        "title": "On your own server",
-        "body": "For companies that can't let their data leave the building: installed on your server, using your own AI account. Priced on volume.",
-        "cta": "Let's talk",
-        "subject": "ReportAI on our own server"
+      "who": {
+        "label": "Who built it",
+        "role": "AI Engineer",
+        "body": "I design it, write it and run it. The code is public: you can check how it's built.",
+        "caseStudy": "Read the case study",
+        "code": "Code on GitHub",
+        "portfolio": "Portfolio",
+        "linkedin": "LinkedIn"
       }
     },
     "faq": {
@@ -282,21 +297,26 @@
         },
         "selfhost": {
           "q": "Can we run it on our own server?",
-          "a": "Yes, on the Enterprise plan: it's installed on your server with your own AI provider account, and data only leaves your infrastructure to reach that provider."
+          "a": "Yes. It installs on your server with one command and a setup wizard, uses your own AI provider account, and data only leaves your infrastructure to reach that provider."
+        },
+        "sale": {
+          "q": "Can we buy it?",
+          "a": "Not yet: ReportAI is a project in development and isn't for sale. If you'd like to try it with your team, email me and we'll set it up, with sample data in a trial account or installed on your server."
         }
       }
     },
     "closing": {
       "heading": "Your next visit, with the report done before you're back at the car.",
-      "sub": "14 days free, 30 reports, no card."
+      "sub": "I'll set it up with your own template."
     },
     "footer": {
       "tagline": "From dictation on site to a report in your template.",
       "product": "Product",
       "company": "ReportAI",
-      "architecture": "How it's built",
+      "architecture": "Case study",
       "code": "Source code",
       "legal": "Legal notice",
+      "privacy": "Privacy",
       "contact": "Contact",
       "madeBy": "Made by"
     },

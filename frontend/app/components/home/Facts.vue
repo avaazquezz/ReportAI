@@ -2,7 +2,7 @@
 // Four facts a buyer can check, in place of the logos and testimonials a new product doesn't have
 // yet. Printed like the header row of a form: ruled, no icons, no animation.
 const { t } = useI18n()
-const FACTS = ['template', 'offline', 'review', 'team'] as const
+const FACTS = ['template', 'offline', 'review', 'code'] as const
 </script>
 
 <template>
