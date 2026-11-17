@@ -447,6 +447,7 @@ export interface Dashboard {
     email: boolean
     channel: boolean
     senders: boolean
+    team: boolean
     document_type: boolean
     first_report: boolean
   } | null

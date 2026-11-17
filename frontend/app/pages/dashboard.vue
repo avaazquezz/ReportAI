@@ -45,6 +45,8 @@ const steps = computed(() => {
     { key: 'transcription', done: done.transcription, to: settings && `${settings}?tab=ai`, optional: true },
     { key: 'email', done: done.email, to: settings && `${settings}?tab=email`, optional: true },
     { key: 'document_type', done: done.document_type, to: '/admin/document-types' },
+    // Optional: an admin can record reports in the app too.
+    { key: 'team', done: done.team, to: '/admin/team', optional: true },
     // The app is a channel of its own: a chat bot and its senders are extras.
     { key: 'channel', done: done.channel, to: '/admin/channels', optional: true },
     { key: 'senders', done: done.senders, to: '/admin/channels', optional: true },

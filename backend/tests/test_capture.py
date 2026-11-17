@@ -94,6 +94,8 @@ async def test_a_technician_records_a_report_with_photos(client: AsyncClient, db
     assert response.json() == {"id": str(key), "status": "pending"}
     report = await db.get(Report, key)
     assert report is not None and report.requester_channel == "web" and report.requester_user_id == acme["technician"].id
+    # Chosen before recording, so the report shows it while it is still being processed.
+    assert report.document_type_id == acme["doc_type"].id
     job = await db.scalar(select(Job).where(Job.report_id == key))
     assert job is not None and job.payload["document_type_id"] == str(acme["doc_type"].id)
     assert job.payload["media_reference"].endswith(".webm") and Path(job.payload["media_reference"]).exists()

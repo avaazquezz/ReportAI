@@ -73,9 +73,11 @@
         "emailHelp": "To email reports and invite the team.",
         "document_type": "Have a template",
         "document_typeHelp": "Upload a Word example or start with a ready-made template.",
+        "team": "Invite the technicians",
+        "teamHelp": "Under Team: they get into the app with a link, no password.",
         "channel": "Connect a channel",
         "channelHelp": "Optional: besides the app, a Telegram bot or an email inbox.",
-        "senders": "Invite whoever will send reports",
+        "senders": "Invite whoever writes to the bot or the mailbox",
         "sendersHelp": "Under Channels, with a link: no ids to copy.",
         "first_report": "Get the first report",
         "first_reportHelp": "Record one from «New report», or send a voice note to the bot if you have one."
