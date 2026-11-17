@@ -73,9 +73,11 @@
         "emailHelp": "Para enviar informes por email e invitar al equipo.",
         "document_type": "Tener una plantilla",
         "document_typeHelp": "Sube un Word de ejemplo o empieza con una plantilla ya hecha.",
+        "team": "Invitar a los técnicos",
+        "teamHelp": "Desde Equipo: entran en la app con un enlace, sin contraseña.",
         "channel": "Conectar un canal",
         "channelHelp": "Opcional: además de la app, un bot de Telegram o un buzón de email.",
-        "senders": "Invitar a quien enviará informes",
+        "senders": "Invitar a quien escribe al bot o al buzón",
         "sendersHelp": "Desde Canales, con un enlace: sin copiar identificadores.",
         "first_report": "Recibir el primer informe",
         "first_reportHelp": "Graba uno desde «Nuevo informe», o envía una nota de voz al bot si tienes uno."
