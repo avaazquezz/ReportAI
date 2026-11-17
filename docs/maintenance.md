@@ -45,6 +45,20 @@ from a bad update, not a backup. What to back up, off this server:
 - `/opt/reportai/.env` — **without its `ENCRYPTION_KEY` the stored AI keys, mail password and bot
   tokens cannot be read**, and have to be entered again.
 
+## Knowing it is down before your technicians do
+
+Two checks, both from **outside** the server (a monitor on the same machine goes down with it):
+
+- **The panel and the API.** A keyword monitor in any uptime service on
+  `https://reportes.empresa.com/api/health`, expecting `"status":"ok"` (it answers 503 when the
+  database is unreachable).
+- **The worker**, which runs every report. The API can't see it: with the worker stuck, the panel
+  still answers while reports wait. Create a check in a service that watches for regular requests
+  (healthchecks.io, or Uptime Kuma's push monitor), with a 1-minute period and a grace of a few
+  minutes, put its URL in `.env` as `WORKER_HEARTBEAT_URL=` and run `reportai restart`. The worker
+  then requests it every minute while its loop runs, and the service alerts when that stops. Keep
+  the URL private.
+
 ## Everyday commands
 
 | Command | |
