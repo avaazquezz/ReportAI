@@ -39,8 +39,9 @@ EXTRACTION_PROVIDERS: dict[str, ExtractionProvider] = {
     for p in (
         ExtractionProvider("anthropic", "Anthropic Claude", "anthropic", "", "claude-sonnet-5", validated=True),
         ExtractionProvider(
+            # Golden set 2026-11-17, three runs: 98.3 / 98.0 / 98.1 % of 646 fields, none invented.
             "openai", "OpenAI", "openai_compatible", "https://api.openai.com/v1", "gpt-6.1-terra",
-            validated=False, reasoning_effort="none",
+            validated=True, reasoning_effort="none",
         ),
     )
 }
