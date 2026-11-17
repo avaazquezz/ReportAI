@@ -68,6 +68,7 @@ useSeoMeta({
           <span class="font-medium text-ink-900">{{ processor.name }}</span>: {{ t(`landing.privacy.recipients.${processor.key}`) }}
         </li>
       </ul>
+      <p class="mt-3 text-sm text-ink-900/80">{{ t('landing.privacy.recipients.ownAi') }}</p>
       <p class="mt-3 text-sm text-ink-900/80">{{ t('landing.privacy.recipients.connectors') }}</p>
       <p class="mt-3 text-sm text-ink-900/80">{{ t('landing.privacy.recipients.authorities') }}</p>
     </section>
