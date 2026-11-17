@@ -2,200 +2,212 @@
 
 ## 1. Overview
 
-ReportAI is an AI agent that turns a voice note or a chat message into a
-correctly formatted document (meeting minutes, commercial visit reports, and
-future document types), filled into the client's own template and delivered
-to the right inbox. Multi-tenant from the data model up: each client
-configures their own instance (document templates, fields, channels, users,
-recipients) from an admin panel.
+ReportAI turns a field technician's voice note (or typed notes and photos) into a finished report
+in the company's own Word template, sent as a PDF once the technician has confirmed what was
+extracted. Its audience is occupational health and safety (PRL) work: coordinators and
+technicians who visit sites, inspect and have to leave a written record.
 
-This is a working development tracker — phases, checklists, and technical
-decisions — not a presentation document.
+One codebase runs in two modes:
+- **Hosted, multi-tenant** (`SINGLE_TENANT=false`): companies share one service and the super
+  admin creates them. Self-signup exists behind `SIGNUP_ENABLED`, which is off.
+- **Self-host** (`SINGLE_TENANT=true`): one company per server, installed with
+  `infra/install/install.sh` and set up in the panel's wizard (`docs/install.md`).
+
+ReportAI is not on sale (2026-11-11, §8). The hosted service is a showcase with a live demo;
+whoever wants to try it gets an account with sample data, or installs it on their own server.
+
+This file is the working tracker (what is built, what is next and why), not a presentation. The
+presentation is the engineering case study served at `/architecture`.
 
 ## 2. Architecture
 
 ```mermaid
 flowchart TB
-    subgraph Private Server [Private server — Docker Compose + Traefik + TLS]
-        Admin[Admin panel<br/>Vue/Nuxt + Vuetify/Tailwind]
-        API[FastAPI backend]
-        Agent[LangGraph agent core]
-        DB[(Postgres)]
+    subgraph Server [One server: Docker Compose behind Traefik or Caddy, with TLS]
+        Front[Nuxt app<br/>landing, admin panel, field app]
+        API[FastAPI]
+        Worker[Worker<br/>LangGraph agent]
+        DB[(Postgres<br/>data, job queue,<br/>agent checkpoints)]
         Gotenberg[Gotenberg<br/>docx → PDF]
     end
-    Channels[Telegram / WhatsApp / Email-in adapters<br/>— more on demand] --> API
-    Admin -->|REST / JSON, authenticated| API
+    Tech[Technician's phone<br/>field app, offline queue] --> Front
+    Front -->|/api| API
+    Channels[Telegram bot / inbound email / WhatsApp] -->|webhooks| API
     API --> DB
-    API --> Agent
-    Agent --> Gotenberg
-    Agent -->|transcription| Groq[Groq Whisper API]
-    Agent -->|structured extraction| Claude[Anthropic API]
-    API -->|SMTP| Email[Email delivery]
+    Worker --> DB
+    Worker --> Gotenberg
+    Worker -->|transcription| STT[Whisper-compatible API]
+    Worker -->|extraction| LLM[Claude or an OpenAI-compatible model]
+    Worker -->|SMTP| Mail[Email delivery]
 ```
 
-### Agent pipeline (LangGraph)
+- The API never runs the agent: it stores the input and enqueues a job
+  (`backend/app/services/jobs/`). The worker claims jobs with `FOR UPDATE SKIP LOCKED`, holds a
+  lease with a heartbeat and retries with backoff; a retry resumes the graph from its last
+  checkpoint.
+- The panel and the API share one domain, the API under `/api`: no CORS in production.
+
+### Agent pipeline (LangGraph, `backend/app/services/agent/graph.py`)
 
 ```mermaid
 flowchart LR
-    A[Incoming message<br/>text or voice] --> B{Voice?}
-    B -->|yes| C[Transcribe<br/>Groq Whisper]
-    B -->|no| D[Unify input]
-    C --> D
-    D --> E[Resolve tenant +<br/>document type]
-    E --> F[Extract structured fields<br/>Claude tool_use + Pydantic schema]
-    F --> G{Schema valid?}
-    G -->|no, retry budget left| H[Re-prompt with<br/>validation error]
-    H --> F
-    G -->|yes| I[Render document<br/>docxtpl + Gotenberg]
-    I --> J[Deliver<br/>email + reply on origin channel]
-    J --> K[Log execution<br/>cost, latency, tenant_id, doc_type]
+    A[ingest] --> B[download media<br/>+ transcribe]
+    B --> C{report type<br/>known?}
+    C -->|no: ask in chat, wait| E
+    C -->|yes| E[extract<br/>structured output + evidence]
+    E --> V{valid?}
+    V -->|no, retries left| E
+    V -->|yes| M{required fields<br/>missing?}
+    M -->|chat: ask, wait| E
+    M -->|no, or field app| P[approval prompt]
+    P --> I[[interrupt: wait for the<br/>sender or the panel]]
+    I -->|correct| E
+    I -->|cancel| X[cancelled]
+    I -->|confirm| R[render docx, convert to PDF]
+    R --> D[deliver]
+    D --> F[finalize]
 ```
 
-### Channel adapter pattern
+Every pause is a LangGraph `interrupt()` saved by the Postgres checkpointer, so a report can wait
+days for its confirmation. In the field app the form is the question: missing fields are
+highlighted instead of asked in chat, and confirming goes through the same `approve` endpoint as
+the panel, which refuses while a required field is empty.
 
-```mermaid
-flowchart TB
-    subgraph Adapters
-        T[Telegram Adapter]
-        W[WhatsApp Business Adapter]
-        E[Email-in Adapter]
-        O[On-demand: Slack, Teams — built per client request]
-    end
-    T & W & E & O --> I["ChannelAdapter interface<br/>receive_message / send_message / download_media"]
-    I --> Core[Agent Core — LangGraph pipeline]
-```
+### Channels
+
+Every way in implements `ChannelAdapter` (`backend/app/services/channels/base.py`,
+`docs/channel-adapter.md`): `web` (the field app, the primary channel), `telegram` (the company's
+own bot, by webhook or by long polling when there is no public domain), `email` (inbound through
+Mailgun) and `whatsapp` (experimental).
 
 ### Stack summary
 
-- **Backend**: FastAPI, Python
-- **Agent orchestration**: LangGraph
-- **LLM extraction**: Anthropic Claude, tool-calling / structured output
-- **Transcription**: Groq Whisper (whisper-large-v3-turbo)
-- **Database**: Postgres, self-hosted (Docker)
-- **Document rendering**: docxtpl + self-hosted Gotenberg
-- **Admin panel**: Vue/Nuxt + Vuetify/Tailwind
-- **Channels**: Telegram, WhatsApp Business Cloud API, Email-in (initial build); Slack and Microsoft Teams built on-demand per client request; Discord, Google Chat, SMS, RCS evaluated and not prioritized (see §5 Phase 3)
-- **Infra**: private server (Hetzner-class VPS), Docker Compose, Traefik reverse proxy, Let's Encrypt TLS
-- **Auth**: per-tenant login (email/password or magic link), roles: platform super-admin / tenant admin
-- **Observability**: structured per-execution logs (cost, latency, tenant_id, document_type)
-- **Testing**: unit tests per pipeline node, golden-set eval suite in CI
+- **Backend:** Python, FastAPI, SQLAlchemy 2 (async), Alembic, Postgres 16
+- **Agent:** LangGraph with `langgraph-checkpoint-postgres`
+- **AI:** Anthropic Claude (structured outputs) or any OpenAI-compatible endpoint; transcription
+  through any Whisper-compatible API (Groq by default). Entered in the panel, encrypted at rest
+- **Rendering:** docxtpl into the company's `.docx`, Gotenberg for the PDF
+- **Frontend:** Nuxt 4, Vue 3, Vuetify 4, Pinia, `@nuxtjs/i18n` (es/en), a hand-written service
+  worker for the field app
+- **Infra:** Docker Compose; Traefik on the hosted service, Caddy in the self-host installer;
+  GitHub Actions for CI, images on GHCR and releases on `v*` tags
+- **Observability:** an execution log per AI call (tokens, audio seconds, cost, latency), an
+  audit log, optional Sentry
+- **Testing:** pytest against a real Postgres, the tenant-isolation matrix, the golden-set eval
+  (`pytest -m eval`, real API calls), frontend unit tests and a smoke test of the built server's
+  security headers
 
 ## 3. Architecture & scope decisions
 
 | Decision | Rationale |
 |---|---|
 | Fully custom-coded agent (no low-code/workflow-builder tools) | A project living entirely in a no-code tool structurally closes the signal channel hiring managers look for: readable commit history, testable/inspectable architecture, real version control. |
-| Multi-tenant SaaS from the data model up, with a client-facing admin panel | Each client configures their own instance (templates, fields, authorized users, recipients) themselves, not through a support ticket. |
-| Sales motion stays white-label / consulting-led, not public self-serve | No validated demand yet for public self-serve. Software is SaaS-shaped; go-to-market is relationship-led. Public self-serve signup and billing are explicitly deferred (see §6). |
-| Channel-agnostic ingestion via an adapter interface; Telegram, WhatsApp, and email-in built in the initial phase | These are the channels the target audience (non-technical SME field reps, Spain/LatAm) actually uses with zero IT gatekeeping. Slack and Microsoft Teams require per-client setup (OAuth install / Azure Bot + IT admin approval) and are built on-demand when a client requests them, not speculatively. |
-| Structured LLM output (tool-calling / schema enforcement), never raw-JSON-in-prompt | Removes an entire class of parsing failures versus asking the model for JSON in free text. |
-| Document type & field schema as per-tenant runtime config (Pydantic model built from DB config), not hardcoded prompts | A new client or new document type becomes configuration, not a code change. |
-| Self-hosted Postgres on a private server, not a managed BaaS | Long-lived, multi-tenant product — warrants owning the infra rather than a managed backend-as-a-service. |
-| Own document rendering: docxtpl (Jinja2-tagged .docx templates) → self-hosted Gotenberg (Docker) for docx→PDF | No opaque black-box dependency, no per-document third-party API receiving confidential content off-server. |
-| Golden-set eval suite + structured cost/latency logging from the first commit | Highest-leverage investment for both reliability and demonstrable engineering quality, regardless of priority order. |
-| Secrets in environment variables / not committed, from the first commit | Non-negotiable baseline for any multi-tenant system handling client documents. |
-| Public repository with sanitized/synthetic data only | No real tenant content ever appears in this repo, in eval datasets, or in the public demo. |
+| Multi-tenant from the data model up, with a client-facing admin panel | Each company configures its own report types, templates, people and recipients itself, not through a support ticket. |
+| One codebase for the hosted service and self-host; self-host must not change | Two products would double the maintenance. New flags default to off and new columns get neutral defaults, so a `SINGLE_TENANT=true` install behaves as before. |
+| Not on sale: the hosted service is a showcase, self-host is for whoever wants to run it | See the 2026-11-11 log entry. The code stays SaaS-ready, with self-signup behind its flag. |
+| Field app (installable web app) as the primary channel; chat channels as optional connectors | No dependence on Meta or Telegram for the core flow, review in a form instead of a chat, no third-party platform holding the voice notes, and sign-up without installing anything. |
+| Human confirmation before anything is sent | No agent sends on a company's behalf without an explicit checkpoint: a LangGraph interrupt that the sender or the panel resumes. |
+| Structured LLM output (structured outputs / forced function call), never raw JSON in a prompt | Removes an entire class of parsing failures; every value comes with the quote it was taken from. |
+| Report type and field schema as per-company runtime config (a Pydantic model built from the database) | A new company or report type is configuration, not a code change. |
+| Postgres as the job queue (`SKIP LOCKED`, lease and heartbeat), no Redis or Celery | One fewer service to run and back up; at this volume Postgres is enough. Trigger to revisit: sustained queue latency or several worker hosts. |
+| Tenant isolation enforced in code (`core/scoping.py`) and proven by a test matrix; Postgres RLS deferred | Another company's row is a 404, never a 403. RLS comes with the first enterprise client or an audit that asks for it. |
+| Self-hosted Postgres, not a managed backend-as-a-service | Long-lived, multi-tenant product: warrants owning the infra. |
+| Own document rendering: docxtpl (Jinja2-tagged .docx templates) → self-hosted Gotenberg | No opaque dependency, no third-party API receiving confidential documents. |
+| Golden-set eval suite + structured cost/latency logging from the first commit | Highest-leverage investment for both reliability and demonstrable engineering quality. |
+| Secrets in environment variables or encrypted in the database, never committed | Non-negotiable baseline for a multi-tenant system handling company documents. |
+| Public repository with sanitized/synthetic data only | No real company content ever appears in this repo, in eval datasets or in the public demo. |
 | Real incremental commit history from day one | A single big-bang commit or a squashed import reads as a red flag; history must reflect actual development. |
 
 ## 4. Data model overview
 
-Core entities, all tenant-scoped from the first migration:
+Every company-owned table carries `tenant_id` and is read through `get_scoped_or_404`.
 
-- `tenants` — one row per client company
-- `tenant_users` — admin-panel login accounts, scoped to a tenant (+ one super-admin role)
-- `channel_connections` — which channel(s) + credentials a tenant has wired up (Telegram bot token, Slack workspace, Discord bot/guild, etc.)
-- `document_types` — per-tenant document definitions (name, field schema as JSON, prompt/instructions)
-- `document_templates` — the .docx template file reference + version per document type
-- `reports` — generated report records (status, requester, timestamps, links to files)
-- `execution_logs` — per-run cost, latency, model calls, success/failure, for observability and future billing
+- `tenants` — one company: language, time zone, branding, plan and trial, pending deletion
+- `tenant_users` — panel and field-app accounts with their role (super admin, admin, approver,
+  viewer, technician) and the token version that ends every session at once
+- `password_reset_tokens`, `used_refresh_tokens`, `sender_invites` — single-use links and
+  refresh-token rotation; invitations for chat senders
+- `channel_connections` — the company's ways in (field app, Telegram bot, inbound email,
+  WhatsApp), credentials encrypted, allowed senders
+- `inbound_messages` — one row per external message id: what makes ingestion idempotent
+- `document_types`, `document_templates` — report types with their field schema and recipients,
+  and the `.docx` template behind each
+- `reports`, `report_revisions`, `report_attachments` — the report (status, transcript, fields,
+  evidence, files), every edit to it, and its photos
+- `deliveries` — one row per copy sent, with its state, for resending
+- `jobs` — the work queue the worker drains
+- `execution_logs` — one row per AI call: tokens, audio seconds, cost, latency
+- `audit_events` — who did what in the panel
+- `rate_limit_hits` — the Postgres-backed rate limiter
+- `instance_settings` — the installation's own settings entered in the panel (AI provider, mail
+  server), secrets encrypted
+- LangGraph's checkpoint tables — the paused state of every report waiting for an answer
 
 ## 5. Development phases
 
-### Phase 0 — Foundations
-- [x] Repo layout (`backend/`, `frontend/`, `infra/`, `docs/`)
-- [x] FastAPI skeleton + Postgres via Docker Compose (local dev)
-- [x] Alembic migrations for the core schema (§4), `tenant_id` on every scoped table
-- [x] `.env.example`, secrets strictly via environment variables
-- [x] Basic CI (lint + test) on push
-- [x] `ChannelAdapter` interface defined (no implementation yet)
+The repository went through three numberings of phases (the first plan in August, the audit of
+2026-09-30 and the SaaS plan of 2026-11-06). Here they are listed by date, with their pull
+requests.
 
-### Phase 1 — Agent core + initial channels
-- [x] LangGraph pipeline: ingest → transcribe → resolve tenant/doc type → extract → validate → render → deliver → log
-- [x] Telegram adapter implementing `ChannelAdapter`
-- [x] WhatsApp Business Cloud API adapter implementing `ChannelAdapter` (start Meta Business verification early — 2-5 days typical, up to 4-8 weeks)
-- [x] Email-in adapter implementing `ChannelAdapter` (inbound email parsing via Mailgun)
-- [x] Claude structured-output extraction with per-tenant Pydantic schema
-- [x] Retry-with-validation-error loop, bounded attempts
-- [x] docxtpl + Gotenberg rendering pipeline
-- [x] Email + in-channel delivery
-- [x] Golden-set eval suite (synthetic data) + unit tests per node
-- [x] Structured execution logging (cost, latency)
-- [x] One seeded demo tenant with fictional data end to end (`make seed-demo`)
-- [x] Mandatory human-approval interrupt before delivery (not in the original checklist — added per the `ai-agents` skill's non-negotiable rule that no agent sends on a client's behalf without an explicit checkpoint)
+### Shipped
 
-### Phase 2 — Admin panel
-- [x] Auth — login real (JWT contra `tenant_users`), dashboard placeholder protegido — adelantado junto con la landing (ver §8, 2026-08-11)
-  - [x] UI de gestión de tenants para super-admin
-  - [x] Recuperación de contraseña / magic link
-- [x] Tenant management (create/list/deactivate) — super-admin only
-- [x] Document type & template management (upload .docx, define field schema) — tenant admin
-- [x] Channel connection management (link bots per channel, manage allowed users) — tenant admin
-- [x] Recipients / notification settings — tenant admin
-- [x] Report history view with status
-- [x] Usage/cost dashboard per tenant
+| When | What | PRs, tags |
+|---|---|---|
+| 2026-08-10 → 08-17 | Foundations; agent core with Telegram, WhatsApp and inbound email, human approval and the first golden set; admin panel; demo mode; bilingual landing with a real pre-generated example | #1–#11 |
+| 2026-09-30 → 10-02 | After a full audit: installable, secure production and licence; reliable reports (Postgres job queue and worker, deliveries, conversation in chat, extraction with evidence, report detail and history, golden-set gate); self-install (installer, setup wizard, encrypted settings, single-tenant mode, updates); PRL landing | #12–#19, v0.3.0, v0.4.0 |
+| 2026-10-19 | Landing for engineers with the architecture page | #20 |
+| 2026-11-07 | SaaS foundations: tenant-isolation matrix, plans and quotas, Postgres rate limiter, audit log, usage metering, technician role with magic link, data export and deletion, error reporting, self-signup (off) | #21 |
+| 2026-11-08 | Field app: capture, offline queue, installable, starts without coverage, CSP with a per-response nonce | #22 |
+| 2026-11-10 | PRL landing, public live demo with its own limits, engineering case study | #23, #24 |
+| 2026-11-11 | Not on sale: landing without prices, privacy policy, live-demo setup script | #25 |
 
-### Phase 3 — On-demand channel adapters (reactive backlog — no work starts here without a specific client request)
-- [ ] Slack adapter — build when a specific client requests it (self-service OAuth install, low effort)
-- [ ] Microsoft Teams adapter — build only when a specific paying Microsoft 365 client requests it; register as a single-tenant Azure Bot scoped to that client (not a multi-tenant Teams Store app — Microsoft disallowed new multi-tenant bots as of 2025-07-31). Requires that client's IT admin to sideload the app package or approve a store listing; budget 1-2 weeks dev plus client-side admin approval time.
-- [ ] Evaluated and explicitly not prioritized: Discord (no fit with formal corporate reporting for this audience), Google Chat (same IT-gated integration cost as Teams, far smaller footprint in this market), SMS (can't carry voice notes — breaks the core "send a voice note" flow), RCS (fragmented, immature cross-carrier/OS support). Revisit only if a specific client asks.
+### Next: the finish line is v1.0.0
 
-### Phase 4 — Deployment & launch
+- [ ] **v0.5.0** — README and this roadmap match the product; the installer verified end to end
+  (fresh install, and update from 0.4.0); release; uptime monitor on the hosted service.
+- [ ] **Company AI keys** — on the hosted service each company enters its own AI provider and key
+  when it sets the service up, from a closed list of providers; the platform's key serves only
+  companies the super admin marks (the live demo), and the spend breaker counts only what the
+  platform pays. Self-host unchanged.
+- [ ] **Agent, MCP and API, on reports** — a typed tool layer scoped by company and role,
+  per-company API keys (hashed, scoped, revocable), a remote MCP server over Streamable HTTP, and
+  an eval of the agent (tool choice, prompt injection, isolation). Left out: an assistant inside
+  the app, a proactive weekly summary, outgoing webhooks.
+- [ ] **v1.0.0** — then maintained on demand: new work only on the triggers below and in §6.
 
-Scope confirmed 2026-08-15: this phase plus the demo hardening below is the
-"finish line" of the project; Phases 3 and 5 stay deferred with their
-existing triggers.
+### Deferred, with the trigger that brings each back
 
-**A. Demo-readiness (code, runs locally first)**
-- [x] Frontend production build: Dockerfile + Nuxt service in `docker-compose.prod.yml`; single-domain Traefik routing (`/api` prefix → backend, everything else → Nuxt) so prod needs no CORS config and no extra subdomain
-- [x] Fix the 2026-08-13 deferred finding: an approval-prompt send failure must still reach the `await_human_approval` interrupt so the report stays approvable from the admin panel — grew into the full resume-cycle fix (see 2026-08-15 decisions-log entry)
-- [x] Telegram demo bot config path + webhook registration script shipped (`DEMO_TELEGRAM_BOT_TOKEN`, `scripts/set_telegram_webhook.py`) — **not activated**; see the 2026-08-15 pivot below
-- [x] One-click demo access from the landing (demo tenant login without typing credentials) — `POST /auth/demo-login` + read-only guard for the demo account — built and functional, dormant until deployed
-- [x] Abuse/cost controls for the public demo: per-sender rate limit, global daily spend cap computed from `execution_logs.cost_usd`, audio size limit
-- [x] Scheduled reset of the demo tenant to a clean seeded state — `make reset-demo` + cron line in `infra/README.md`
-- [x] Telegram webhook hardening (not in the original checklist — found during Phase 4 exploration): secret-token verification (the other two channels already verified HMAC) and an `is_active` check
-- [x] **Real, pre-generated example embedded directly in the landing page** — audio → transcript → extracted fields → PDF, actual pipeline output (`backend/scripts/generate_landing_demo_asset.py`), not a live per-visitor call. This is the actual public-facing proof while the live bot stays dormant (see pivot below).
-
-**B. Infra — deferred, not abandoned (trigger: a real client needs a live public demo)**
-- [ ] `reportai.is-a.dev` registration PR
-- [ ] Deploy: compose up on the VPS, migrations, demo seed, activate the Telegram bot
-- [ ] Real end-to-end smoke test in prod: voice note → PDF → email delivery
-- [ ] Postgres backup job + minimal monitoring
-
-**C. Presentation**
-- [ ] README: architecture, setup instructions, live demo link, flow GIF
-- [ ] Final verification pass: tests, lint, mypy, eval suite, synthetic-data-only check (§7)
-
-Separately, not a code deliverable: first white-label client deployments sold
-through existing consulting relationships — a sales outcome dependent on
-those relationships, not something a checklist item completes.
-
-### Phase 5 — Explicitly deferred (not a scheduled future phase — no date, no trigger; see also §6)
-- Public self-serve signup
-- Billing / payment integration
-- Corporate SSO / OAuth for the admin panel
-- Multi-region / high-availability infra
+- **Operations layer** (sites, findings, corrective actions, visit schedules): excluded on
+  2026-11-10; back if users of the reports ask for the follow-up.
+- **Billing and plans with a payment provider:** out since 2026-11-11 (not on sale).
+- **Client portal and signature:** when someone wants to use ReportAI with real company data.
+- **Dedicated server, off-site backups and a restore drill for the hosted service:** before the
+  first company with real data.
+- **Slack and Microsoft Teams adapters:** only for a specific client that asks (see the
+  2026-08-10 log entries for why Teams needs that client's IT admin).
 
 ## 6. Explicitly out of scope for now
 
-- Public self-serve onboarding and billing (see Phase 5).
-- Any channel not yet confirmed via Phase 3 research.
+- WhatsApp on the hosted service: if two or more users ask for it.
+- Postgres row-level security: with the first enterprise client or an audit that requires it.
+- Object storage (S3): when there is a second application server.
+- A native app wrapper: only if recording on an iPhone stops with the screen locked and users
+  suffer it.
+- A shared Telegram bot for the platform: the field app takes its place.
+- Live transcription while speaking: the note is transcribed when the recording stops.
+- SSO: with the first client that requires it.
 
 ## 7. Known risks
 
-- Real tenant data must never enter the public repo, eval datasets, or demo — synthetic data only, checked before every public push.
-- Multi-tenant isolation must be correct before a second real client's data lives on shared infrastructure — a cross-tenant leak would be reputationally severe.
-- Scope discipline: this roadmap already includes a full SaaS admin panel and three initial channels by explicit decision (see §3) — resist adding further speculative scope (extra auth methods, billing) without a real trigger.
-- Git history must stay genuinely incremental from Phase 0 onward — no big-bang imports.
+- Real company data must never enter the public repo, eval datasets or the demo: synthetic data
+  only, checked before every public push.
+- Recording with the screen locked is verified on Android only; iPhone is untested.
+- The hosted service shares a server and keeps its backups on it: acceptable only while it holds
+  demo and sample data (see "Deferred").
+- The live demo records visitors' voices: covered by the privacy policy, its own daily limits and
+  a 24-hour purge.
+- Extraction quality depends on the configured model: only Claude has passed the golden set.
+- Scope discipline: no new feature without a trigger from a real user (see §5 and §6).
 
 ## 8. Decisions log
 
@@ -230,3 +242,5 @@ those relationships, not something a checklist item completes.
 | 2026-08-15 | Landing demo example redone a second time: (1) **real bug fixed** — `RealDemoSection.vue`'s transcript reveal never fired on play; `onPlay()` flipped the `v-if`/`v-else` that mounts the transcript spans and called the GSAP reveal in the same synchronous tick, before Vue's next-tick re-render created those elements, so `gsap.fromTo` animated an empty ref array and the static `opacity-0` class never got removed — fixed with `await nextTick()`. My own earlier visual verification missed this because the check script force-set `opacity:1` on any dim element, masking the dead animation. (2) Audio generation moved from Higgsfield to **OpenAI TTS** (`gpt-4o-mini-tts`, `backend/scripts/generate_landing_demo_audio.py`) after Higgsfield credits ran out again — cost is fractions of a cent, `openai` added to `[dev]` extras only (not a production dependency). Confirmed Anthropic has no TTS API of its own (Claude's own Voice Mode uses ElevenLabs under the hood). (3) The generated document is now genuinely detailed and professional instead of a title + 4 bare paragraphs: `FIELD_SCHEMA` grew to 11 fields (company, location, agenda, decisions, and per-action owner/due-date as lists parallel to `action_items`), and `_generate_template()` builds a real corporate-style document — navy title/subtitle, real bullet/numbered lists via docxtpl's `{%p for%}` tag, a real 3-column action table via `{%tr for%}` + parallel-list indexing — deliberately neutral styling (navy/gray, not ReportAI's own orange), since this stands in for *the client's* template and the product's pitch is "your template, not ours." A first pass overflowed onto an almost-empty second page — fixed with tighter margins/heading spacing. | Confirmed |
 | 2026-11-06 | **Supersedes "white-label / consulting-led, not public self-serve"** (§3 and the 2026-08-10 business-path entry): the business model is now hybrid. The main product is a multi-tenant SaaS hosted in the EU, sold by subscription; the self-host installer (`infra/install`, `SINGLE_TENANT=true`) stays as the Enterprise plan. Vertical: PRL (occupational risk prevention): coordinadores de seguridad y salud and técnicos de PRL. The primary capture channel will be a web app/PWA; Telegram and email stay as connectors. Built as Fase 4 on `feature/phase-4-saas-foundations`. | Confirmed |
 | 2026-11-11 | **Supersedes the commercial side of the 2026-11-06 entry**: ReportAI is not on sale for now. The hosted landing presents the product (how it works, the live demo, the hours it saves) together with how it is built (a condensed "what's behind the report" section linking to the `/arquitectura` case study), with no prices, plans, trial or pilot counter; its one action is an email to try it. Whoever wants to try it gets a trial account with sample data, or installs it on their own server. The code stays multi-tenant and SaaS-ready, with self-signup behind its flag (off). Fase 8 (billing) leaves the roadmap and Fase 10 (client portal) waits until someone wants to use it with real data; Fase 9 (agent, MCP, API) is next. | Confirmed |
+| 2026-11-17 | Finish line set: v0.5.0 (README and roadmap matching the product, the installer verified end to end, a release, an uptime monitor), then company AI keys on the hosted service, then the agent, MCP and API on reports, then v1.0.0 and maintenance on demand. A global daily AI spend breaker is set on the hosted service. | Confirmed |
+| 2026-11-17 | Hosted service: each company brings its own AI provider key, entered when it sets the service up; the platform's key serves only the companies the super admin marks (the live demo), so the platform no longer pays for other companies' AI and one trial account can't exhaust the breaker for everyone. The hosted service takes a closed list of providers with fixed URLs: a free base URL would let any company point the worker at internal addresses (SSRF). Self-host keeps the free base URL and its installation-wide settings. | Confirmed |
