@@ -41,6 +41,12 @@ export function useTenants() {
     return await api<Tenant>(`/admin/tenants/${id}`, { method: 'PATCH', body: change })
   }
 
+  // On: the company's reports use the platform's AI keys instead of its own.
+  async function setPlatformAi(id: string, platformAi: boolean): Promise<Tenant> {
+    const api = useApi()
+    return await api<Tenant>(`/admin/tenants/${id}`, { method: 'PATCH', body: { platform_ai: platformAi } })
+  }
+
   async function resendInvite(id: string) {
     const api = useApi()
     return await api<{ message: string }>(`/admin/tenants/${id}/resend-invite`, { method: 'POST' })
@@ -51,5 +57,5 @@ export function useTenants() {
     return await api<Tenant>(`/admin/tenants/${id}`)
   }
 
-  return { items, total, loading, error, fetchList, create, setActive, setPlan, resendInvite, getById }
+  return { items, total, loading, error, fetchList, create, setActive, setPlan, setPlatformAi, resendInvite, getById }
 }
