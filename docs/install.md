@@ -48,7 +48,8 @@ Open the address it printed. The setup wizard asks for:
 3. **The AI provider and its key**, and the **transcription service** — each with a *Test* button
    that makes one tiny real call, so a wrong key shows up now and not on the first report.
 4. **Email** (optional) — with a *Send a test email* button.
-5. **The Telegram bot token** (optional) — checked with Telegram before it is saved.
+5. **The Telegram bot token** (optional: technicians use the field app) — checked with Telegram
+   before it is saved.
 
 Keys and tokens are stored encrypted with the server's `ENCRYPTION_KEY`.
 
@@ -60,22 +61,27 @@ The dashboard's *First steps* list says what is left:
   inspection, work order, site visit, incident report — with your logo and in your language) or
   create a type and upload a Word document you already fill in by hand: the template assistant
   proposes the fields and where each one goes, you correct it, preview it as a PDF and apply it.
-- **People who send reports.** Under *Channels*, *Invite* creates a one-time link for each person
-  (Telegram: opening it is all they do). Nobody copies chat ids.
-- **Your team in the panel.** Under *Team*, invite admins, approvers (review, correct, approve,
-  resend) and read-only viewers.
+- **The technicians.** Under *Team*, invite each one as a *field technician*. They get an email
+  and sign in to the field app with a link or an 8-character code, no password; on a phone they
+  can install it on the home screen. The field app needs the installation to be served over HTTPS.
+- **The rest of your team in the panel.** Under *Team*, invite admins, approvers (review,
+  correct, approve, resend) and read-only viewers.
+- **Optional: people who report through a chat bot or by email.** Under *Channels*, *Invite*
+  creates a one-time link for each person (Telegram: opening it is all they do). Nobody copies
+  chat ids.
 - **Your logo and colour**, under *Settings → Company*: used in emails and, through
   `{{ branding.logo }}` and `{{ branding.name }}`, in templates.
 
-Then send the bot a voice note describing a job. The report comes back for confirmation, and
-the PDF arrives in the chat and in the inboxes set on its document type.
+Then record a visit from *New report* in the field app (or send the bot a voice note). The
+report comes back for review with each value next to the words it came from; once confirmed, the
+PDF goes to the inboxes set on its document type.
 
 ## How it fits together
 
 | Service | What it does |
 | --- | --- |
 | `caddy` | The only open ports (80/443). HTTPS for the domain; `/api/*` → backend, the rest → panel |
-| `frontend` | The panel (Nuxt) |
+| `frontend` | The panel and the technicians' field app (Nuxt) |
 | `backend` | The API (FastAPI) |
 | `worker` | Runs the reports: transcription, the AI, rendering, delivery. Polls Telegram when there is no domain |
 | `migrate` | Applies database migrations, then exits — on every start and every update |

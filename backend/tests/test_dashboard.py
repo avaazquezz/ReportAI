@@ -96,8 +96,20 @@ async def test_the_admin_sees_what_is_left_to_set_up(client: AsyncClient, db: As
     db.add_all([
         DocumentTemplate(tenant_id=tenant.id, document_type_id=doc_type.id, file_path="x.docx", version=1, is_active=True),
         _report(tenant, "delivered"),
+        TenantUser(tenant_id=tenant.id, email="tecnica@g.test", hashed_password="x", full_name="Técnica", role="technician", is_active=True),
     ])
     await db.commit()
 
     done = (await client.get("/dashboard", headers=admin)).json()["checklist"]
-    assert done == {"ai": True, "transcription": False, "email": False, "channel": True, "senders": True, "document_type": True, "first_report": True}
+    assert done == {
+        "ai": True, "transcription": False, "email": False, "channel": True, "senders": True, "team": True,
+        "document_type": True, "first_report": True,
+    }
+
+
+async def test_a_switched_off_technician_does_not_count_as_the_team(client: AsyncClient, db: AsyncSession) -> None:
+    tenant, admin, _ = await _setup(client, db)
+    db.add(TenantUser(tenant_id=tenant.id, email="ex@g.test", hashed_password="x", full_name="Ex", role="technician", is_active=False))
+    await db.commit()
+
+    assert (await client.get("/dashboard", headers=admin)).json()["checklist"]["team"] is False
