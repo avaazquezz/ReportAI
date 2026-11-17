@@ -21,6 +21,9 @@ class ExtractionProvider:
     base_url: str  # empty for Anthropic's own API
     default_model: str
     validated: bool  # passed the golden set: the extraction is as good as the one ReportAI is tested with
+    # Sent as reasoning_effort on an OpenAI-compatible call. OpenAI's reasoning models refuse a
+    # forced function call on /chat/completions unless it is "none".
+    reasoning_effort: str = ""
 
 
 @dataclass(frozen=True)
@@ -36,7 +39,8 @@ EXTRACTION_PROVIDERS: dict[str, ExtractionProvider] = {
     for p in (
         ExtractionProvider("anthropic", "Anthropic Claude", "anthropic", "", "claude-sonnet-5", validated=True),
         ExtractionProvider(
-            "openai", "OpenAI", "openai_compatible", "https://api.openai.com/v1", "gpt-6.1-terra", validated=False
+            "openai", "OpenAI", "openai_compatible", "https://api.openai.com/v1", "gpt-6.1-terra",
+            validated=False, reasoning_effort="none",
         ),
     )
 }

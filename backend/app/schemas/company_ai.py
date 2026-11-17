@@ -97,7 +97,8 @@ def extraction_response(provider_id: str | None, config: AIConfig) -> CompanyExt
     return CompanyExtractionResponse(
         provider=provider_id,
         model=config.model,
-        effort=config.effort,
+        # Only Anthropic's is the admin's choice; an OpenAI reasoning_effort is fixed by ReportAI.
+        effort=config.effort if config.provider == "anthropic" else "",
         api_key=SecretState.of(config.api_key),
         configured=config.configured,
     )

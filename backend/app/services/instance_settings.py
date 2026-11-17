@@ -27,6 +27,8 @@ class AIConfig:
     model: str
     api_key: str
     base_url: str
+    # Anthropic: output_config's effort. OpenAI-compatible: reasoning_effort, sent only when set
+    # (a provider from ai_providers that needs it; other compatible servers may refuse the field).
     effort: str
     # Whose key it is: the platform's (or the installation's own), or a company's on the hosted
     # service. The platform's spend breaker counts only the first.

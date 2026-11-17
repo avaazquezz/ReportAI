@@ -4,12 +4,14 @@ provider addresses ReportAI knows (no URL to type: SSRF), and left out of the pl
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import get_args
 
 import anthropic
 import httpx
 import pytest
 from httpx import AsyncClient
+from pydantic import BaseModel
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -111,7 +113,7 @@ async def test_a_companys_own_key_is_stored_encrypted_and_paid_by_the_company(
 
     assert config == AIConfig(
         provider="openai_compatible", model="gpt-6.1-terra", api_key="sk-proj-company-openai-key",
-        base_url="https://api.openai.com/v1", effort="", platform_paid=False,
+        base_url="https://api.openai.com/v1", effort="none", platform_paid=False,
     )
     raw = await db.scalar(text("SELECT value FROM company_settings WHERE key = 'extraction_api_key'"))
     assert raw and "company-openai-key" not in raw
@@ -390,3 +392,26 @@ async def test_a_companys_keys_leave_with_it_and_never_in_its_export(
     await db.commit()
 
     assert await db.scalar(select(func.count()).select_from(CompanySetting)) == 0
+
+
+async def test_reasoning_effort_goes_only_to_the_provider_that_needs_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    sent: list[dict[str, object]] = []
+
+    class Completions:
+        async def create(self, **kwargs: object) -> SimpleNamespace:
+            sent.append(kwargs)
+            call = SimpleNamespace(type="function", function=SimpleNamespace(arguments='{"ok": true}'))
+            return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(tool_calls=[call]))], usage=None)
+
+    monkeypatch.setattr(llm, "_openai_client", lambda *_: SimpleNamespace(chat=SimpleNamespace(completions=Completions())))
+
+    class Ping(BaseModel):
+        ok: bool
+
+    openai_config = company_ai.extraction_from({"extraction_provider": "openai", "extraction_api_key": "sk-proj-" + "x" * 8})
+    # A self-hosted OpenAI-compatible server may refuse a field it doesn't know.
+    other = AIConfig(provider="openai_compatible", model="local", api_key="k", base_url="http://ollama:11434/v1", effort="")
+    for config in (openai_config, other):
+        await llm.structured_completion(system="s", user="u", model_cls=Ping, tool_name="t", config=config)
+
+    assert sent[0]["reasoning_effort"] == "none" and "reasoning_effort" not in sent[1]
