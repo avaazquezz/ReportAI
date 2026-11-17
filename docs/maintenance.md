@@ -68,9 +68,14 @@ from a bad update, not a backup. What to back up, off this server:
 
 ## Publishing a release (maintainers of ReportAI itself)
 
-1. Tag the commit: `git tag v1.4.2 && git push origin v1.4.2`.
-2. The *Publish images* workflow builds `ghcr.io/avaazquezz/reportai-backend:1.4.2` and
+1. Tag a release candidate first: `git tag v1.4.2-rc.1 && git push origin v1.4.2-rc.1`. It gets
+   its images and a GitHub *prerelease*, which GitHub never makes the latest release, so no
+   installation is offered it. Install it fresh (`install.sh --version 1.4.2-rc.1`) and update an
+   installation of the previous release to it (`reportai update 1.4.2-rc.1`), both on a test
+   server, and make a report end to end on each.
+2. Tag the same commit as the release: `git tag v1.4.2 && git push origin v1.4.2`.
+3. The *Publish images* workflow builds `ghcr.io/avaazquezz/reportai-backend:1.4.2` and
    `…/reportai-frontend:1.4.2` with the version baked in, and creates the GitHub release that
    installations compare themselves with.
-3. For a security fix, also add the advisory to `security/advisories.json` on `main` and publish
+4. For a security fix, also add the advisory to `security/advisories.json` on `main` and publish
    the GitHub Security Advisory.
