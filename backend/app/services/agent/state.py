@@ -14,6 +14,7 @@ class ToolUsage(BaseModel):
     input_tokens: int | None = None
     output_tokens: int | None = None
     audio_seconds: float | None = None
+    platform_key: bool = True  # whose key paid for it; the platform's spend breaker counts only these
 
 
 class DocumentTypeOption(BaseModel):

@@ -17,10 +17,11 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
-const { isAdmin, isInstanceAdmin } = useRole()
+const { isAdmin, isInstanceAdmin, setsCompanyAi } = useRole()
 
 // The company's own settings are its admin's; the installation's (AI keys, mail server,
-// updates) belong to whoever runs it.
+// updates) belong to whoever runs it. On the hosted service a company pays its own AI, so its
+// admin gets an AI tab of its own.
 const tabs = computed(() => [
   ...(isAdmin.value ? [{ value: 'company', title: t('admin.settings.tabs.company') }] : []),
   ...(isInstanceAdmin.value
@@ -29,7 +30,9 @@ const tabs = computed(() => [
         { value: 'email', title: t('admin.settings.tabs.email') },
         { value: 'updates', title: t('admin.settings.tabs.updates') }
       ]
-    : [])
+    : setsCompanyAi.value
+      ? [{ value: 'ai', title: t('admin.settings.tabs.ai') }]
+      : [])
 ])
 const tab = ref(String(route.query.tab ?? '') || tabs.value[0]?.value)
 watch(tab, (value) => navigateTo({ query: { tab: value } }, { replace: true }))
@@ -74,7 +77,8 @@ async function exportData() {
             <SettingsDeleteCompany />
           </template>
         </template>
-        <SettingsAiSettings v-else-if="tab === 'ai'" />
+        <SettingsAiSettings v-else-if="tab === 'ai' && isInstanceAdmin" />
+        <SettingsCompanyAiSettings v-else-if="tab === 'ai' && setsCompanyAi" />
         <SettingsEmailSettings v-else-if="tab === 'email'" />
         <SettingsUpdatesPanel v-else-if="tab === 'updates'" />
       </v-card-text>

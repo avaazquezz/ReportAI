@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.repositories.execution_log_repository import ExecutionLogRepository
-from app.services import instance_settings
+from app.services import company_ai
 
 TRIAL_DAYS = 14
 STATUSES = ("trialing", "active", "past_due", "canceled")
@@ -82,7 +82,9 @@ async def message_refusal(db: AsyncSession, tenant: Tenant | None, *, voice: boo
     Checked for every message, replies to a paused report included: they cost AI too."""
     if tenant is None or not tenant.is_active:
         return "tenant_suspended"
-    if settings.DAILY_SPEND_CAP_USD > 0:  # platform-wide breaker, whatever the plan
+    # The platform-wide breaker, whatever the plan: only for companies on the platform's AI. A
+    # company paying its own AI costs the platform nothing, so the platform's budget never stops it.
+    if settings.DAILY_SPEND_CAP_USD > 0 and not company_ai.uses_own_keys(tenant):
         spent = await ExecutionLogRepository(db).total_cost_since(_midnight_utc())
         if spent >= settings.DAILY_SPEND_CAP_USD:
             return "spend_capped"
@@ -96,14 +98,14 @@ async def message_refusal(db: AsyncSession, tenant: Tenant | None, *, voice: boo
             spent = await ExecutionLogRepository(db).total_cost_since(_midnight_utc(), tenant_id=tenant.id)
             if spent >= cap:
                 return "spend_capped"
-    if voice and not instance_settings.transcription_from(await instance_settings.load(db)).configured:
+    if voice and not (await company_ai.transcription_config(db, tenant)).configured:
         return "voice_not_configured"
     return None
 
 
 async def new_report_refusal(db: AsyncSession, tenant: Tenant) -> str | None:
     """On top of message_refusal, for a message that would start a new report."""
-    if not instance_settings.ai_from(await instance_settings.load(db)).configured:
+    if not (await company_ai.extraction_config(db, tenant)).configured:
         return "not_configured"
     quota = None if settings.SINGLE_TENANT else plan_of(tenant).monthly_reports
     # ponytail: count-then-create, so two senders at once can overshoot the quota by one or two;

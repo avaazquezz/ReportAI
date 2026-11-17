@@ -231,6 +231,15 @@
         "created": "Created: {date}",
         "resendInvite": "Resend invitation"
       },
+      "platformAi": {
+        "label": "Use the platform's AI",
+        "hint": "Its reports use ReportAI's keys instead of its own: for the live demo, or a company being shown the product.",
+        "toastOn": "The company now uses the platform's AI.",
+        "toastOff": "The company is back on its own AI.",
+        "errors": {
+          "save": "Couldn't change the company's AI."
+        }
+      },
       "errors": {
         "list": "Couldn't load companies.",
         "create": "Couldn't create the company. Check that the slug isn't already in use.",
@@ -503,6 +512,15 @@
           "load": "Couldn't load the AI settings."
         }
       },
+      "companyAi": {
+        "intro": "Your company uses its own AI account: each report costs a few cents, billed by the provider straight to that account. The key is stored encrypted and never shown again.",
+        "platform": "ReportAI provides your company's AI: there's nothing to set up.",
+        "extractionHelp": "The model that understands what each person says and fills in the report's fields.",
+        "notValidated": "ReportAI hasn't run this one through its extraction test set yet: review the first reports carefully.",
+        "voiceHelp": "The service that turns voice notes into text. Without it, only text messages are accepted.",
+        "voiceEnable": "Accept voice notes",
+        "tooManyChecks": "That's a lot of tests for one hour. Wait a while and try again."
+      },
       "email": {
         "noEncryption": "Unencrypted (local network only)",
         "help": "The server that sends report emails, invitations and password resets.",
@@ -719,7 +737,8 @@
           "logo_removed": "Removed the logo",
           "exported": "Exported the company's data",
           "deletion_requested": "Asked to delete the company",
-          "deletion_cancelled": "Cancelled the company's deletion"
+          "deletion_cancelled": "Cancelled the company's deletion",
+          "ai_updated": "Changed the company's AI"
         },
         "instance": {
           "ai_updated": "Changed the AI settings",
@@ -738,7 +757,8 @@
         "tenant": {
           "created": "Created the company",
           "updated": "Suspended or reactivated the company",
-          "purged": "All of a company's data was purged"
+          "purged": "All of a company's data was purged",
+          "platform_ai_changed": "Changed whether the company uses the platform's AI"
         },
         "plan": {
           "changed": "Changed the plan"

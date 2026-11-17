@@ -5,7 +5,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.channel_connection import ChannelConnection
 from app.repositories.base import BaseRepository
-from app.services import transcription
+from app.services import company_ai, transcription
 from app.services.agent.persistence import save_report
 from app.services.agent.state import AgentState
 from app.services.agent.tools.pricing import transcription_usage
@@ -50,7 +50,10 @@ async def transcribe_node(state: AgentState) -> AgentState:
     assert state.media_local_path is not None
 
     audio_bytes = await asyncio.to_thread(Path(state.media_local_path).read_bytes)
-    transcript = await transcription.transcribe(audio_bytes, Path(state.media_local_path).name, state.language)
+    transcript = await transcription.transcribe(
+        audio_bytes, Path(state.media_local_path).name, state.language,
+        config=await company_ai.transcription_for(state.tenant_id),
+    )
     # What was said first, then whatever came typed with it: both are the report's source.
     text = "\n\n".join(part for part in (transcript.text, state.incoming_text) if part)
     await save_report(state.report_id, source_text=text)

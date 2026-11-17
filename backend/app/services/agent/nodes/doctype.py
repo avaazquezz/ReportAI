@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.core.database import AsyncSessionLocal
 from app.models.document_type import DocumentType
 from app.repositories.base import BaseRepository
+from app.services import company_ai
 from app.services.agent.nodes._shared import send_on_origin_channel
 from app.services.agent.state import AgentState, DocumentTypeOption, ToolUsage
 from app.services.agent.tools.pricing import usage_of
@@ -58,6 +59,7 @@ async def _classify_type(
         model_cls=_TypeChoice,
         tool_name="choose_document_type",
         max_tokens=200,
+        config=await company_ai.extraction_for(state.tenant_id),
     )
     usage = usage_of(result)
     choice = _TypeChoice.model_validate(result.data)

@@ -16,7 +16,7 @@ definePageMeta({
 const { t } = useI18n()
 const authStore = useAuthStore()
 const api = useApi()
-const { isMember, isInstanceAdmin } = useRole()
+const { isMember, isInstanceAdmin, setsCompanyAi } = useRole()
 const { statusLabel, statusColor } = useReportStatus()
 const { formatDateTime } = useLocaleDate()
 const { status: updates, load: loadUpdates } = useUpdates()
@@ -35,14 +35,16 @@ onMounted(async () => {
 })
 
 // What is left before the first report, each with where to do it. The first three are the
-// installation's settings: a company admin who doesn't run the installation can only read them.
+// installation's settings: a company admin who doesn't run the installation can only read them,
+// except the AI and voice notes on the hosted service, which each company enters for itself.
 const steps = computed(() => {
   const done = board.value?.checklist
   if (!done) return []
   const settings = isInstanceAdmin.value ? '/admin/settings' : null
+  const aiSettings = isInstanceAdmin.value || setsCompanyAi.value ? '/admin/settings?tab=ai' : null
   return [
-    { key: 'ai', done: done.ai, to: settings && `${settings}?tab=ai` },
-    { key: 'transcription', done: done.transcription, to: settings && `${settings}?tab=ai`, optional: true },
+    { key: 'ai', done: done.ai, to: aiSettings },
+    { key: 'transcription', done: done.transcription, to: aiSettings, optional: true },
     { key: 'email', done: done.email, to: settings && `${settings}?tab=email`, optional: true },
     { key: 'document_type', done: done.document_type, to: '/admin/document-types' },
     // Optional: an admin can record reports in the app too.

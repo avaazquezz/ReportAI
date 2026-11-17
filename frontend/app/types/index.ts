@@ -32,6 +32,8 @@ export interface Tenant {
   plan: PlanKey
   plan_status: PlanStatus
   plan_period_end: string | null
+  // True: the company's reports use the platform's AI keys instead of its own.
+  platform_ai: boolean
   deletion_requested_at: string | null
   created_at: string
 }
@@ -276,6 +278,64 @@ export interface TranscriptionSettings {
 export interface AISettings {
   extraction: Omit<ExtractionSettings, 'api_key'> & { api_key: SecretState; configured: boolean }
   transcription: Omit<TranscriptionSettings, 'api_key'> & { api_key: SecretState; configured: boolean }
+}
+
+// A company's own AI on the hosted service (backend/app/schemas/company_ai.py): providers come from
+// the API's closed list, so there is no address to type.
+export type CompanyExtractionProvider = 'anthropic' | 'openai'
+export type CompanyTranscriptionProvider = 'groq' | 'openai'
+
+export interface CompanyExtractionSettings {
+  provider: CompanyExtractionProvider
+  model: string
+  effort: ExtractionSettings['effort'] // Anthropic only: '' for any other provider
+  api_key: string | null // write-only: null keeps the saved key
+}
+
+export interface CompanyTranscriptionSettings {
+  provider: CompanyTranscriptionProvider
+  model: string
+  api_key: string | null
+}
+
+export interface CompanyAISettingsUpdate {
+  extraction: CompanyExtractionSettings
+  transcription: CompanyTranscriptionSettings | null // null: no voice notes (its provider and key are removed)
+}
+
+export interface CompanyAICheckRequest {
+  extraction?: CompanyExtractionSettings
+  transcription?: CompanyTranscriptionSettings
+}
+
+export interface ExtractionProviderOption {
+  id: CompanyExtractionProvider
+  name: string
+  default_model: string
+  validated: boolean // passed ReportAI's extraction test set
+}
+
+export interface TranscriptionProviderOption {
+  id: CompanyTranscriptionProvider
+  name: string
+  default_model: string
+}
+
+export interface CompanyAISettings {
+  // True: ReportAI provides this company's AI; the rest comes back empty on purpose.
+  platform_ai: boolean
+  extraction: Omit<CompanyExtractionSettings, 'provider' | 'api_key'> & {
+    provider: CompanyExtractionProvider | null
+    api_key: SecretState
+    configured: boolean
+  }
+  transcription: Omit<CompanyTranscriptionSettings, 'provider' | 'api_key'> & {
+    provider: CompanyTranscriptionProvider | null
+    api_key: SecretState
+    configured: boolean
+  }
+  extraction_providers: ExtractionProviderOption[]
+  transcription_providers: TranscriptionProviderOption[]
 }
 
 export type SmtpSecurity = 'starttls' | 'ssl' | 'none'

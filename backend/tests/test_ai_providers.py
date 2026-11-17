@@ -212,7 +212,7 @@ async def test_transcription_without_a_key_explains_what_to_set(monkeypatch: pyt
     monkeypatch.setattr(settings, "TRANSCRIPTION_API_KEY", "")
     monkeypatch.setattr(settings, "GROQ_API_KEY", "")
     with pytest.raises(RuntimeError, match="TRANSCRIPTION_API_KEY"):
-        await transcription.transcribe(b"audio", "a.ogg")
+        await transcription.transcribe(b"audio", "a.ogg", None, config=await instance_settings.transcription_config())
 
 
 def test_prices_match_anthropics_list_and_unknown_models_are_unpriced() -> None:
