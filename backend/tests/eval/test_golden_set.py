@@ -16,7 +16,7 @@ import pytest
 
 from app.core.config import settings
 from app.core.logging import describe_exception
-from app.services import llm
+from app.services import company_ai, instance_settings, llm
 from app.services.agent.nodes.extract import extract_node, validate_node
 from app.services.agent.state import AgentState
 from tests.eval.golden import Case, Report, build_cases, grade
@@ -29,6 +29,16 @@ MAX_INVENTED = 0
 _CONCURRENCY = int(os.environ.get("EVAL_CONCURRENCY", "4"))
 # Shorter than the job queue's 30/120/300 s, same idea: a transient provider error isn't a miss.
 _PROVIDER_RETRY_DELAYS = (5, 20)
+
+
+@pytest.fixture(autouse=True)
+def _installation_ai(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The eval grades the model this checkout is configured with (EXTRACTION_* or the panel's
+    # settings), not a company's own: no company stands behind these made-up reports.
+    async def installation(_tenant_id: uuid.UUID) -> instance_settings.AIConfig:
+        return await instance_settings.ai_config()
+
+    monkeypatch.setattr(company_ai, "extraction_for", installation)
 
 
 @pytest.fixture(autouse=True)

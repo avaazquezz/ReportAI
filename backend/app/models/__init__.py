@@ -2,6 +2,7 @@
 # autogenerate diffing and for Base.metadata.create_all in tests.
 from app.models.audit_event import AuditEvent  # noqa: F401
 from app.models.channel_connection import ChannelConnection  # noqa: F401
+from app.models.company_setting import CompanySetting  # noqa: F401
 from app.models.delivery import Delivery  # noqa: F401
 from app.models.document_template import DocumentTemplate  # noqa: F401
 from app.models.document_type import DocumentType  # noqa: F401

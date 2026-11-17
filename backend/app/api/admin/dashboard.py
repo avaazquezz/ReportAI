@@ -18,9 +18,10 @@ from app.models.delivery import Delivery
 from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
 from app.models.report import Report
+from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.repositories.report_repository import PENDING_STATUSES
-from app.services import instance_settings
+from app.services import company_ai, instance_settings
 from app.services.channels.web import WEB
 from app.services.sender_invites import sender_labels
 
@@ -92,6 +93,8 @@ async def _listed(db: AsyncSession, tenant_id: uuid.UUID, *conditions: object) -
 
 
 async def _checklist(db: AsyncSession, tenant_id: uuid.UUID) -> Checklist:
+    tenant = await db.get(Tenant, tenant_id)
+    assert tenant is not None  # the signed-in user's company
     stored = await instance_settings.load(db)
 
     async def any_of(*conditions: object) -> bool:
@@ -104,8 +107,9 @@ async def _checklist(db: AsyncSession, tenant_id: uuid.UUID) -> Checklist:
         ChannelConnection.channel_type != WEB,
     )
     return Checklist(
-        ai=instance_settings.ai_from(stored).configured,
-        transcription=instance_settings.transcription_from(stored).configured,
+        # The company's own AI on the hosted service, the installation's otherwise (company_ai).
+        ai=(await company_ai.extraction_config(db, tenant)).configured,
+        transcription=(await company_ai.transcription_config(db, tenant)).configured,
         email=instance_settings.smtp_from(stored).configured,
         channel=await any_of(*channel),
         senders=settings.ALLOW_ANY_SENDER or await any_of(*channel, func.cardinality(ChannelConnection.allowed_senders) > 0),

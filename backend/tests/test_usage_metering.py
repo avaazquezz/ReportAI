@@ -16,7 +16,7 @@ from app.models.document_type import DocumentType
 from app.models.execution_log import ExecutionLog
 from app.models.report import Report
 from app.models.tenant import Tenant
-from app.services import transcription
+from app.services import instance_settings, transcription
 from app.services.agent.nodes import approval, doctype, extract, media
 from app.services.agent.state import AgentState
 from app.services.agent.tools.pricing import estimate_transcription_cost_usd
@@ -120,7 +120,7 @@ async def test_a_transcription_logs_the_audio_seconds_and_their_cost(
 async def test_a_model_without_verbose_json_is_asked_for_json_and_left_unpriced(monkeypatch: pytest.MonkeyPatch) -> None:
     create = _transcription_client(monkeypatch, "gpt-4o-mini-transcribe", SimpleNamespace(text="hola"))
 
-    result = await transcription.transcribe(b"opus", "audio.ogg")
+    result = await transcription.transcribe(b"opus", "audio.ogg", None, config=await instance_settings.transcription_config())
 
     assert create.await_args.kwargs["response_format"] == "json"  # the only format gpt-4o transcribe takes
     assert (result.text, result.seconds) == ("hola", None)

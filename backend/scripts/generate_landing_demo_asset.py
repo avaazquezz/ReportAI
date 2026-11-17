@@ -32,7 +32,7 @@ from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageDraw, ImageFont
 
-from app.services import transcription
+from app.services import company_ai, instance_settings, transcription
 from app.services.agent.nodes.extract import extract_node, validate_node
 from app.services.agent.state import AgentState
 from app.services.branding import Branding
@@ -112,11 +112,19 @@ async def generate(audio_path: Path) -> None:
     )
 
     print("Transcribing (real call)...")
-    transcript = await transcription.transcribe(audio_path.read_bytes(), audio_path.name, locale)
+    transcript = await transcription.transcribe(
+        audio_path.read_bytes(), audio_path.name, locale, config=await instance_settings.transcription_config()
+    )
     print(f"  -> {transcript.text}")
     state = state.model_copy(update={"transcript": transcript.text, "source_text": transcript.text})
 
     print("Extracting fields (real call)...")
+    # With this installation's AI (EXTRACTION_* or the panel's): the made-up company above has
+    # no settings of its own to look up.
+    async def installation_ai(_tenant_id: uuid.UUID) -> instance_settings.AIConfig:
+        return await instance_settings.ai_config()
+
+    setattr(company_ai, "extraction_for", installation_ai)  # noqa: B010 — a one-off script, not app code
     state = await extract_node.__wrapped__(state)  # type: ignore[attr-defined]
     usage = state.last_tool_usage
     print(f"  -> {state.extracted_fields}")

@@ -235,7 +235,7 @@ async def seed_demo_tenant(*, reset: bool = False) -> None:
             await _ensure_demo_user(session, existing[0].id)
             return
 
-        tenant = await tenant_repo.create(name="Demo Consulting S.L.", slug="demo", is_active=True)
+        tenant = await tenant_repo.create(name="Demo Consulting S.L.", slug="demo", is_active=True, platform_ai=True)
 
         doc_type_repo = BaseRepository(DocumentType, session)
         document_type = await doc_type_repo.create(

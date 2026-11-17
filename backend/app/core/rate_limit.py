@@ -96,6 +96,9 @@ signup_by_email = AttemptLimiter("signup_email", max_attempts=3, window_seconds=
 signup_by_ip = AttemptLimiter("signup_ip", max_attempts=5, window_seconds=60 * 60)
 # A company's data export reads every file it has: once an hour is plenty for portability.
 export_by_tenant = AttemptLimiter("export_tenant", max_attempts=1, window_seconds=60 * 60)
+# The "test" button of a company's own AI key: each try is a real call from this server with
+# whatever key was typed, so it must not become a way to try stolen keys in bulk.
+ai_check_by_tenant = AttemptLimiter("ai_check_tenant", max_attempts=20, window_seconds=60 * 60)
 # The landing's live demo is open to anyone and each try costs real AI: a few per visitor and a
 # ceiling for everyone, per day, with details the page tells apart (frontend/app/utils/demoFields.ts
 # reads "is full"), claimed with claim(). Each preview render hits Gotenberg.
