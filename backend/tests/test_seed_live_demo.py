@@ -32,6 +32,8 @@ async def test_it_sets_up_the_demo_company_once(
     assert not await can_sign_in(db, account)  # nobody signs in, not even through a password reset
     tenant = await db.get(Tenant, account.tenant_id)
     assert tenant is not None and tenant.plan == "unlimited" and tenant.plan_status == "active"
+    # Visitors try it without a key of their own: the demo runs on the platform's AI.
+    assert tenant.platform_ai is True
     names = {}
     for language, document_type_id in ids.items():
         doc_type = await db.get(DocumentType, document_type_id)
@@ -45,7 +47,10 @@ async def test_it_sets_up_the_demo_company_once(
         assert template is not None and Path(template.file_path).is_file()
     assert names == {"es": "Visita de seguridad y salud", "en": "Site safety inspection"}
 
+    tenant.platform_ai = False  # a company made before platform_ai existed, or switched off by hand
+    await db.commit()
     assert await seed_live_demo(db, EMAIL) == ids  # run again: nothing new
+    assert tenant.platform_ai is True  # the same row the seed loaded, set back on
     await db.commit()
     assert await db.scalar(select(func.count()).select_from(Tenant).where(Tenant.slug == "live-demo")) == 1
     assert await db.scalar(select(func.count()).select_from(DocumentType).where(DocumentType.tenant_id == tenant.id)) == 2

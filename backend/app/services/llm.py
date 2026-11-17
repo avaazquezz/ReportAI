@@ -9,13 +9,15 @@ import json
 from functools import lru_cache
 from typing import Any, NamedTuple, cast
 
+import anthropic
+import openai
 from anthropic import AsyncAnthropic, transform_schema
 from anthropic.types import OutputConfigParam
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from app.core.config import settings
-from app.services.instance_settings import AIConfig, NotConfiguredError, ai_config
+from app.services.instance_settings import AIConfig, NotConfiguredError, ProviderRejectedKeyError
 
 
 class LLMResult(NamedTuple):
@@ -23,16 +25,18 @@ class LLMResult(NamedTuple):
     input_tokens: int
     output_tokens: int
     model: str = ""  # who answered: what the cost is counted against
+    platform_paid: bool = True  # whose key paid for it (AIConfig.platform_paid)
 
 
 # One client per key: a key changed in the panel gets a new client on the next call, and the
-# old one is dropped from the cache.
-@lru_cache(maxsize=4)
+# old one is dropped from the cache. ponytail: 64 keys (companies using the AI at the same time);
+# beyond that clients churn and lose their pooled connections, so size it to the active companies.
+@lru_cache(maxsize=64)
 def _anthropic_client(api_key: str) -> AsyncAnthropic:
     return AsyncAnthropic(api_key=api_key, max_retries=2, timeout=settings.LLM_TIMEOUT_SECONDS)
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=64)
 def _openai_client(api_key: str, base_url: str) -> AsyncOpenAI:
     return AsyncOpenAI(api_key=api_key, base_url=base_url, max_retries=2, timeout=settings.LLM_TIMEOUT_SECONDS)
 
@@ -70,7 +74,9 @@ async def _with_anthropic(
 async def _with_openai_compatible(
     config: AIConfig, system: str, user: str, model_cls: type[BaseModel], tool_name: str
 ) -> LLMResult:
+    options: dict[str, Any] = {"reasoning_effort": config.reasoning_effort} if config.reasoning_effort else {}
     response = await _openai_client(config.api_key, config.base_url).chat.completions.create(
+        **options,
         model=config.model,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         tools=[
@@ -109,19 +115,29 @@ async def structured_completion(
     user: str,
     model_cls: type[BaseModel],
     tool_name: str,
+    config: AIConfig,
     max_tokens: int = 4096,
-    config: AIConfig | None = None,
 ) -> LLMResult:
-    """Ask the model for JSON matching `model_cls`, with the installation's AI settings unless
-    `config` says otherwise (the panel's "test" button tries settings before saving them).
+    """Ask the model for JSON matching `model_cls`. `config` has no default on purpose: the caller
+    says whose AI it is (company_ai for a company's work, the form's values for a "test" button),
+    so no call can fall back to the platform's key by omission.
     Bounded overall: the clients' own timeouts apply per attempt, and with retries a stalled
     provider could otherwise hold a job for minutes."""
-    config = config or await ai_config()
     if not config.configured:
         raise NotConfiguredError(
             "No AI model is configured: add the provider and its API key in the panel (Settings → AI)"
         )
-    async with asyncio.timeout(settings.LLM_TOTAL_TIMEOUT_SECONDS):
-        if config.provider == "anthropic":
-            return await _with_anthropic(config, system, user, model_cls, max_tokens)
-        return await _with_openai_compatible(config, system, user, model_cls, tool_name)
+    try:
+        async with asyncio.timeout(settings.LLM_TOTAL_TIMEOUT_SECONDS):
+            if config.provider == "anthropic":
+                result = await _with_anthropic(config, system, user, model_cls, max_tokens)
+            else:
+                result = await _with_openai_compatible(config, system, user, model_cls, tool_name)
+    except (
+        anthropic.AuthenticationError,
+        anthropic.PermissionDeniedError,
+        openai.AuthenticationError,
+        openai.PermissionDeniedError,
+    ) as exc:
+        raise ProviderRejectedKeyError(f"The AI provider refused the key ({type(exc).__name__})") from exc
+    return result._replace(platform_paid=config.platform_paid)

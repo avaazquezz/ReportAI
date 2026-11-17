@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.database import Base
 from app.core.security import hash_password
 from app.models.audit_event import AuditEvent
+from app.models.company_setting import CompanySetting
 from app.models.document_template import DocumentTemplate
 from app.models.execution_log import ExecutionLog
 from app.models.inbound_message import InboundMessage
@@ -89,6 +90,7 @@ async def _full_company(db: AsyncSession, name: str, root: Path) -> dict[str, An
             InboundMessage(connection_id=ids["connection_id"], external_id=uuid.uuid4().hex),
             PasswordResetToken(tenant_user_id=admin.id, token_hash=uuid.uuid4().hex, expires_at=datetime.now(UTC) + timedelta(hours=1)),
             AuditEvent(tenant_id=tenant_id, actor_id=admin.id, action="auth.login_succeeded"),
+            CompanySetting(tenant_id=tenant_id, key="extraction_api_key", value="sealed", encrypted=True),
         ]
     )
     await db.commit()

@@ -9,6 +9,7 @@ from app.api import auth, capture, health, public_demo, setup, signup
 from app.api.admin import audit as admin_audit
 from app.api.admin import channel_connections as admin_channel_connections
 from app.api.admin import company as admin_company
+from app.api.admin import company_ai as admin_company_ai
 from app.api.admin import dashboard as admin_dashboard
 from app.api.admin import document_types as admin_document_types
 from app.api.admin import instance_settings as admin_instance_settings
@@ -80,6 +81,7 @@ app.include_router(admin_usage.router)
 app.include_router(admin_instance_settings.router)
 app.include_router(admin_team.router)
 app.include_router(admin_company.router)
+app.include_router(admin_company_ai.router)
 app.include_router(admin_template_assistant.router)
 app.include_router(admin_starter_templates.router)
 app.include_router(admin_dashboard.router)

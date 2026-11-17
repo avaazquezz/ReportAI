@@ -1,7 +1,18 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, Numeric, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+    text,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +24,8 @@ class ExecutionLog(Base):
     __table_args__ = (
         Index("ix_execution_logs_tenant_id", "tenant_id"),
         Index("ix_execution_logs_tenant_id_created_at", "tenant_id", "created_at"),
+        # The platform's spend breaker sums today's platform-paid cost on every message.
+        Index("ix_execution_logs_platform_created_at", "created_at", postgresql_where=text("platform_key")),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -32,5 +45,8 @@ class ExecutionLog(Base):
     output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     audio_seconds: Mapped[float | None] = mapped_column(Numeric(10, 3), nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Who paid for the call: the platform's keys (true), or the company's own (false). Defaults to
+    # the platform, so a call nobody labelled counts against the platform's breaker, not past it.
+    platform_key: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     error_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

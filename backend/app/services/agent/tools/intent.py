@@ -6,10 +6,12 @@ to the model, because telling "la fecha era el martes" (correct) from "vale, per
 (confirm) is exactly what rules are bad at."""
 
 import re
+import uuid
 from typing import Literal
 
 from pydantic import BaseModel
 
+from app.services import company_ai
 from app.services.llm import LLMResult, structured_completion
 
 Intent = Literal["confirm", "correct", "cancel", "new_report", "ask"]
@@ -58,14 +60,16 @@ _SYSTEM = (
 )
 
 
-async def classify_reply(text: str) -> tuple[Intent, LLMResult | None]:
-    """Returns the intent and, when the model was asked, its usage (so the cost is logged)."""
+async def classify_reply(text: str, tenant_id: uuid.UUID) -> tuple[Intent, LLMResult | None]:
+    """Returns the intent and, when the model was asked, its usage (so the cost is logged). The
+    model is the company's (company_ai)."""
     quick = quick_intent(text)
     if quick is not None:
         return quick, None
     try:
         result = await structured_completion(
-            system=_SYSTEM, user=text, model_cls=_Classification, tool_name="classify_reply", max_tokens=200
+            system=_SYSTEM, user=text, model_cls=_Classification, tool_name="classify_reply", max_tokens=200,
+            config=await company_ai.extraction_for(tenant_id),
         )
         return _Classification.model_validate(result.data).intent, result
     except Exception:  # noqa: BLE001 — a classifier hiccup must not lose the person's message

@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.core.config import settings
 from app.schemas.document_type import ColumnSpec, ColumnType, FieldSchemaEntry
+from app.services import company_ai
 from app.services.agent.tools.pricing import usage_of
 from app.services.branding import TEMPLATE_VARIABLE, Branding
 from app.services.i18n import LANGUAGE_NAMES, normalize_language
@@ -300,6 +301,7 @@ async def create_draft(
             model_cls=Proposal,
             tool_name="propose_template",
             max_tokens=16_000,
+            config=await company_ai.extraction_for(tenant_id),
         )
         # Logged as soon as it is paid for, before anything below can fail.
         await write_execution_log(

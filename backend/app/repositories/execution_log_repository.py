@@ -39,11 +39,13 @@ class ExecutionLogRepository:
         }
 
     async def total_cost_since(self, since: datetime, *, tenant_id: uuid.UUID | None = None) -> float:
-        """One company's spend (its plan's daily cap), or the whole platform's without tenant_id
-        (the global breaker). ponytail: seq scan on the platform-wide sum, fine at demo scale;
-        index created_at if it ever hurts."""
+        """What the platform paid since `since`: for one company (its plan's daily cap), or for all
+        of them without tenant_id (the global breaker). Calls made with a company's own key are left
+        out: they cost the platform nothing. The platform-wide sum uses a partial index on
+        created_at (platform_key rows only)."""
         query = select(func.coalesce(func.sum(ExecutionLog.cost_usd), 0)).where(
-            ExecutionLog.created_at >= since
+            # The bare column, as in the partial index's WHERE: Postgres doesn't match `IS true` to it.
+            ExecutionLog.created_at >= since, ExecutionLog.platform_key
         )
         if tenant_id is not None:
             query = query.where(ExecutionLog.tenant_id == tenant_id)
