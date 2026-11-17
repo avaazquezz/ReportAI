@@ -29,13 +29,14 @@ class LLMResult(NamedTuple):
 
 
 # One client per key: a key changed in the panel gets a new client on the next call, and the
-# old one is dropped from the cache.
-@lru_cache(maxsize=4)
+# old one is dropped from the cache. ponytail: 64 keys (companies using the AI at the same time);
+# beyond that clients churn and lose their pooled connections, so size it to the active companies.
+@lru_cache(maxsize=64)
 def _anthropic_client(api_key: str) -> AsyncAnthropic:
     return AsyncAnthropic(api_key=api_key, max_retries=2, timeout=settings.LLM_TIMEOUT_SECONDS)
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=64)
 def _openai_client(api_key: str, base_url: str) -> AsyncOpenAI:
     return AsyncOpenAI(api_key=api_key, base_url=base_url, max_retries=2, timeout=settings.LLM_TIMEOUT_SECONDS)
 
@@ -73,7 +74,7 @@ async def _with_anthropic(
 async def _with_openai_compatible(
     config: AIConfig, system: str, user: str, model_cls: type[BaseModel], tool_name: str
 ) -> LLMResult:
-    options: dict[str, Any] = {"reasoning_effort": config.effort} if config.effort else {}
+    options: dict[str, Any] = {"reasoning_effort": config.reasoning_effort} if config.reasoning_effort else {}
     response = await _openai_client(config.api_key, config.base_url).chat.completions.create(
         **options,
         model=config.model,

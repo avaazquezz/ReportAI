@@ -23,7 +23,7 @@ from app.schemas.document_type import DocumentTypeResponse
 from app.services import plans
 from app.services.branding import Branding
 from app.services.i18n import t
-from app.services.instance_settings import NotConfiguredError
+from app.services.instance_settings import NotConfiguredError, ProviderRejectedKeyError
 from app.services.rendering.gotenberg_client import convert_docx_to_pdf
 from app.services.templates import assistant
 from app.services.templates.assistant import ApplyRequest, Draft, PlanError, Proposal
@@ -82,6 +82,10 @@ async def analyze_example(
         )
     except (PlanError, NotConfiguredError) as exc:
         raise ValidationException(str(exc)) from exc
+    except ProviderRejectedKeyError as exc:
+        raise ValidationException(
+            "The AI provider refused your company's key: check it in Settings → AI and voice"
+        ) from exc
 
 
 @router.post("/{document_type_id}/template-assistant/{draft_id}/preview")

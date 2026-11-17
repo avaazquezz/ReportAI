@@ -82,7 +82,9 @@ async def message_refusal(db: AsyncSession, tenant: Tenant | None, *, voice: boo
     Checked for every message, replies to a paused report included: they cost AI too."""
     if tenant is None or not tenant.is_active:
         return "tenant_suspended"
-    if settings.DAILY_SPEND_CAP_USD > 0:  # platform-wide breaker, whatever the plan
+    # The platform-wide breaker, whatever the plan: only for companies on the platform's AI. A
+    # company paying its own AI costs the platform nothing, so the platform's budget never stops it.
+    if settings.DAILY_SPEND_CAP_USD > 0 and not company_ai.uses_own_keys(tenant):
         spent = await ExecutionLogRepository(db).total_cost_since(_midnight_utc())
         if spent >= settings.DAILY_SPEND_CAP_USD:
             return "spend_capped"

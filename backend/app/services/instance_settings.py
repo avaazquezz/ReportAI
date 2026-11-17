@@ -27,12 +27,14 @@ class AIConfig:
     model: str
     api_key: str
     base_url: str
-    # Anthropic: output_config's effort. OpenAI-compatible: reasoning_effort, sent only when set
-    # (a provider from ai_providers that needs it; other compatible servers may refuse the field).
-    effort: str
+    effort: str  # Anthropic's output_config effort; nothing else reads it
     # Whose key it is: the platform's (or the installation's own), or a company's on the hosted
     # service. The platform's spend breaker counts only the first.
     platform_paid: bool = True
+    # Sent as reasoning_effort on an OpenAI-compatible call. Set only from ai_providers' list (OpenAI
+    # needs "none" for a forced function call); never from the environment or an installation's
+    # settings, so a self-hosted compatible server never receives a field it may refuse.
+    reasoning_effort: str = ""
 
     @property
     def configured(self) -> bool:

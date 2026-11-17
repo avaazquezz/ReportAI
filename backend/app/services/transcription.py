@@ -35,7 +35,7 @@ def audio_suffix(media_reference: str) -> str:
     return suffix if suffix in AUDIO_TYPES else ".ogg"
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=64)
 def _client(api_key: str, base_url: str) -> AsyncOpenAI:
     return AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=settings.LLM_TIMEOUT_SECONDS)
 
