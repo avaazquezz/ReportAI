@@ -73,7 +73,9 @@ async def _with_anthropic(
 async def _with_openai_compatible(
     config: AIConfig, system: str, user: str, model_cls: type[BaseModel], tool_name: str
 ) -> LLMResult:
+    options: dict[str, Any] = {"reasoning_effort": config.effort} if config.effort else {}
     response = await _openai_client(config.api_key, config.base_url).chat.completions.create(
+        **options,
         model=config.model,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         tools=[
