@@ -13,6 +13,7 @@ import signal
 import socket
 from datetime import UTC, datetime, timedelta
 
+import httpx
 from sqlalchemy import delete, text, update
 
 from app.core import rate_limit
@@ -32,12 +33,15 @@ from app.services.channels.telegram_updates import (
 )
 from app.services.jobs.queue import claim_next, fail_abandoned
 from app.services.jobs.runner import give_up, process
+from app.services.observability.heartbeat import LoopProgress, run_heartbeat
 from app.services.templates.assistant import drop_expired_drafts
 
 logger = logging.getLogger(__name__)
 
 _IDLE_POLL_SECONDS = 2.0
 _MAINTENANCE_EVERY = timedelta(minutes=10)
+# On top of the longest a job may take: a round that also runs maintenance is not a hang.
+_HEARTBEAT_MARGIN_SECONDS = 300
 
 
 async def cancel_abandoned_reports() -> int:
@@ -164,9 +168,25 @@ async def main() -> None:
         telegram = asyncio.create_task(run_pollers(stopping))
     else:
         telegram = asyncio.create_task(register_all_webhooks())
+    progress = LoopProgress()
+    heartbeat_client: httpx.AsyncClient | None = None
+    heartbeat = None
+    if settings.WORKER_HEARTBEAT_URL:
+        heartbeat_client = httpx.AsyncClient()
+        heartbeat = asyncio.create_task(
+            run_heartbeat(
+                heartbeat_client,
+                settings.WORKER_HEARTBEAT_URL,
+                progress,
+                stopping,
+                every=settings.WORKER_HEARTBEAT_SECONDS,
+                stuck_after=settings.JOB_TIMEOUT_SECONDS + _HEARTBEAT_MARGIN_SECONDS,
+            )
+        )
     last_maintenance = datetime.min.replace(tzinfo=UTC)
     try:
         while not stopping.is_set():
+            progress.mark()
             if datetime.now(UTC) - last_maintenance > _MAINTENANCE_EVERY:
                 try:
                     await maintenance()
@@ -186,6 +206,10 @@ async def main() -> None:
         stopping.set()
         with contextlib.suppress(Exception):
             await telegram
+        if heartbeat is not None:
+            await heartbeat
+        if heartbeat_client is not None:
+            await heartbeat_client.aclose()
         await close_checkpointer()
         logger.info("Worker %s stopped", worker_id)
 

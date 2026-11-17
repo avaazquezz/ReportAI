@@ -21,11 +21,14 @@ def _no_real_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_printing_the_settings_never_shows_a_secret() -> None:
-    settings = Settings(_env_file=None, **_GIVEN, ANTHROPIC_API_KEY=_KEY, SENTRY_DSN="https://abc@o1.ingest.sentry.io/2")  # type: ignore[call-arg]
+    settings = Settings(  # type: ignore[call-arg]
+        _env_file=None, **_GIVEN, ANTHROPIC_API_KEY=_KEY, SENTRY_DSN="https://abc@o1.ingest.sentry.io/2",
+        WORKER_HEARTBEAT_URL="https://hc-ping.example/heartbeat-check-id",
+    )
 
     shown = repr(settings) + str(settings)
 
-    for secret in (_KEY, "pg-not-a-real-password", "jwt-not-a-real-secret", "abc@o1"):
+    for secret in (_KEY, "pg-not-a-real-password", "jwt-not-a-real-secret", "abc@o1", "heartbeat-check-id"):
         assert secret not in shown
     assert "ANTHROPIC_API_KEY='**********'" in shown
     assert "POSTGRES_USER='reportai'" in shown and "ACCESS_TOKEN_EXPIRE_MINUTES=60" in shown  # the rest stays readable
@@ -39,3 +42,14 @@ def test_a_refused_configuration_does_not_echo_what_it_was_given() -> None:
     assert "SIGNUP_ENABLED=true needs SINGLE_TENANT=false" in str(refused.value)
     # Pydantic shortens a long input from its middle: whatever sits at either end would show.
     assert "input_value" not in str(refused.value)
+
+
+@pytest.mark.parametrize("url", ["hc-ping.com/abc", "ftp://hc-ping.com/abc", "https://"])
+def test_a_heartbeat_url_that_is_not_a_web_address_refuses_to_start(url: str) -> None:
+    with pytest.raises(ValidationError, match="WORKER_HEARTBEAT_URL must be an http"):
+        Settings(_env_file=None, **_GIVEN, WORKER_HEARTBEAT_URL=url)  # type: ignore[call-arg]
+
+
+def test_a_heartbeat_more_often_than_every_ten_seconds_is_refused() -> None:
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, **_GIVEN, WORKER_HEARTBEAT_SECONDS=1)  # type: ignore[call-arg]

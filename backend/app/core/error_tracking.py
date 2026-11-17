@@ -20,9 +20,12 @@ _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 
 
 def scrub(value: Any) -> Any:
-    """Bot tokens and email addresses out of every string of an event or breadcrumb, whichever
-    field they ended up in (message, log params, exception value, breadcrumb URL...)."""
+    """Bot tokens, email addresses and the heartbeat URL out of every string of an event or
+    breadcrumb, whichever field they ended up in (message, log params, exception value, breadcrumb
+    URL...)."""
     if isinstance(value, str):
+        if settings.WORKER_HEARTBEAT_URL:  # an httpx breadcrumb of the worker's heartbeat
+            value = value.replace(settings.WORKER_HEARTBEAT_URL, "<heartbeat-url>")
         return _EMAIL.sub("<email>", _BOT_TOKEN.sub("bot<token>", value))
     if isinstance(value, dict):
         return {key: scrub(item) for key, item in value.items()}
