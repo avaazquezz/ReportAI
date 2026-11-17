@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import require_tenant_member
+from app.core.deps import TECHNICIAN, require_tenant_member
 from app.core.scoping import require_tenant_id
 from app.models.channel_connection import ChannelConnection
 from app.models.delivery import Delivery
@@ -53,6 +53,7 @@ class Checklist(BaseModel):
     email: bool
     channel: bool
     senders: bool
+    team: bool
     document_type: bool
     first_report: bool
 
@@ -108,6 +109,8 @@ async def _checklist(db: AsyncSession, tenant_id: uuid.UUID) -> Checklist:
         email=instance_settings.smtp_from(stored).configured,
         channel=await any_of(*channel),
         senders=settings.ALLOW_ANY_SENDER or await any_of(*channel, func.cardinality(ChannelConnection.allowed_senders) > 0),
+        # Someone who reports from the field app.
+        team=await any_of(TenantUser.tenant_id == tenant_id, TenantUser.role == TECHNICIAN, TenantUser.is_active.is_(True)),
         document_type=await any_of(
             DocumentTemplate.tenant_id == tenant_id,
             DocumentTemplate.is_active.is_(True),
