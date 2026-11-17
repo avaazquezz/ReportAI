@@ -6,6 +6,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import get_args
+from unittest.mock import AsyncMock
 
 import anthropic
 import httpx
@@ -16,6 +17,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.admin import company_ai as company_ai_api
+from app.api.admin import template_assistant as template_assistant_api
 from app.core.config import settings
 from app.core.security import create_access_token, hash_password
 from app.models.audit_event import AuditEvent
@@ -23,16 +25,28 @@ from app.models.company_setting import CompanySetting
 from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
 from app.models.execution_log import ExecutionLog
+from app.models.report import Report
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.repositories.execution_log_repository import ExecutionLogRepository
 from app.schemas.company_ai import ExtractionProviderId, TranscriptionProviderId
-from app.services import company_ai, data_lifecycle, export, llm, plans
-from app.services.agent.state import ToolUsage
-from app.services.agent.tools.pricing import usage_of
+from app.services import (
+    company_ai,
+    data_lifecycle,
+    export,
+    instance_settings,
+    llm,
+    plans,
+    transcription,
+)
+from app.services.agent.nodes.extract import extract_node
+from app.services.agent.state import AgentState, ToolUsage
+from app.services.agent.tools.pricing import transcription_usage, usage_of
 from app.services.ai_providers import EXTRACTION_PROVIDERS, TRANSCRIPTION_PROVIDERS
 from app.services.instance_settings import AIConfig, ProviderRejectedKeyError
+from app.services.jobs import runner
 from app.services.jobs.errors import PermanentJobError
+from app.services.jobs.queue import ClaimedJob
 from app.services.observability.execution_log import write_execution_log
 from app.services.settings_checks import CheckFailed, check_ai
 
@@ -113,7 +127,7 @@ async def test_a_companys_own_key_is_stored_encrypted_and_paid_by_the_company(
 
     assert config == AIConfig(
         provider="openai_compatible", model="gpt-6.1-terra", api_key="sk-proj-company-openai-key",
-        base_url="https://api.openai.com/v1", effort="none", platform_paid=False,
+        base_url="https://api.openai.com/v1", effort="", platform_paid=False, reasoning_effort="none",
     )
     raw = await db.scalar(text("SELECT value FROM company_settings WHERE key = 'extraction_api_key'"))
     assert raw and "company-openai-key" not in raw
@@ -409,9 +423,125 @@ async def test_reasoning_effort_goes_only_to_the_provider_that_needs_it(monkeypa
         ok: bool
 
     openai_config = company_ai.extraction_from({"extraction_provider": "openai", "extraction_api_key": "sk-proj-" + "x" * 8})
-    # A self-hosted OpenAI-compatible server may refuse a field it doesn't know.
-    other = AIConfig(provider="openai_compatible", model="local", api_key="k", base_url="http://ollama:11434/v1", effort="")
+    # An installation configured from its .env, effort included: a self-hosted OpenAI-compatible
+    # server may refuse a field it doesn't know.
+    monkeypatch.setattr(settings, "EXTRACTION_PROVIDER", "openai_compatible")
+    monkeypatch.setattr(settings, "EXTRACTION_BASE_URL", "http://ollama:11434/v1")
+    monkeypatch.setattr(settings, "EXTRACTION_API_KEY", "local-key")
+    monkeypatch.setattr(settings, "EXTRACTION_EFFORT", "low")
+    other = instance_settings.ai_from({})
     for config in (openai_config, other):
         await llm.structured_completion(system="s", user="u", model_cls=Ping, tool_name="t", config=config)
 
     assert sent[0]["reasoning_effort"] == "none" and "reasoning_effort" not in sent[1]
+
+
+# ── The invariants end to end: whose key a real call uses, who pays, what the sender hears ─
+
+
+def _anthropic_answer(used: list[str], data: str = '{"fields": {"summary": "todo bien"}, "evidence": {}}') -> object:
+    def client(api_key: str) -> SimpleNamespace:
+        used.append(api_key)
+
+        async def create(**_: object) -> SimpleNamespace:
+            return SimpleNamespace(
+                content=[SimpleNamespace(type="text", text=data)], stop_reason="end_turn",
+                usage=SimpleNamespace(input_tokens=1000, output_tokens=100),
+            )
+
+        return SimpleNamespace(messages=SimpleNamespace(create=create))
+
+    return client
+
+
+async def test_a_companys_report_runs_on_its_own_key_and_is_logged_as_its_own(
+    db: AsyncSession, own_ai_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tenant = await _company(db)
+    await company_ai.save(db, tenant.id, {"extraction_provider": "anthropic", "extraction_api_key": "sk-ant-company-run-key"})
+    report = Report(tenant_id=tenant.id, status="pending", requester_channel="web", requester_identifier="tecnica")
+    db.add(report)
+    await db.commit()
+    used: list[str] = []
+    monkeypatch.setattr(llm, "_anthropic_client", _anthropic_answer(used))
+    state = AgentState(
+        thread_id=str(report.id), tenant_id=tenant.id, channel_connection_id=uuid.uuid4(), channel_type="web",
+        sender_id="tecnica", report_id=report.id, raw_payload={}, incoming_text="Visita: todo bien",
+        document_type_name="Visita", field_schema={"summary": {"type": "str", "description": "Resumen", "required": True}},
+    )
+
+    await extract_node(state)
+
+    assert used == ["sk-ant-company-run-key"]
+    log = await db.scalar(select(ExecutionLog).where(ExecutionLog.report_id == report.id, ExecutionLog.step == "extract"))
+    assert log is not None and log.platform_key is False and float(log.cost_usd or 0) > 0
+
+
+async def test_a_transcription_says_whose_key_paid_for_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def create(**_: object) -> SimpleNamespace:
+        return SimpleNamespace(text="hola", duration=12.0)
+
+    client = SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create)))
+    monkeypatch.setattr(transcription, "_client", lambda *_: client)
+    own = company_ai.transcription_from({"transcription_provider": "groq", "transcription_api_key": "gsk_" + "x" * 10})
+
+    result = await transcription.transcribe(b"opus", "a.ogg", "es", config=own)
+
+    assert result.platform_paid is False and transcription_usage(result).platform_key is False
+
+
+async def test_a_refused_key_is_not_retried_and_tells_the_sender_why(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def refused(job: ClaimedJob) -> None:
+        raise ProviderRejectedKeyError("The AI provider refused the key (AuthenticationError)")
+
+    retried: list[bool] = []
+    told: list[str] = []
+
+    async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryable: bool) -> bool:
+        retried.append(retryable)
+        return False
+
+    monkeypatch.setattr(runner, "execute", refused)
+    monkeypatch.setattr(runner, "fail_or_retry", fail_or_retry)
+    monkeypatch.setattr(runner, "give_up", AsyncMock(side_effect=lambda report_id, error, reason="failure": told.append(reason)))
+    monkeypatch.setattr(runner, "extend_lease", AsyncMock(return_value=True))
+
+    await runner.process(ClaimedJob(uuid.uuid4(), uuid.uuid4(), "run", {}, 1, 3), "worker-1")
+
+    assert retried == [False] and told == ["ai_key_rejected"]
+
+
+async def test_the_platforms_budget_stops_only_the_companies_it_pays_for(
+    db: AsyncSession, own_ai_keys: None, own_sessions: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    on_platform = await _company(db, platform_ai=True)
+    own = await _company(db, name="Own")
+    await write_execution_log(
+        tenant_id=on_platform.id, report_id=None, step="extract", status="success",
+        usage=ToolUsage(model_used="claude-sonnet-5", cost_usd=5.0),
+    )
+    monkeypatch.setattr(settings, "DAILY_SPEND_CAP_USD", 3.0)
+
+    assert await plans.message_refusal(db, on_platform, voice=False) == "spend_capped"
+    assert await plans.message_refusal(db, own, voice=False) is None
+
+
+async def test_the_template_assistant_says_the_key_was_refused_instead_of_failing(
+    client: AsyncClient, db: AsyncSession, own_ai_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tenant, headers = await _admin(client, db)
+    await client.put("/company/ai", json=OWN, headers=headers)
+    doc_type = DocumentType(tenant_id=tenant.id, name="Parte", field_schema={}, is_active=True)
+    db.add(doc_type)
+    await db.commit()
+
+    async def refused(**_: object) -> None:
+        raise ProviderRejectedKeyError("refused")
+
+    monkeypatch.setattr(template_assistant_api.assistant, "create_draft", refused)
+    response = await client.post(
+        f"/document-types/{doc_type.id}/template-assistant", headers=headers,
+        files={"file": ("parte.docx", b"PK-not-really", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+    )
+
+    assert response.status_code == 400 and "refused your company's key" in response.json()["detail"]

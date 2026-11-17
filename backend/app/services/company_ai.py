@@ -63,8 +63,9 @@ def extraction_from(stored: dict[str, str]) -> AIConfig:
         model=stored.get("extraction_model") or provider.default_model,
         api_key=stored.get("extraction_api_key", ""),
         base_url=provider.base_url,
-        effort=stored.get("extraction_effort", "") if provider.kind == "anthropic" else provider.reasoning_effort,
+        effort=stored.get("extraction_effort", "") if provider.kind == "anthropic" else "",
         platform_paid=False,
+        reasoning_effort=provider.reasoning_effort,
     )
 
 

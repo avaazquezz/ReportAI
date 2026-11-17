@@ -44,7 +44,8 @@ class ExecutionLogRepository:
         out: they cost the platform nothing. The platform-wide sum uses a partial index on
         created_at (platform_key rows only)."""
         query = select(func.coalesce(func.sum(ExecutionLog.cost_usd), 0)).where(
-            ExecutionLog.created_at >= since, ExecutionLog.platform_key.is_(True)
+            # The bare column, as in the partial index's WHERE: Postgres doesn't match `IS true` to it.
+            ExecutionLog.created_at >= since, ExecutionLog.platform_key
         )
         if tenant_id is not None:
             query = query.where(ExecutionLog.tenant_id == tenant_id)

@@ -36,6 +36,15 @@ def _installation_ai(monkeypatch: pytest.MonkeyPatch) -> None:
     # The eval grades the model this checkout is configured with (EXTRACTION_* or the panel's
     # settings), not a company's own: no company stands behind these made-up reports.
     async def installation(_tenant_id: uuid.UUID) -> instance_settings.AIConfig:
+        # EVAL_COMPANY_PROVIDER=openai (with EVAL_COMPANY_API_KEY, optional EVAL_COMPANY_MODEL) grades
+        # a provider of the hosted service's list, called exactly as a company's own key would be:
+        # how a provider earns `validated` in services/ai_providers.py.
+        if provider := os.environ.get("EVAL_COMPANY_PROVIDER"):
+            return company_ai.extraction_from({
+                "extraction_provider": provider,
+                "extraction_model": os.environ.get("EVAL_COMPANY_MODEL", ""),
+                "extraction_api_key": os.environ["EVAL_COMPANY_API_KEY"],
+            })
         return await instance_settings.ai_config()
 
     monkeypatch.setattr(company_ai, "extraction_for", installation)
