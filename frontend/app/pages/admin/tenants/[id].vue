@@ -7,19 +7,24 @@ const { t } = useI18n()
 const { formatDate } = useLocaleDate()
 const route = useRoute()
 const tenantId = String(route.params.id)
-const { getById, resendInvite, setActive, setPlan } = useTenants()
+const { getById, resendInvite, setActive, setPlan, setPlatformAi } = useTenants()
 const { show } = useSnackbar()
 
 const tenant = ref<Tenant | null>(null)
 const loading = ref(true)
 const error = ref('')
 const sendingInvite = ref(false)
+// The switch keeps its own value: bound straight to the tenant, a refused change would leave the
+// native checkbox flipped while the switch shows the old value, and the next click would do nothing.
+const platformAi = ref(false)
+const savingPlatformAi = ref(false)
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
     tenant.value = await getById(tenantId)
+    platformAi.value = tenant.value.platform_ai
   } catch {
     error.value = t('admin.tenants.errors.load')
   } finally {
@@ -69,6 +74,20 @@ async function onPlanChange(change: { plan?: PlanKey; plan_status?: PlanStatus }
   }
 }
 
+async function onPlatformAiChange(value: boolean | null) {
+  if (!tenant.value) return
+  savingPlatformAi.value = true
+  try {
+    tenant.value = await setPlatformAi(tenant.value.id, Boolean(value))
+    show(t(tenant.value.platform_ai ? 'admin.tenants.platformAi.toastOn' : 'admin.tenants.platformAi.toastOff'), 'success')
+  } catch {
+    platformAi.value = tenant.value.platform_ai
+    show(t('admin.tenants.platformAi.errors.save'), 'error')
+  } finally {
+    savingPlatformAi.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -113,6 +132,17 @@ onMounted(load)
         <p v-if="tenant.plan_period_end" class="mt-2 font-body text-sm text-ink-900/70">
           {{ t('admin.plan.periodEnd', { date: formatDate(tenant.plan_period_end) }) }}
         </p>
+        <v-switch
+          v-model="platformAi"
+          class="mt-4 max-w-xl"
+          color="primary"
+          :label="t('admin.tenants.platformAi.label')"
+          :hint="t('admin.tenants.platformAi.hint')"
+          persistent-hint
+          :loading="savingPlatformAi"
+          :disabled="savingPlatformAi"
+          @update:model-value="onPlatformAiChange"
+        />
       </v-card-text>
       <v-card-actions>
         <v-btn variant="text" :loading="sendingInvite" @click="onResendInvite">{{ t('admin.tenants.detail.resendInvite') }}</v-btn>

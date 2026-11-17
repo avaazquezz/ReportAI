@@ -47,5 +47,8 @@ export function useRole() {
   const isInstanceAdmin = computed(() =>
     status.value?.single_tenant ? role.value === 'tenant_admin' : role.value === 'super_admin'
   )
-  return { role, isAdmin, isSuperAdmin, isMember, isTechnician, canApprove, canCapture, isInstanceAdmin }
+  // Enters the company's own AI provider and key (/company/ai): its admin, on the hosted service
+  // only. On a one-company installation the AI is the installation's, under isInstanceAdmin.
+  const setsCompanyAi = computed(() => isAdmin.value && status.value?.single_tenant === false)
+  return { role, isAdmin, isSuperAdmin, isMember, isTechnician, canApprove, canCapture, isInstanceAdmin, setsCompanyAi }
 }

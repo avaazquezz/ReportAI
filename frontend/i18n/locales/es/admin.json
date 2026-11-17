@@ -231,6 +231,15 @@
         "created": "Creada: {date}",
         "resendInvite": "Reenviar invitación"
       },
+      "platformAi": {
+        "label": "Usar la IA de la plataforma",
+        "hint": "Sus informes usan las claves de ReportAI en vez de las suyas: para la demo en vivo o una empresa a la que se le está enseñando el producto.",
+        "toastOn": "La empresa usa ahora la IA de la plataforma.",
+        "toastOff": "La empresa vuelve a usar su propia IA.",
+        "errors": {
+          "save": "No se pudo cambiar la IA de la empresa."
+        }
+      },
       "errors": {
         "list": "No se pudieron cargar las empresas.",
         "create": "No se pudo crear la empresa. Revisa que el slug no esté en uso.",
@@ -503,6 +512,15 @@
           "load": "No se pudieron cargar los ajustes de IA."
         }
       },
+      "companyAi": {
+        "intro": "Tu empresa usa su propia cuenta de IA: cada informe cuesta unos céntimos, que el proveedor cobra directamente en esa cuenta. La clave se guarda cifrada y no se vuelve a mostrar.",
+        "platform": "ReportAI pone la IA de tu empresa: no hay nada que configurar.",
+        "extractionHelp": "El modelo que entiende lo que dice cada persona y rellena los campos del informe.",
+        "notValidated": "ReportAI aún no lo ha probado con su batería de pruebas de extracción: revisa con calma los primeros informes.",
+        "voiceHelp": "El servicio que pasa a texto las notas de voz. Sin él, solo se aceptan mensajes de texto.",
+        "voiceEnable": "Aceptar notas de voz",
+        "tooManyChecks": "Has hecho muchas pruebas en la última hora. Espera un rato y vuelve a probar."
+      },
       "email": {
         "noEncryption": "Sin cifrar (solo en red local)",
         "help": "El servidor por el que salen los informes por email, las invitaciones y los cambios de contraseña.",
@@ -719,7 +737,8 @@
           "logo_removed": "Quitó el logo",
           "exported": "Exportó los datos de la empresa",
           "deletion_requested": "Pidió borrar la empresa",
-          "deletion_cancelled": "Anuló el borrado de la empresa"
+          "deletion_cancelled": "Anuló el borrado de la empresa",
+          "ai_updated": "Cambió la IA de la empresa"
         },
         "instance": {
           "ai_updated": "Cambió los ajustes de IA",
@@ -738,7 +757,8 @@
         "tenant": {
           "created": "Dio de alta la empresa",
           "updated": "Suspendió o reactivó la empresa",
-          "purged": "Se purgaron todos los datos de una empresa"
+          "purged": "Se purgaron todos los datos de una empresa",
+          "platform_ai_changed": "Cambió si la empresa usa la IA de la plataforma"
         },
         "plan": {
           "changed": "Cambió el plan"
