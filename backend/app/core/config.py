@@ -3,12 +3,13 @@ import uuid
 from collections.abc import Iterator
 from typing import Any, Literal
 
-from pydantic import computed_field, model_validator
+from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# A setting is a secret when its name says so; DATABASE_URL carries the database password. Matched
-# by name, so a new *_API_KEY or *_TOKEN is covered the day it is added.
-_SECRET_NAME = re.compile(r"KEY|SECRET|PASSWORD|TOKEN|DSN|DATABASE_URL")
+# A setting is a secret when its name says so; DATABASE_URL carries the database password and a
+# heartbeat URL is enough to fake a healthy worker. Matched by name, so a new *_API_KEY or *_TOKEN
+# is covered the day it is added.
+_SECRET_NAME = re.compile(r"KEY|SECRET|PASSWORD|TOKEN|DSN|DATABASE_URL|HEARTBEAT_URL")
 
 
 class Settings(BaseSettings):
@@ -62,6 +63,13 @@ class Settings(BaseSettings):
     #    tokens or email addresses. Empty = off, so an installation sends nothing unless its
     #    administrator sets one. ─────────────────────────────────────────────────────────────
     SENTRY_DSN: str = ""
+
+    # ── Worker heartbeat: while the worker's loop keeps turning it requests this URL every
+    #    WORKER_HEARTBEAT_SECONDS, and the monitoring service it belongs to (healthchecks.io,
+    #    Uptime Kuma's push monitor…) alerts when the requests stop. The API's /health can't tell
+    #    a dead worker apart. Empty = off: nothing is sent anywhere. ─────────────────────────
+    WORKER_HEARTBEAT_URL: str = ""
+    WORKER_HEARTBEAT_SECONDS: int = Field(default=60, ge=10)
 
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
@@ -171,6 +179,13 @@ class Settings(BaseSettings):
     def _signup_needs_several_companies(self) -> "Settings":
         if self.SIGNUP_ENABLED and self.SINGLE_TENANT:
             raise ValueError("SIGNUP_ENABLED=true needs SINGLE_TENANT=false: a one-company installation has no signup")
+        return self
+
+    @model_validator(mode="after")
+    def _heartbeat_is_a_web_address(self) -> "Settings":
+        # A typo here would only show as an alert that never stops: refuse to start instead.
+        if self.WORKER_HEARTBEAT_URL and not re.match(r"https?://[^/\s]+", self.WORKER_HEARTBEAT_URL):
+            raise ValueError("WORKER_HEARTBEAT_URL must be an http(s) address")
         return self
 
     @model_validator(mode="after")

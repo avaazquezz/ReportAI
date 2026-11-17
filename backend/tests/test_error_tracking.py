@@ -10,6 +10,13 @@ from app.core.logging import log_context
 _BOT_URL = "https://api.telegram.org/bot123456:AAH-x_9zQ/sendMessage"
 
 
+def test_scrub_removes_the_worker_heartbeat_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "WORKER_HEARTBEAT_URL", "https://hc-ping.example/check-id-123")
+    crumb = {"category": "httplib", "data": {"url": "https://hc-ping.example/check-id-123", "method": "GET"}}
+
+    assert scrub(crumb) == {"category": "httplib", "data": {"url": "<heartbeat-url>", "method": "GET"}}
+
+
 def test_scrub_removes_bot_tokens_and_emails_and_keeps_the_rest() -> None:
     event = {
         "level": "error",
