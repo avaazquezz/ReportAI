@@ -19,6 +19,12 @@ _PRICING_PER_MILLION_TOKENS: dict[str, tuple[float, float]] = {
     "claude-sonnet-5": (2.0, 10.0),
     "claude-sonnet-4-6": (3.0, 15.0),
     "claude-haiku-4-5": (1.0, 5.0),
+    # OpenAI's list prices (developers.openai.com/api/docs/models, 2026-11-17), for companies that
+    # bring an OpenAI key: their usage page shows what they spent.
+    "gpt-6-astra": (10.0, 50.0),
+    "gpt-6.1-sol": (2.0, 10.0),
+    "gpt-6.1-terra": (1.0, 5.0),
+    "gpt-6-luna": (0.1, 0.5),
 }
 
 
@@ -55,6 +61,7 @@ def usage_of(result: LLMResult) -> ToolUsage:
         input_tokens=result.input_tokens,
         output_tokens=result.output_tokens,
         cost_usd=estimate_cost_usd(result.model, result.input_tokens, result.output_tokens),
+        platform_key=result.platform_paid,
     )
 
 
@@ -63,6 +70,7 @@ def transcription_usage(transcript: Transcript) -> ToolUsage:
         model_used=transcript.model,
         audio_seconds=transcript.seconds,
         cost_usd=estimate_transcription_cost_usd(transcript.model, transcript.seconds),
+        platform_key=transcript.platform_paid,
     )
 
 

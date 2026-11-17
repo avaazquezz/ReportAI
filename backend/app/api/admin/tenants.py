@@ -100,7 +100,7 @@ async def update_tenant(
     tenant = await repo.get_by_id(tenant_id)
     if tenant is None:
         raise ResourceNotFoundException()
-    was_active, old_plan, old_status = tenant.is_active, tenant.plan, tenant.plan_status
+    was_active, old_plan, old_status, old_ai = tenant.is_active, tenant.plan, tenant.plan_status, tenant.platform_ai
     if payload.is_active is not None:
         tenant.is_active = payload.is_active
     cancelled_deletion = tenant.is_active and tenant.deletion_requested_at is not None
@@ -110,6 +110,8 @@ async def update_tenant(
         plans.start_plan(tenant, payload.plan, payload.plan_status or "active")
     elif payload.plan_status is not None:
         tenant.plan_status = payload.plan_status
+    if payload.platform_ai is not None:
+        tenant.platform_ai = payload.platform_ai
     # One event per concern: suspending or reactivating the company, and its plan.
     if tenant.is_active != was_active:
         await audit.record(
@@ -124,6 +126,12 @@ async def update_tenant(
         await audit.record(
             db, "plan.changed", actor=current_user, tenant_id=tenant.id, target=tenant.id, request=request,
             plan={"from": old_plan, "to": tenant.plan}, plan_status={"from": old_status, "to": tenant.plan_status},
+        )
+    if tenant.platform_ai != old_ai:
+        # Who pays for the company's AI from now on: the platform, or the company's own key.
+        await audit.record(
+            db, "tenant.platform_ai_changed", actor=current_user, tenant_id=tenant.id, target=tenant.id,
+            request=request, platform_ai={"from": old_ai, "to": tenant.platform_ai},
         )
     await db.flush()
     await db.refresh(tenant)

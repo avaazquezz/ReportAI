@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.repositories.execution_log_repository import ExecutionLogRepository
-from app.services import instance_settings
+from app.services import company_ai
 
 TRIAL_DAYS = 14
 STATUSES = ("trialing", "active", "past_due", "canceled")
@@ -96,14 +96,14 @@ async def message_refusal(db: AsyncSession, tenant: Tenant | None, *, voice: boo
             spent = await ExecutionLogRepository(db).total_cost_since(_midnight_utc(), tenant_id=tenant.id)
             if spent >= cap:
                 return "spend_capped"
-    if voice and not instance_settings.transcription_from(await instance_settings.load(db)).configured:
+    if voice and not (await company_ai.transcription_config(db, tenant)).configured:
         return "voice_not_configured"
     return None
 
 
 async def new_report_refusal(db: AsyncSession, tenant: Tenant) -> str | None:
     """On top of message_refusal, for a message that would start a new report."""
-    if not instance_settings.ai_from(await instance_settings.load(db)).configured:
+    if not (await company_ai.extraction_config(db, tenant)).configured:
         return "not_configured"
     quota = None if settings.SINGLE_TENANT else plan_of(tenant).monthly_reports
     # ponytail: count-then-create, so two senders at once can overshoot the quota by one or two;

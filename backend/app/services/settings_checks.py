@@ -11,6 +11,7 @@ from app.core.logging import describe_exception
 from app.services.instance_settings import (
     AIConfig,
     NotConfiguredError,
+    ProviderRejectedKeyError,
     SMTPConfig,
     TranscriptionConfig,
 )
@@ -44,6 +45,8 @@ def _failure(exc: BaseException) -> CheckFailed:
     """What went wrong, from either SDK (Anthropic, OpenAI-compatible) or the mail server."""
     if isinstance(exc, NotConfiguredError):
         return CheckFailed("not_configured", str(exc))
+    if isinstance(exc, ProviderRejectedKeyError) and exc.__cause__ is not None:
+        return CheckFailed("auth", _provider_message(exc.__cause__) or describe_exception(exc.__cause__))
     name = type(exc).__name__
     status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
     detail = _provider_message(exc) or describe_exception(exc)

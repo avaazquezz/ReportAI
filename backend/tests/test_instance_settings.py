@@ -91,7 +91,9 @@ async def test_a_key_saved_in_the_panel_wins_over_the_environment(
     class Ping(BaseModel):
         ok: bool
 
-    result = await llm.structured_completion(system="s", user="u", model_cls=Ping, tool_name="t")
+    result = await llm.structured_completion(
+        system="s", user="u", model_cls=Ping, tool_name="t", config=await instance_settings.ai_config()
+    )
 
     assert used_keys == ["sk-ant-api03-secret-1234"] and result.model == "claude-sonnet-5"
 

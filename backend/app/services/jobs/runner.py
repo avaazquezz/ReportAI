@@ -19,7 +19,7 @@ from app.models.channel_connection import ChannelConnection
 from app.models.report import Report
 from app.models.tenant import Tenant
 from app.repositories.report_repository import TERMINAL_STATUSES, ReportRepository
-from app.services import transcription
+from app.services import company_ai, transcription
 from app.services.agent.graph import get_compiled_graph
 from app.services.agent.nodes.deliver import mark_report_failed
 from app.services.agent.persistence import save_report
@@ -137,7 +137,9 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant)
     audio = await get_channel_adapter(connection).download_media(media_reference)
     filename = f"reply-{job.id}{transcription.audio_suffix(media_reference)}"
     start = time.monotonic()
-    transcript = await transcription.transcribe(audio, filename, tenant.language)
+    transcript = await transcription.transcribe(
+        audio, filename, tenant.language, config=await company_ai.transcription_for(tenant.id)
+    )
     # Outside the graph, so no node logs it: metered here.
     await write_execution_log(
         tenant_id=tenant.id,
@@ -220,7 +222,7 @@ async def process(job: ClaimedJob, worker_id: str) -> None:
         logger.exception("Job %s (%s) failed on attempt %s", job.id, job.kind, job.attempts)
         retrying = await fail_or_retry(job, worker_id, error, retryable=not permanent)
         if not retrying:
-            await give_up(job.report_id, error)
+            await give_up(job.report_id, error, exc.reason_key if isinstance(exc, PermanentJobError) else "failure")
     finally:
         heartbeat.cancel()
         with contextlib.suppress(asyncio.CancelledError):

@@ -36,7 +36,7 @@ async def seed_live_demo(db: AsyncSession, email: str) -> dict[str, uuid.UUID]:
     account = await db.scalar(select(TenantUser).where(TenantUser.email == email))
     if account is None:
         # "unlimited": its reports count towards its quota until the purge deletes them a day later.
-        tenant = Tenant(name="ReportAI · demo en vivo", slug=SLUG, plan="unlimited")
+        tenant = Tenant(name="ReportAI · demo en vivo", slug=SLUG, plan="unlimited", platform_ai=True)
         db.add(tenant)
         await db.flush()
         account = TenantUser(
@@ -55,6 +55,9 @@ async def seed_live_demo(db: AsyncSession, email: str) -> dict[str, uuid.UUID]:
             f"{email} already belongs to another company (or is a super admin): pick an address of its own "
             "for PUBLIC_DEMO_USER_EMAIL, or visitors' recordings would land in that company"
         )
+    # Visitors try it without a key of their own: the demo runs on the platform's AI, within its
+    # own daily budget (PUBLIC_DEMO_DAILY_SPEND_USD).
+    company.platform_ai = True
 
     ids: dict[str, uuid.UUID] = {}
     for language in LANGUAGES:

@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
+from app.services import company_ai
 from app.services.agent.state import AgentState
 from app.services.agent.tools.extraction_schema import (
     build_extraction_model,
@@ -79,6 +80,7 @@ async def extract_node(state: AgentState) -> AgentState:
         user=_build_user_message(state),
         model_cls=result_cls,
         tool_name=TOOL_NAME,
+        config=await company_ai.extraction_for(state.tenant_id),
     )
 
     fields: dict[str, Any] = completion.data.get("fields") or {}

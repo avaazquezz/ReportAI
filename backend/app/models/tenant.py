@@ -32,6 +32,10 @@ class Tenant(Base):
     plan_status: Mapped[str] = mapped_column(String(16), nullable=False, default="active", server_default="active")
     plan_period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     plan_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # On the hosted service: true = its reports use the platform's AI keys (set by the super admin:
+    # the live demo, a company being shown the product); false = it enters its own provider and
+    # key. A one-company installation ignores it and uses its installation's settings.
+    platform_ai: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     # Its admin asked to delete it: blocked since, purged with all its data after a grace period
     # (services/data_lifecycle.py). Reactivating the company cancels the request.
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

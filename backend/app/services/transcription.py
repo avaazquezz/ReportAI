@@ -3,13 +3,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple
 
+import openai
 from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.services.instance_settings import (
     NotConfiguredError,
+    ProviderRejectedKeyError,
     TranscriptionConfig,
-    transcription_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ class Transcript(NamedTuple):
     text: str
     model: str
     seconds: float | None = None  # the audio's length, when the provider reports it
+    platform_paid: bool = True  # whose key paid for it (TranscriptionConfig.platform_paid)
 
 
 def audio_suffix(media_reference: str) -> str:
@@ -42,14 +44,12 @@ def clear_client_cache() -> None:
     _client.cache_clear()
 
 
-async def transcribe(
-    audio: bytes, filename: str, language: str | None = None, config: TranscriptionConfig | None = None
-) -> Transcript:
+async def transcribe(audio: bytes, filename: str, language: str | None, *, config: TranscriptionConfig) -> Transcript:
     """Speech to text through any OpenAI-compatible /audio/transcriptions endpoint, in the
-    company's language (a Spanish model hint on English speech garbles it)."""
+    company's language (a Spanish model hint on English speech garbles it). `config` has no default
+    on purpose, as in llm.structured_completion: the caller says whose key it is."""
     if len(audio) > settings.MAX_AUDIO_BYTES:
         raise ValueError(f"Audio too large: {len(audio)} bytes (limit {settings.MAX_AUDIO_BYTES})")
-    config = config or await transcription_config()
     if not config.configured:
         raise NotConfiguredError(
             "Voice notes need a transcription provider: add its API key in the panel (Settings → AI), "
@@ -58,14 +58,19 @@ async def transcribe(
     # Whisper models are billed by audio length and report it only in verbose_json; the gpt-4o
     # transcribe models accept nothing but json.
     verbose = "whisper" in config.model.lower()
-    result = await _client(config.api_key, config.base_url).audio.transcriptions.create(
-        file=(filename, audio),
-        model=config.model,
-        language=language or settings.TRANSCRIPTION_LANGUAGE,
-        response_format="verbose_json" if verbose else "json",
-        temperature=0,
-    )
+    try:
+        result = await _client(config.api_key, config.base_url).audio.transcriptions.create(
+            file=(filename, audio),
+            model=config.model,
+            language=language or settings.TRANSCRIPTION_LANGUAGE,
+            response_format="verbose_json" if verbose else "json",
+            temperature=0,
+        )
+    except (openai.AuthenticationError, openai.PermissionDeniedError) as exc:
+        raise ProviderRejectedKeyError(f"The transcription provider refused the key ({type(exc).__name__})") from exc
     seconds = getattr(result, "duration", None)
     if verbose and seconds is None:
         logger.warning("Transcription model %s returned no duration: its cost can't be counted", config.model)
-    return Transcript(result.text, config.model, float(seconds) if seconds is not None else None)
+    return Transcript(
+        result.text, config.model, float(seconds) if seconds is not None else None, config.platform_paid
+    )

@@ -24,6 +24,8 @@ class TenantUpdateRequest(BaseModel):
     is_active: bool | None = None
     plan: PlanKey | None = None
     plan_status: PlanStatus | None = None
+    # True: the company's reports use the platform's AI keys instead of its own.
+    platform_ai: bool | None = None
 
 
 class TenantResponse(BaseModel):
@@ -36,6 +38,7 @@ class TenantResponse(BaseModel):
     plan: str
     plan_status: str
     plan_period_end: datetime | None
+    platform_ai: bool
     deletion_requested_at: datetime | None  # set: blocked and purged 30 days later unless reactivated
     created_at: datetime
 

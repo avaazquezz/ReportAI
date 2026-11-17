@@ -11,7 +11,7 @@ from app import models  # noqa: F401  — registers all tables on Base.metadata
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, Base, get_db
 from app.main import app
-from app.services import instance_settings
+from app.services import company_ai, instance_settings
 
 TEST_DATABASE_URL = settings.DATABASE_URL.rsplit("/", 1)[0] + f"/{settings.POSTGRES_DB}_test"
 
@@ -101,6 +101,31 @@ def _nothing_saved_in_the_panel(request: pytest.FixtureRequest, monkeypatch: pyt
 @pytest.fixture
 def stored_instance_settings(own_sessions: None) -> None:
     """Opt in to reading instance settings from the test database."""
+
+
+@pytest.fixture(autouse=True)
+def _installation_ai(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Outside the tests about companies' own AI keys, every company runs on the installation's
+    AI, as before companies had keys of their own: the environment decides, and a node can run
+    for a made-up company with no row behind it."""
+    if "own_ai_keys" in request.fixturenames:
+        return
+
+    async def installation_extraction(_tenant_id: object) -> instance_settings.AIConfig:
+        return instance_settings.ai_from(await instance_settings.load())
+
+    async def installation_transcription(_tenant_id: object) -> instance_settings.TranscriptionConfig:
+        return instance_settings.transcription_from(await instance_settings.load())
+
+    monkeypatch.setattr(company_ai, "uses_own_keys", lambda tenant: False)
+    monkeypatch.setattr(company_ai, "extraction_for", installation_extraction)
+    monkeypatch.setattr(company_ai, "transcription_for", installation_transcription)
+
+
+@pytest.fixture
+def own_ai_keys(own_sessions: None) -> None:
+    """Opt in: on the hosted service, a company uses its own AI keys unless it is on the
+    platform's AI (services/company_ai.py)."""
 
 
 @pytest.fixture(autouse=True)

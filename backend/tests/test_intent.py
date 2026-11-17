@@ -1,3 +1,4 @@
+import uuid
 from unittest.mock import AsyncMock
 
 import pytest
@@ -33,7 +34,7 @@ async def test_the_model_decides_what_rules_cannot(monkeypatch: pytest.MonkeyPat
     ask = AsyncMock(return_value=LLMResult({"intent": "correct"}, 50, 5, "claude-sonnet-5"))
     monkeypatch.setattr(intent, "structured_completion", ask)
 
-    result, usage = await intent.classify_reply("la fecha era el martes")
+    result, usage = await intent.classify_reply("la fecha era el martes", uuid.uuid4())
 
     assert result == "correct" and usage is not None and usage.input_tokens == 50
     ask.assert_awaited_once()
@@ -43,11 +44,11 @@ async def test_a_quick_answer_costs_nothing(monkeypatch: pytest.MonkeyPatch) -> 
     ask = AsyncMock()
     monkeypatch.setattr(intent, "structured_completion", ask)
 
-    assert await intent.classify_reply("Sí.") == ("confirm", None)
+    assert await intent.classify_reply("Sí.", uuid.uuid4()) == ("confirm", None)
     ask.assert_not_awaited()
 
 
 async def test_a_model_failure_is_treated_as_a_correction_not_a_lost_message(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(intent, "structured_completion", AsyncMock(side_effect=TimeoutError()))
 
-    assert await intent.classify_reply("cambia la fecha") == ("correct", None)
+    assert await intent.classify_reply("cambia la fecha", uuid.uuid4()) == ("correct", None)

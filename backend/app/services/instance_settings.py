@@ -28,6 +28,9 @@ class AIConfig:
     api_key: str
     base_url: str
     effort: str
+    # Whose key it is: the platform's (or the installation's own), or a company's on the hosted
+    # service. The platform's spend breaker counts only the first.
+    platform_paid: bool = True
 
     @property
     def configured(self) -> bool:
@@ -39,6 +42,7 @@ class TranscriptionConfig:
     base_url: str
     api_key: str
     model: str
+    platform_paid: bool = True  # as in AIConfig
 
     @property
     def configured(self) -> bool:
@@ -62,6 +66,15 @@ class SMTPConfig:
 class NotConfiguredError(PermanentJobError, RuntimeError):
     """Something the report needs (the AI model, transcription, email) has not been set up: no
     retry will fix it until someone enters it in the panel."""
+
+    reason_key = "not_configured"
+
+
+class ProviderRejectedKeyError(PermanentJobError, RuntimeError):
+    """The AI or transcription provider refused the key (401/403): wrong, revoked, or without
+    access to the model. No retry will fix it until someone enters a good one in the panel."""
+
+    reason_key = "ai_key_rejected"
 
 
 async def load(session: AsyncSession | None = None) -> dict[str, str]:
