@@ -2,15 +2,20 @@
 sent back, used for its reports only, never replaced by the platform's key, sent only to the
 provider addresses ReportAI knows (no URL to type: SSRF), and left out of the platform's spend."""
 
+import contextlib
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from io import BytesIO
+from pathlib import Path
 from types import SimpleNamespace
-from typing import get_args
-from unittest.mock import AsyncMock
+from typing import Any, get_args
+from unittest.mock import AsyncMock, patch
 
 import anthropic
 import httpx
 import pytest
+from docx import Document as DocxDocument
 from httpx import AsyncClient
 from pydantic import BaseModel
 from sqlalchemy import func, select, text
@@ -39,16 +44,20 @@ from app.services import (
     plans,
     transcription,
 )
+from app.services.agent.nodes import doctype as doctype_node
+from app.services.agent.nodes import media as media_node
 from app.services.agent.nodes.extract import extract_node
 from app.services.agent.state import AgentState, ToolUsage
+from app.services.agent.tools import intent as intent_tool
 from app.services.agent.tools.pricing import transcription_usage, usage_of
 from app.services.ai_providers import EXTRACTION_PROVIDERS, TRANSCRIPTION_PROVIDERS
-from app.services.instance_settings import AIConfig, ProviderRejectedKeyError
+from app.services.instance_settings import AIConfig, ProviderRejectedKeyError, TranscriptionConfig
 from app.services.jobs import runner
 from app.services.jobs.errors import PermanentJobError
 from app.services.jobs.queue import ClaimedJob
 from app.services.observability.execution_log import write_execution_log
 from app.services.settings_checks import CheckFailed, check_ai
+from app.services.templates import assistant as template_assistant
 
 PASSWORD = "correct-password"
 OWN = {
@@ -545,3 +554,102 @@ async def test_the_template_assistant_says_the_key_was_refused_instead_of_failin
     )
 
     assert response.status_code == 400 and "refused your company's key" in response.json()["detail"]
+
+
+class _Asked(Exception):
+    """Ends a call right after it asked the AI: what matters here is with which settings."""
+
+
+_COMPANY_AI = AIConfig(provider="anthropic", model="m", api_key="sk-ant-COMPANY", base_url="", effort="", platform_paid=False)
+_COMPANY_VOICE = TranscriptionConfig(base_url="https://api.groq.com/openai/v1", api_key="gsk_COMPANY", model="w", platform_paid=False)
+
+
+@pytest.fixture
+def asked(monkeypatch: pytest.MonkeyPatch, own_ai_keys: None, tmp_path: Path) -> dict[str, list[object]]:
+    seen: dict[str, list[object]] = {"companies": [], "settings": []}
+
+    async def extraction_for(tenant_id: uuid.UUID) -> AIConfig:
+        seen["companies"].append(tenant_id)
+        return _COMPANY_AI
+
+    async def transcription_for(tenant_id: uuid.UUID) -> TranscriptionConfig:
+        seen["companies"].append(tenant_id)
+        return _COMPANY_VOICE
+
+    async def ai(**kwargs: object) -> None:
+        seen["settings"].append(kwargs["config"])
+        raise _Asked
+
+    async def voice(*_: object, config: TranscriptionConfig, **__: object) -> None:
+        seen["settings"].append(config)
+        raise _Asked
+
+    monkeypatch.setattr(company_ai, "extraction_for", extraction_for)
+    monkeypatch.setattr(company_ai, "transcription_for", transcription_for)
+    for module in (doctype_node, intent_tool, template_assistant):
+        monkeypatch.setattr(module, "structured_completion", ai)
+    monkeypatch.setattr(transcription, "transcribe", voice)
+    monkeypatch.setattr(settings, "DOCUMENT_STORAGE_PATH", str(tmp_path))
+    return seen
+
+
+def _a_state(tenant_id: uuid.UUID, **values: Any) -> AgentState:
+    return AgentState(
+        thread_id="t", tenant_id=tenant_id, channel_connection_id=uuid.uuid4(), channel_type="telegram",
+        sender_id="42", report_id=uuid.uuid4(), raw_payload={}, incoming_text="Revisión de la obra de la calle Mayor",
+        **values,
+    )
+
+
+async def _choose_type(tenant_id: uuid.UUID, tmp_path: Path) -> object:
+    types = [DocumentType(id=uuid.uuid4(), tenant_id=tenant_id, name=name, field_schema={}) for name in ("Visita", "Incidente")]
+    return await doctype_node._classify_type(_a_state(tenant_id), types)
+
+
+async def _classify(tenant_id: uuid.UUID, tmp_path: Path) -> object:
+    return await intent_tool.classify_reply("la fecha era el martes, no el lunes", tenant_id)
+
+
+async def _transcribe_note(tenant_id: uuid.UUID, tmp_path: Path) -> object:
+    audio = tmp_path / "nota.ogg"
+    audio.write_bytes(b"opus")
+    return await media_node.transcribe_node.__wrapped__(_a_state(tenant_id, media_local_path=str(audio)))  # type: ignore[attr-defined]
+
+
+async def _transcribe_reply(tenant_id: uuid.UUID, tmp_path: Path) -> object:
+    adapter = SimpleNamespace(download_media=AsyncMock(return_value=b"opus"))
+    job = ClaimedJob(uuid.uuid4(), uuid.uuid4(), "resume", {"media_reference": "file-id"}, 1, 3)
+    with patch.object(runner, "get_channel_adapter", lambda _connection: adapter):
+        return await runner._reply(job, SimpleNamespace(), Tenant(id=tenant_id, name="Acme", slug="acme", language="es"))  # type: ignore[arg-type]
+
+
+async def _propose_template(tenant_id: uuid.UUID, tmp_path: Path) -> object:
+    document = DocxDocument()
+    document.add_paragraph("Cliente: Comunidad Calle Mayor 12")
+    content = BytesIO()
+    document.save(content)
+    return await template_assistant.create_draft(
+        tenant_id=tenant_id, document_type_id=uuid.uuid4(), filename="parte.docx", content=content.getvalue(), language="es"
+    )
+
+
+@pytest.mark.parametrize(
+    ("call", "expected"),
+    [
+        (_choose_type, _COMPANY_AI),
+        (_classify, _COMPANY_AI),
+        (_transcribe_note, _COMPANY_VOICE),
+        (_transcribe_reply, _COMPANY_VOICE),
+        (_propose_template, _COMPANY_AI),
+    ],
+    ids=["document type", "reply intent", "voice note", "voice reply", "template assistant"],
+)
+async def test_every_ai_call_asks_for_its_companys_ai(
+    asked: dict[str, list[object]], tmp_path: Path, call: Callable[[uuid.UUID, Path], Awaitable[object]], expected: object
+) -> None:
+    tenant_id = uuid.uuid4()
+
+    with contextlib.suppress(_Asked):  # the reply classifier turns any failure into a correction
+        await call(tenant_id, tmp_path)
+
+    assert asked["companies"] == [tenant_id] and asked["settings"] == [expected]
