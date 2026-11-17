@@ -142,6 +142,7 @@ async def create_report_with_job(
         requester_channel=channel_type,
         requester_identifier=sender_id,
         requester_user_id=requester_user_id,
+        document_type_id=document_type_id,
         channel_connection_id=connection.id,
         received_at=sent_at or datetime.now(UTC),
         channel_meta=meta or None,
