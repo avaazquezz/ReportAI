@@ -63,7 +63,7 @@
     "privacy": {
       "title": "Privacy policy",
       "seoDescription": "What personal data ReportAI processes, why, how long it keeps it and how to exercise your rights.",
-      "updated": "Last updated: 11 November 2026",
+      "updated": "Last updated: 17 November 2026",
       "intro": "This policy explains what personal data is processed when you visit this website, try the demo, write to the contact address or use ReportAI: why, for how long and what your rights are, under the General Data Protection Regulation (GDPR) and Spanish Organic Law 3/2018 (LOPDGDD).",
       "controller": {
         "heading": "Data controller",
@@ -118,16 +118,17 @@
         "heading": "Who else has access to the data",
         "intro": "We don't sell or hand over data to anyone. Only the providers needed to run the service have access to it, as processors under a contract that meets GDPR article 28:",
         "hetzner": "server hosting, in Helsinki (Finland).",
-        "groq": "transcribing recordings, in the United States.",
-        "anthropic": "understanding the visit and drafting the report, in the United States.",
+        "groq": "transcribing the recordings of the live demo and of the companies that use ReportAI's AI, in the United States.",
+        "anthropic": "understanding the visit and drafting the report for the live demo and for the companies that use ReportAI's AI, in the United States.",
         "mailgun": "sending the service's emails, from its European Union region.",
         "zoho": "the contact address's mailbox, in its European Union data centres.",
+        "ownAi": "Each company connects its own AI account (Anthropic, OpenAI or Groq): the recordings and reports of its visits are processed by the provider it chooses, under its own account and the contract it has with that provider. ReportAI only keeps its key, encrypted, to make those calls on its behalf.",
         "connectors": "If a company connects its own Telegram bot or mailbox, the messages that arrive that way also go through those services, which the company itself contracts.",
         "authorities": "Beyond that, data will only be disclosed to an authority when a law requires it."
       },
       "transfers": {
         "heading": "Transfers outside the European Union",
-        "body": "Groq and Anthropic are in the United States. That transfer relies on the European Commission's standard contractual clauses (Implementing Decision (EU) 2021/914), included in their data processing agreements (GDPR art. 46(2)(c)). Neither may use the data to train its models."
+        "body": "Groq and Anthropic, which process the data of the live demo and of the companies that use ReportAI's AI, are in the United States. That transfer relies on the European Commission's standard contractual clauses (Implementing Decision (EU) 2021/914), included in their data processing agreements (GDPR art. 46(2)(c)). Neither may use the data to train its models. When a company uses its own AI account, the transfer is governed by that company's contract with its provider."
       },
       "automated": {
         "heading": "Automated decisions",
