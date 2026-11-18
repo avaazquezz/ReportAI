@@ -1,5 +1,6 @@
 # Import every model so Base.metadata is fully populated for Alembic
 # autogenerate diffing and for Base.metadata.create_all in tests.
+from app.models.api_key import ApiKey  # noqa: F401
 from app.models.audit_event import AuditEvent  # noqa: F401
 from app.models.channel_connection import ChannelConnection  # noqa: F401
 from app.models.company_setting import CompanySetting  # noqa: F401

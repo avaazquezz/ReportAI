@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.routing import Route
 
 from app.api import auth, capture, health, public_demo, setup, signup
+from app.api.admin import api_keys as admin_api_keys
 from app.api.admin import audit as admin_audit
 from app.api.admin import channel_connections as admin_channel_connections
 from app.api.admin import company as admin_company
@@ -26,6 +28,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.error_tracking import init_error_tracking
 from app.core.logging import configure_logging
+from app.mcp_server.server import endpoint as mcp_endpoint
 from app.services.agent.tools.pricing import require_priced_model_for_spend_cap
 from app.services.setup import needs_setup
 
@@ -43,7 +46,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 "This installation is not set up yet: get a setup code with `reportai setup-code` "
                 "and open %s/setup", settings.FRONTEND_ORIGIN
             )
-    yield
+    async with mcp_endpoint.running():
+        yield
 
 
 # The interactive docs and the OpenAPI schema document every endpoint for whoever asks:
@@ -86,9 +90,15 @@ app.include_router(admin_template_assistant.router)
 app.include_router(admin_starter_templates.router)
 app.include_router(admin_dashboard.router)
 app.include_router(admin_audit.router)
+app.include_router(admin_api_keys.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)
+# The MCP server for AI assistants (app/mcp_server): a plain route, so /mcp answers without the
+# trailing-slash redirect a mount would add, which MCP clients don't follow with a POST. POST only:
+# a stateless server has nothing to push, and the SDK would hold an older client's GET stream open
+# (silent) until it disconnects, which also stalls every shutdown; a 405 tells clients "no stream".
+app.router.routes.append(Route("/mcp", endpoint=mcp_endpoint, methods=["POST"]))
 
 
 @app.get("/")
