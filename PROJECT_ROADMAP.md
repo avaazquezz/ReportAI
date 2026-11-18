@@ -161,7 +161,7 @@ requests.
 | 2026-11-10 | PRL landing, public live demo with its own limits, engineering case study | #23, #24 |
 | 2026-11-11 | Not on sale: landing without prices, privacy policy, live-demo setup script | #25 |
 | 2026-11-17 | v0.5.0: README and roadmap matching the product, release candidates as prereleases, the installer verified end to end (fresh install, and update from 0.4.0), optional worker heartbeat; company AI keys on the hosted service (closed provider list, the spend breaker counts only what the platform pays; self-host unchanged) | #26–#29, v0.5.0 |
-| 2026-11-18 | MCP server for AI assistants on reports, with personal API keys and the AI assistants page; an eval of an assistant using it | #30 |
+| 2026-11-18 | v1.0.0: MCP server for AI assistants on reports, with personal API keys and the AI assistants page; an eval of an assistant using it; the installer's update from 0.5.0 verified end to end (data intact, a real MCP client with a real key) | #30, v1.0.0 |
 
 ### Next: the finish line is v1.0.0
 
@@ -179,7 +179,7 @@ requests.
   revocable, acting as their person and their role), managed in the panel; an eval of an assistant
   using it (tool choice, prompt injection, isolation). Left out: an assistant inside the app, a
   proactive weekly summary, outgoing webhooks.
-- [ ] **v1.0.0** — then maintained on demand: new work only on the triggers below and in §6.
+- [x] **v1.0.0** — released 2026-11-18; maintained on demand from here: new work only on the triggers below and in §6.
 
 ### Deferred, with the trigger that brings each back
 
