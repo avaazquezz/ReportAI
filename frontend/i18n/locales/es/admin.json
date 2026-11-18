@@ -561,7 +561,7 @@
       "toast": {
         "invited": "Invitación enviada a {email}.",
         "roleChanged": "Rol de {name} actualizado.",
-        "signedOut": "Se han cerrado las sesiones de {name}"
+        "signedOut": "Se han cerrado las sesiones de {name} y revocado sus claves de asistentes de IA."
       },
       "errors": {
         "load": "No se pudo cargar el equipo.",

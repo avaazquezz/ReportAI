@@ -92,6 +92,15 @@ async def revocable_key(db: AsyncSession, user: TenantUser, key_id: uuid.UUID) -
     return key
 
 
+async def revoke_all(db: AsyncSession, user: TenantUser) -> int:
+    """Revokes every live key of `user` (not committed) and says how many: signing someone out
+    everywhere also ends any key a stolen session may have made."""
+    result = await db.execute(
+        update(ApiKey).where(ApiKey.user_id == user.id, ApiKey.revoked_at.is_(None)).values(revoked_at=func.now())
+    )
+    return int(result.rowcount)  # type: ignore[attr-defined]
+
+
 async def authenticate(db: AsyncSession, secret: str) -> Principal | None:
     """The person a key acts as, or None: an unknown or revoked key, or a person who may not act
     (inactive, company suspended, the read-only public demo account). Commits when it records the

@@ -150,6 +150,20 @@ async def test_a_key_acts_only_while_its_person_may(client: AsyncClient, db: Asy
     assert await who() is None  # revoked is for good
 
 
+async def test_signing_someone_out_everywhere_revokes_their_keys(client: AsyncClient, db: AsyncSession) -> None:
+    acme = await _company(db)
+    theirs = [(await _make(client, acme["technician"], name))["secret"] for name in ("laptop", "phone")]
+    colleague = (await _make(client, acme["approver"]))["secret"]
+
+    signed_out = await client.post(f"/team/{acme['technician'].id}/sign-out", headers=_auth(acme["tenant_admin"]))
+
+    assert signed_out.status_code == 204
+    assert [await api_keys.authenticate(db, secret) for secret in theirs] == [None, None]
+    assert await api_keys.authenticate(db, colleague) is not None  # only that person's keys
+    event = await db.scalar(select(AuditEvent).where(AuditEvent.action == "team.signed_out"))
+    assert event is not None and event.details["api_keys_revoked"] == 2
+
+
 async def test_the_public_demo_account_s_key_is_nobody(client: AsyncClient, db: AsyncSession, monkeypatch: pytest.MonkeyPatch) -> None:
     acme = await _company(db)
     secret = (await _make(client, acme["viewer"]))["secret"]
