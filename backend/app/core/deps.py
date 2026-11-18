@@ -101,13 +101,17 @@ async def require_approver(
     return current_user
 
 
+# Who records reports in the app and confirms them: approvers, and a technician, whose own
+# confirmation sends the document. Also who may start a draft through the MCP server.
+CAPTURER_ROLES = frozenset({"tenant_admin", "approver", "super_admin", TECHNICIAN})
+
+
 async def require_capturer(
     current_user: TenantUser = Depends(get_current_user),
 ) -> TenantUser:
-    """Records reports in the app and confirms them: approvers, and a technician, whose own
-    confirmation sends the document. A route that takes this must still keep a technician to their
-    own reports (`visible_report` in api/admin/reports.py)."""
-    if current_user.role not in {"tenant_admin", "approver", "super_admin", TECHNICIAN}:
+    """See CAPTURER_ROLES. A route that takes this must still keep a technician to their own
+    reports (`visible_report` in api/admin/reports.py)."""
+    if current_user.role not in CAPTURER_ROLES:
         raise AuthorizationException("Not allowed to capture or confirm reports")
     return current_user
 
