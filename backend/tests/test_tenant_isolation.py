@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password
 from app.main import app
+from app.models.api_key import ApiKey
 from app.models.channel_connection import ChannelConnection
 from app.models.delivery import Delivery
 from app.models.document_template import DocumentTemplate
@@ -69,6 +70,7 @@ ID_ROUTES: dict[tuple[str, str], dict[str, Any]] = {
     ("PATCH", "/team/{member_id}"): {"json": {"is_active": False}},
     ("POST", "/team/{member_id}/invite"): {},
     ("POST", "/team/{member_id}/sign-out"): {},
+    ("DELETE", "/api-keys/{key_id}"): {},
 }
 
 
@@ -143,7 +145,8 @@ async def _company(db: AsyncSession, name: str) -> dict[str, Any]:
     await db.flush()
     photo = ReportAttachment(tenant_id=tenant.id, report_id=report.id, sender_identifier="42", path="/nonexistent.jpg")
     delivery = Delivery(report_id=report.id, kind="email", destination=f"boss@{name.lower()}.test")
-    db.add_all([photo, delivery])
+    key = ApiKey(tenant_id=tenant.id, user_id=member.id, name=f"{name} Claude", key_hash=uuid.uuid4().hex * 2, prefix="rpt_isolated")
+    db.add_all([photo, delivery, key])
     await db.commit()
     return {
         "tenant": tenant,
@@ -158,6 +161,7 @@ async def _company(db: AsyncSession, name: str) -> dict[str, Any]:
             "report_id": report.id,
             "photo_id": photo.id,
             "member_id": member.id,
+            "key_id": key.id,
         },
     }
 
@@ -171,7 +175,7 @@ async def _snapshot(db: AsyncSession, tenant: Tenant) -> str:
     """Everything of the company's that a route could change, to compare before and after."""
     rows: list[Any] = []
     fresh = {"populate_existing": True}  # read the database, not the session's copies
-    for model in (DocumentType, DocumentTemplate, ChannelConnection, SenderInvite, Report, TenantUser):
+    for model in (DocumentType, DocumentTemplate, ChannelConnection, SenderInvite, Report, TenantUser, ApiKey):
         query = select(model).where(model.tenant_id == tenant.id).order_by(model.id).execution_options(**fresh)
         for row in (await db.scalars(query)).all():
             rows.append({c.name: getattr(row, c.key) for c in model.__mapper__.columns if c.name != "updated_at"})
@@ -205,7 +209,7 @@ async def test_another_company_gets_404_and_changes_nothing(
     assert await _snapshot(db, acme["tenant"]) == before
 
 
-LISTS = ["/reports", "/reports/export.csv", "/channels", "/team", "/document-types", "/dashboard", "/usage/summary", "/audit"]
+LISTS = ["/reports", "/reports/export.csv", "/channels", "/team", "/document-types", "/dashboard", "/usage/summary", "/audit", "/api-keys"]
 
 
 @pytest.mark.parametrize("path", LISTS)
