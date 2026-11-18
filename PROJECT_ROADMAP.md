@@ -161,6 +161,7 @@ requests.
 | 2026-11-10 | PRL landing, public live demo with its own limits, engineering case study | #23, #24 |
 | 2026-11-11 | Not on sale: landing without prices, privacy policy, live-demo setup script | #25 |
 | 2026-11-17 | v0.5.0: README and roadmap matching the product, release candidates as prereleases, the installer verified end to end (fresh install, and update from 0.4.0), optional worker heartbeat; company AI keys on the hosted service (closed provider list, the spend breaker counts only what the platform pays; self-host unchanged) | #26–#29, v0.5.0 |
+| 2026-11-18 | MCP server for AI assistants on reports, with personal API keys and the AI assistants page; an eval of an assistant using it | #30 |
 
 ### Next: the finish line is v1.0.0
 
@@ -172,10 +173,12 @@ requests.
   platform pays. Self-host unchanged.
 - [ ] **Uptime monitor** on the hosted service: the panel and `/api/health` from outside, and the
   worker's heartbeat.
-- [ ] **Agent, MCP and API, on reports** — a typed tool layer scoped by company and role,
-  per-company API keys (hashed, scoped, revocable), a remote MCP server over Streamable HTTP, and
-  an eval of the agent (tool choice, prompt injection, isolation). Left out: an assistant inside
-  the app, a proactive weekly summary, outgoing webhooks.
+- [x] **Agent, MCP and API, on reports** — a remote MCP server over Streamable HTTP (`/api/mcp`)
+  whose tools go through the panel's own checks: list the document types, search and read reports,
+  and start a draft that a person reviews (never approve or send). Personal API keys (hashed,
+  revocable, acting as their person and their role), managed in the panel; an eval of an assistant
+  using it (tool choice, prompt injection, isolation). Left out: an assistant inside the app, a
+  proactive weekly summary, outgoing webhooks.
 - [ ] **v1.0.0** — then maintained on demand: new work only on the triggers below and in §6.
 
 ### Deferred, with the trigger that brings each back
@@ -247,3 +250,4 @@ requests.
 | 2026-11-11 | **Supersedes the commercial side of the 2026-11-06 entry**: ReportAI is not on sale for now. The hosted landing presents the product (how it works, the live demo, the hours it saves) together with how it is built (a condensed "what's behind the report" section linking to the `/arquitectura` case study), with no prices, plans, trial or pilot counter; its one action is an email to try it. Whoever wants to try it gets a trial account with sample data, or installs it on their own server. The code stays multi-tenant and SaaS-ready, with self-signup behind its flag (off). Fase 8 (billing) leaves the roadmap and Fase 10 (client portal) waits until someone wants to use it with real data; Fase 9 (agent, MCP, API) is next. | Confirmed |
 | 2026-11-17 | Finish line set: v0.5.0 (README and roadmap matching the product, the installer verified end to end, a release, an uptime monitor), then company AI keys on the hosted service, then the agent, MCP and API on reports, then v1.0.0 and maintenance on demand. A global daily AI spend breaker is set on the hosted service. | Confirmed |
 | 2026-11-17 | Hosted service: each company brings its own AI provider key, entered when it sets the service up; the platform's key serves only the companies the super admin marks (the live demo), so the platform no longer pays for other companies' AI and one trial account can't exhaust the breaker for everyone. The hosted service takes a closed list of providers with fixed URLs: a free base URL would let any company point the worker at internal addresses (SSRF). Self-host keeps the free base URL and its installation-wide settings. | Confirmed |
+| 2026-11-18 | AI assistants reach ReportAI through an MCP server with **personal** API keys, not company-wide ones: a key acts as its person through the panel's own checks (role, company, a technician's own reports), so it never sees or does more than they can, and dies while they can't sign in. Tools are read-only plus starting a draft that a person reviews; nothing approves or sends. Its own bearer-key auth, not the SDK's OAuth (there is no authorization server to discover). Decided with it: signing someone out everywhere also revokes their keys; no feature flag on self-host (with no keys the endpoint is inert, and making a key is the opt-in, person by person); no per-IP limit on failed keys (256 random bits; each failure is one indexed lookup); a retried draft may create a second one (bounded by 20 drafts per person per hour, and a person reviews each). | Confirmed |
