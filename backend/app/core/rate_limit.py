@@ -99,6 +99,11 @@ export_by_tenant = AttemptLimiter("export_tenant", max_attempts=1, window_second
 # The "test" button of a company's own AI key: each try is a real call from this server with
 # whatever key was typed, so it must not become a way to try stolen keys in bulk.
 ai_check_by_tenant = AttemptLimiter("ai_check_tenant", max_attempts=20, window_seconds=60 * 60)
+# An AI assistant calling the MCP server: a model in a loop can fire requests far faster than a
+# person, so each key gets a ceiling well above real use. Drafts cost AI, and a report a model was
+# talked into dictating (prompt injection) must not turn into hundreds: their own, lower ceiling.
+mcp_by_key = AttemptLimiter("mcp_key", max_attempts=120, window_seconds=60)
+mcp_drafts_by_user = AttemptLimiter("mcp_drafts_user", max_attempts=20, window_seconds=60 * 60)
 # The landing's live demo is open to anyone and each try costs real AI: a few per visitor and a
 # ceiling for everyone, per day, with details the page tells apart (frontend/app/utils/demoFields.ts
 # reads "is full"), claimed with claim(). Each preview render hits Gotenberg.

@@ -76,6 +76,12 @@ Then record a visit from *New report* in the field app (or send the bot a voice 
 report comes back for review with each value next to the words it came from; once confirmed, the
 PDF goes to the inboxes set on its document type.
 
+**Optional: an AI assistant.** Anyone in the company can connect Claude (or another MCP client) to
+ReportAI from *AI assistants* in the panel: a personal key, and the address
+`https://<your domain>/api/mcp`. The assistant searches and reads the reports that person can see
+and can start drafts, which still wait for someone to review and approve them; it can't approve or
+send anything. Nothing is reachable without a key, and a company's admin can revoke anyone's.
+
 ## How it fits together
 
 | Service | What it does |

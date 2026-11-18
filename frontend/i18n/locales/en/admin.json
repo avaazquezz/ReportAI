@@ -12,7 +12,8 @@
         "team": "Team",
         "myReports": "My reports",
         "audit": "Audit log",
-        "capture": "New report"
+        "capture": "New report",
+        "apiKeys": "AI assistants"
       },
       "demoBanner": "Demo mode — read only. Send a voice note to the Telegram bot and you'll see the report appear here.",
       "toggleMenu": "Show or hide the menu"
@@ -560,7 +561,7 @@
       "toast": {
         "invited": "Invitation sent to {email}.",
         "roleChanged": "{name}'s role updated.",
-        "signedOut": "{name} has been signed out everywhere"
+        "signedOut": "{name} has been signed out everywhere and their AI assistant keys revoked."
       },
       "errors": {
         "load": "Couldn't load the team.",
@@ -762,7 +763,77 @@
         },
         "plan": {
           "changed": "Changed the plan"
+        },
+        "api_key": {
+          "created": "Created a key for an AI assistant",
+          "revoked": "Revoked an AI assistant's key"
         }
+      }
+    },
+    "apiKeys": {
+      "help": "Connect your AI assistant (Claude) to ReportAI with a personal key. The key acts as you: it sees the reports you see and can start drafts, which someone reviews before anything is sent. It can't approve or send. Treat it like a password.",
+      "connect": {
+        "title": "How to connect",
+        "url": "MCP server address",
+        "claudeCode": "Claude Code",
+        "claudeCodeHelp": "Always works. Run this in your terminal, with your key:",
+        "claudeApp": "Claude (claude.ai or Desktop)",
+        "steps": {
+          "open": "Go to “Customize → Connectors” and click “Add → Add custom connector”.",
+          "name": "Enter a name (for example, ReportAI) and the address above.",
+          "auth": "Under “Authentication”, choose “No sign-in”.",
+          "header": "Under “Request headers”, add “authorization” with the value “{value}” (including “Bearer” and the space)."
+        },
+        "note": "Request headers are in beta and only some Claude organizations see them. On Team and Enterprise plans an Owner adds the connector for the whole organization, and everyone there would act as you: use your key only on your own account.",
+        "yourKey": "your key"
+      },
+      "create": {
+        "title": "New key",
+        "help": "One per assistant or device, so you can revoke just the one you no longer use.",
+        "placeholder": "Claude on my laptop",
+        "submit": "Create key",
+        "maxLength": "{max} characters at most"
+      },
+      "created": {
+        "title": "Key “{name}” created",
+        "once": "Copy it now: you won't see it again. If you lose it, revoke it and create another.",
+        "secret": "Your key",
+        "claudeCode": "For Claude Code, paste this in your terminal:",
+        "claudeApp": "For Claude (claude.ai or Desktop), follow the steps in “How to connect” with this key.",
+        "done": "I've saved it"
+      },
+      "list": {
+        "mine": "Your keys",
+        "company": "Company keys",
+        "companyHelp": "The whole team's: you can revoke anyone's.",
+        "empty": "There are no keys yet.",
+        "owner": "Owner: {name}",
+        "created": "Created {date}",
+        "lastUsed": "Last used {date}",
+        "neverUsed": "Not used yet",
+        "active": "Active",
+        "revoked": "Revoked {date}",
+        "revoke": "Revoke"
+      },
+      "confirmRevoke": {
+        "title": "Revoke key",
+        "message": "Revoke “{name}”? The assistant using it loses access at once. This can't be undone."
+      },
+      "toast": {
+        "revoked": "Key “{name}” revoked."
+      },
+      "copy": {
+        "url": "Copy the address",
+        "key": "Copy the key",
+        "command": "Copy the command"
+      },
+      "errors": {
+        "load": "The keys couldn't be loaded.",
+        "create": "The key couldn't be created.",
+        "revoke": "The key couldn't be revoked.",
+        "readOnly": "This account is read-only: it can't create or revoke keys.",
+        "limit": "You already have the most active keys allowed: revoke one you no longer use, then create the new one.",
+        "copy": "It couldn't be copied. Select the text and copy it by hand."
       }
     },
     "capture": {
