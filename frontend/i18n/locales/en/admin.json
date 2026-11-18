@@ -561,7 +561,7 @@
       "toast": {
         "invited": "Invitation sent to {email}.",
         "roleChanged": "{name}'s role updated.",
-        "signedOut": "{name} has been signed out everywhere"
+        "signedOut": "{name} has been signed out everywhere and their AI assistant keys revoked."
       },
       "errors": {
         "load": "Couldn't load the team.",
