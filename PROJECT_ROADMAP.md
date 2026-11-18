@@ -171,8 +171,9 @@ requests.
   when it sets the service up, from a closed list of providers; the platform's key serves only
   companies the super admin marks (the live demo), and the spend breaker counts only what the
   platform pays. Self-host unchanged.
-- [ ] **Uptime monitor** on the hosted service: the panel and `/api/health` from outside, and the
-  worker's heartbeat.
+- [x] **Uptime monitor** on the hosted service: the panel and `/api/health` from outside (UptimeRobot,
+  every 5 minutes; `/api/health` alerts when `"status":"ok"` is missing), and the worker's heartbeat
+  (healthchecks.io, a ping every minute, 5 minutes' grace).
 - [x] **Agent, MCP and API, on reports** — a remote MCP server over Streamable HTTP (`/api/mcp`)
   whose tools go through the panel's own checks: list the document types, search and read reports,
   and start a draft that a person reviews (never approve or send). Personal API keys (hashed,
