@@ -35,6 +35,7 @@ flowchart LR
     App[Field app<br/>voice, photos, offline queue] --> API[FastAPI]
     Conn[Telegram bot / inbound email] --> API
     Panel[Admin panel] --> API
+    MCP[AI assistant: Claude via MCP<br/>personal API key] --> API
     API --> In[Idempotent ingestion<br/>+ plan quota]
     In --> Q[(Postgres job queue)]
     Q --> W[Worker: LangGraph agent]
@@ -67,6 +68,10 @@ a new report type is configuration, not a code change.
   with a per-response nonce.
 - **One codebase, two run modes.** A hosted multi-tenant service, or one company per server with a
   one-line installer, a setup wizard, encrypted settings and `reportai update`.
+- **An AI assistant as a client, not a backdoor.** A remote MCP server (Streamable HTTP, stateless)
+  lets Claude search and read reports and start drafts with a personal API key that acts as its
+  person through the panel's own checks; a draft still waits for a human. An eval runs Claude
+  against it for tool choice, prompt injection and isolation.
 - **Guardrails for running it.** Per-plan quotas, a daily AI spend breaker, an audit log, data
   export, account deletion with a grace period and audio retention.
 
