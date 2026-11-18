@@ -86,7 +86,7 @@ _REJECTED = "Rejected by admin"
 _FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 
 
-async def _requester_names(db: AsyncSession, reports: list[Report]) -> dict[uuid.UUID, str]:
+async def requester_names(db: AsyncSession, reports: list[Report]) -> dict[uuid.UUID, str]:
     """Who sent each report, by report id: a signed-in person's name, or the name a chat sender
     joined with (only those who joined by invitation)."""
     labels = await sender_labels(db, list({r.channel_connection_id for r in reports if r.channel_connection_id}))
@@ -140,7 +140,8 @@ def own_reports_only(filters: ReportFilters, user: TenantUser) -> ReportFilters:
     return replace(filters, requester_user_id=user.id) if user.role == TECHNICIAN else filters
 
 
-async def _load(db: AsyncSession, report_id: uuid.UUID, user: TenantUser) -> Report:
+async def visible_report(db: AsyncSession, report_id: uuid.UUID, user: TenantUser) -> Report:
+    """A report `user` may see, or a 404: their company's, and for a technician only their own."""
     report = await get_scoped_or_404(ReportRepository(db), report_id, tenant_id=require_tenant_id(user))
     if user.role == TECHNICIAN and report.requester_user_id != user.id:
         raise ResourceNotFoundException()  # a colleague's report: as if it didn't exist
@@ -201,7 +202,7 @@ async def _detail(db: AsyncSession, report: Report) -> ReportDetailResponse:
     photos = await db.scalars(
         select(ReportAttachment).where(ReportAttachment.report_id == report.id).order_by(ReportAttachment.created_at)
     )
-    names = await _requester_names(db, [report])
+    names = await requester_names(db, [report])
     return ReportDetailResponse(
         **_to_response(report, document_type.name if document_type else None, names.get(report.id)).model_dump(),
         received_at=report.received_at,
@@ -250,7 +251,7 @@ async def list_reports(
     repo = ReportRepository(db)
     rows = await repo.list_with_document_type_name(tenant_id=tenant_id, filters=filters, skip=skip, limit=limit)
     total = await repo.count_scoped(tenant_id=tenant_id, filters=filters)
-    names = await _requester_names(db, [report for report, _ in rows])
+    names = await requester_names(db, [report for report, _ in rows])
     return PaginatedResponse(
         items=[_to_response(report, name, names.get(report.id)) for report, name in rows],
         total=total,
@@ -288,7 +289,7 @@ async def export_reports(
 
     out = io.StringIO()
     writer = csv.writer(out)
-    names = await _requester_names(db, [report for report, _ in rows])
+    names = await requester_names(db, [report for report, _ in rows])
     header = ["id", "created_at", "status", "document_type", "channel", "requester", "requester_name", "completed_at", "error"]
     writer.writerow(header + ([field_label(name, spec) for name, spec in columns.items()] if columns else ["fields"]))
     for report, document_type_name in rows:
@@ -326,7 +327,7 @@ async def get_report(
     current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    return await _detail(db, await _load(db, report_id, current_user))
+    return await _detail(db, await visible_report(db, report_id, current_user))
 
 
 @router.post("/{report_id}/approve", status_code=202)
@@ -339,7 +340,7 @@ async def approve_report(
     """Approve a paused report, with the reviewer's corrections if any — the same as the requester
     confirming on the channel, and the recovery path when the approval prompt never reached them.
     Required fields must be filled: an approval is a decision to send the document as it is."""
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if report.status != "awaiting_approval":
         raise ConflictException("Report is not awaiting approval")
     changes: dict[str, Any] = {}
@@ -366,7 +367,7 @@ async def reply_to_report(
 ) -> ReportDetailResponse:
     """What to change in a draft made in the app, said or typed: like answering the bot in a chat,
     the report is extracted again with it. Confirming is /approve."""
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if report.requester_channel != WEB:
         raise ConflictException("Only reports made in the app take replies here")
     if report.status not in PENDING_STATUSES:
@@ -392,7 +393,7 @@ async def reject_report(
 ) -> ReportDetailResponse:
     """End a paused report without generating it, and tell the requester why. Unblocks the sender:
     their next message would otherwise be captured as a reply to this report."""
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     reason = ((payload.reason if payload else None) or "").strip() or None
     rejected = await db.execute(
         update(Report)
@@ -426,7 +427,7 @@ async def retry_report(
 ) -> ReportDetailResponse:
     """Run a failed report again from the message that started it, once whatever made it fail is
     fixed (an AI key, a provider that was down). A report an admin rejected stays rejected."""
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if report.status != "failed" or report.error_detail == _REJECTED:
         raise ConflictException("Only a report that failed can be tried again")
     first_run = await db.scalar(
@@ -461,7 +462,7 @@ async def edit_report_fields(
 ) -> ReportDetailResponse:
     """Correct a delivered report and regenerate its PDF (with no changes, it only regenerates:
     after a template update, say). Nothing is sent: resending is a separate decision."""
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if report.status not in FINISHED_STATUSES or not report.file_path:
         raise ConflictException("Only a delivered report can be edited; approve a paused one with its edits")
     document_type = await _document_type(db, report)
@@ -501,7 +502,7 @@ async def preview_report(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """The PDF as it would come out with these edits, without saving or sending anything."""
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if report.extracted_fields is None:
         raise ConflictException("Nothing has been extracted from this report yet")
     document_type = await _document_type(db, report)
@@ -529,7 +530,7 @@ async def resend_report(
     current_user: TenantUser = Depends(require_approver),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if report.status not in FINISHED_STATUSES or not report.file_path:
         raise ConflictException("Only a delivered report can be sent again")
     request = payload or ResendRequest()
@@ -546,7 +547,7 @@ async def download_report(
     current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if not report.file_path:
         raise ResourceNotFoundException("No file available for this report")
     tenant = await db.get(Tenant, report.tenant_id)
@@ -564,7 +565,7 @@ async def report_audio(
     current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     if not report.audio_path:
         raise ResourceNotFoundException("This report has no audio")
     media_type = AUDIO_TYPES.get(Path(report.audio_path).suffix.lower(), "application/octet-stream")
@@ -578,7 +579,7 @@ async def report_photo(
     current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
-    report = await _load(db, report_id, current_user)
+    report = await visible_report(db, report_id, current_user)
     photo = await db.get(ReportAttachment, photo_id)
     if photo is None or photo.report_id != report.id:
         raise ResourceNotFoundException()
