@@ -25,15 +25,17 @@ const navItems = computed(() => {
     ]
   }
   const capture = { title: t('admin.layout.nav.capture'), to: '/capture', icon: 'mdi-microphone-outline' }
+  // Everyone in a company connects their own assistant; an admin also sees the company's keys.
+  const apiKeys = { title: t('admin.layout.nav.apiKeys'), to: '/admin/api-keys', icon: 'mdi-robot-outline' }
   if (isTechnician.value) {
-    return [capture, { title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }]
+    return [capture, { title: t('admin.layout.nav.myReports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }, apiKeys]
   }
   const items = [
     { title: t('admin.dashboard.title'), to: '/dashboard', icon: 'mdi-home-outline' },
     ...(canCapture.value ? [capture] : []),
     { title: t('admin.layout.nav.reports'), to: '/admin/reports', icon: 'mdi-file-chart-outline' }
   ]
-  if (!isAdmin.value) return items
+  if (!isAdmin.value) return [...items, apiKeys]
   return [
     ...items,
     { title: t('admin.layout.nav.documentTypes'), to: '/admin/document-types', icon: 'mdi-file-document-outline' },
@@ -41,6 +43,7 @@ const navItems = computed(() => {
     { title: t('admin.layout.nav.team'), to: '/admin/team', icon: 'mdi-account-multiple-outline' },
     { title: t('admin.layout.nav.audit'), to: '/admin/audit', icon: 'mdi-shield-search' },
     { title: t('admin.layout.nav.usage'), to: '/admin/usage', icon: 'mdi-chart-line' },
+    apiKeys,
     settings
   ]
 })
