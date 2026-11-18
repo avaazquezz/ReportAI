@@ -160,15 +160,18 @@ requests.
 | 2026-11-08 | Field app: capture, offline queue, installable, starts without coverage, CSP with a per-response nonce | #22 |
 | 2026-11-10 | PRL landing, public live demo with its own limits, engineering case study | #23, #24 |
 | 2026-11-11 | Not on sale: landing without prices, privacy policy, live-demo setup script | #25 |
+| 2026-11-17 | v0.5.0: README and roadmap matching the product, release candidates as prereleases, the installer verified end to end (fresh install, and update from 0.4.0), optional worker heartbeat; company AI keys on the hosted service (closed provider list, the spend breaker counts only what the platform pays; self-host unchanged) | #26–#29, v0.5.0 |
 
 ### Next: the finish line is v1.0.0
 
-- [ ] **v0.5.0** — README and this roadmap match the product; the installer verified end to end
-  (fresh install, and update from 0.4.0); release; uptime monitor on the hosted service.
-- [ ] **Company AI keys** — on the hosted service each company enters its own AI provider and key
+- [x] **v0.5.0** — README and this roadmap match the product; the installer verified end to end
+  (fresh install, and update from 0.4.0); release.
+- [x] **Company AI keys** — on the hosted service each company enters its own AI provider and key
   when it sets the service up, from a closed list of providers; the platform's key serves only
   companies the super admin marks (the live demo), and the spend breaker counts only what the
   platform pays. Self-host unchanged.
+- [ ] **Uptime monitor** on the hosted service: the panel and `/api/health` from outside, and the
+  worker's heartbeat.
 - [ ] **Agent, MCP and API, on reports** — a typed tool layer scoped by company and role,
   per-company API keys (hashed, scoped, revocable), a remote MCP server over Streamable HTTP, and
   an eval of the agent (tool choice, prompt injection, isolation). Left out: an assistant inside
