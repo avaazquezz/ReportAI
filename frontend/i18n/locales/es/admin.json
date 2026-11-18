@@ -12,7 +12,8 @@
         "team": "Equipo",
         "myReports": "Mis informes",
         "audit": "Registro de actividad",
-        "capture": "Nuevo informe"
+        "capture": "Nuevo informe",
+        "apiKeys": "Asistentes de IA"
       },
       "demoBanner": "Modo demo — solo lectura. Envía una nota de voz al bot de Telegram y verás el informe aparecer aquí.",
       "toggleMenu": "Mostrar u ocultar el menú"
@@ -560,7 +561,7 @@
       "toast": {
         "invited": "Invitación enviada a {email}.",
         "roleChanged": "Rol de {name} actualizado.",
-        "signedOut": "Se han cerrado las sesiones de {name}"
+        "signedOut": "Se han cerrado las sesiones de {name} y revocado sus claves de asistentes de IA."
       },
       "errors": {
         "load": "No se pudo cargar el equipo.",
@@ -762,7 +763,77 @@
         },
         "plan": {
           "changed": "Cambió el plan"
+        },
+        "api_key": {
+          "created": "Creó una clave para un asistente de IA",
+          "revoked": "Revocó una clave de un asistente de IA"
         }
+      }
+    },
+    "apiKeys": {
+      "help": "Conecta tu asistente de IA (Claude) a ReportAI con una clave personal. La clave actúa como tú: ve los informes que ves tú y puede empezar borradores, que alguien revisa antes de que se envíe nada. No puede aprobar ni enviar. Trátala como una contraseña.",
+      "connect": {
+        "title": "Cómo conectar",
+        "url": "Dirección del servidor MCP",
+        "claudeCode": "Claude Code",
+        "claudeCodeHelp": "Funciona siempre. Ejecuta esto en tu terminal, con tu clave:",
+        "claudeApp": "Claude (claude.ai o Desktop)",
+        "steps": {
+          "open": "Ve a «Customize → Connectors» y pulsa «Add → Add custom connector».",
+          "name": "Escribe un nombre (por ejemplo, ReportAI) y la dirección de arriba.",
+          "auth": "En «Authentication», elige «No sign-in».",
+          "header": "En «Request headers», añade «authorization» con el valor «{value}» (con «Bearer» y el espacio)."
+        },
+        "note": "Los «Request headers» están en beta y solo algunas organizaciones de Claude los ven. En los planes Team y Enterprise, un Owner añade el conector para toda la organización y todos actuarían como tú: usa tu clave solo en tu propia cuenta.",
+        "yourKey": "tu clave"
+      },
+      "create": {
+        "title": "Nueva clave",
+        "help": "Una por asistente o dispositivo: así puedes revocar solo la que ya no uses.",
+        "placeholder": "Claude en mi portátil",
+        "submit": "Crear clave",
+        "maxLength": "Como mucho {max} caracteres"
+      },
+      "created": {
+        "title": "Clave «{name}» creada",
+        "once": "Cópiala ahora: no volverás a verla. Si la pierdes, revócala y crea otra.",
+        "secret": "Tu clave",
+        "claudeCode": "Para Claude Code, pega esto en tu terminal:",
+        "claudeApp": "Para Claude (claude.ai o Desktop), sigue los pasos de «Cómo conectar» con esta clave.",
+        "done": "Ya la he guardado"
+      },
+      "list": {
+        "mine": "Tus claves",
+        "company": "Claves de la empresa",
+        "companyHelp": "Las de todo el equipo: puedes revocar la de cualquiera.",
+        "empty": "Aún no hay ninguna clave.",
+        "owner": "De {name}",
+        "created": "Creada el {date}",
+        "lastUsed": "Último uso: {date}",
+        "neverUsed": "Sin usar todavía",
+        "active": "Activa",
+        "revoked": "Revocada el {date}",
+        "revoke": "Revocar"
+      },
+      "confirmRevoke": {
+        "title": "Revocar clave",
+        "message": "¿Revocar «{name}»? El asistente que la use perderá el acceso al momento. No se puede deshacer."
+      },
+      "toast": {
+        "revoked": "Clave «{name}» revocada."
+      },
+      "copy": {
+        "url": "Copiar la dirección",
+        "key": "Copiar la clave",
+        "command": "Copiar el comando"
+      },
+      "errors": {
+        "load": "No se pudieron cargar las claves.",
+        "create": "No se pudo crear la clave.",
+        "revoke": "No se pudo revocar la clave.",
+        "readOnly": "Esta cuenta es de solo lectura: no puede crear ni revocar claves.",
+        "limit": "Ya tienes el máximo de claves activas: revoca una que ya no uses y crea la nueva.",
+        "copy": "No se pudo copiar. Selecciona el texto y cópialo a mano."
       }
     },
     "capture": {

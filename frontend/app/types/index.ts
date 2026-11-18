@@ -421,6 +421,22 @@ export interface SenderInviteCreated extends SenderInvite {
   link: string | null
 }
 
+// backend/app/schemas/api_key.py
+export interface ApiKey {
+  id: string
+  name: string
+  prefix: string // the secret's first characters ("rpt_Ab12cD34"), to tell keys apart
+  owner_id: string
+  owner_name: string
+  created_at: string
+  last_used_at: string | null
+  revoked_at: string | null
+}
+
+export interface ApiKeyCreated extends ApiKey {
+  secret: string // returned by the create call only, never again
+}
+
 export interface StarterTemplate {
   key: string
   name: string

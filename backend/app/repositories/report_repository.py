@@ -18,6 +18,7 @@ ACTIVE_STATUSES = ("pending", *PENDING_STATUSES)
 # The PDF exists. "delivery_failed" means none of its copies arrived (a resend can still fix that).
 FINISHED_STATUSES = ("delivered", "delivery_failed")
 TERMINAL_STATUSES = (*FINISHED_STATUSES, "failed", "cancelled")
+ALL_STATUSES = (*ACTIVE_STATUSES, *TERMINAL_STATUSES)
 
 _Query = TypeVar("_Query", bound=Select[*tuple[Any, ...]])
 

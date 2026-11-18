@@ -60,3 +60,5 @@ def configure_logging() -> None:
         uvicorn_logger.propagate = True
     # httpx logs every request URL at INFO, and a Telegram Bot API URL contains the bot's token.
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    # The MCP SDK logs every stateless request ("Terminating session: None") at INFO.
+    logging.getLogger("mcp").setLevel(logging.WARNING)

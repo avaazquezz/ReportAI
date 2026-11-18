@@ -10,7 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, Header, UploadFile
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
-from sqlalchemy import exists, select
+from sqlalchemy import Select, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -57,19 +57,21 @@ def _check_photo(raw: bytes) -> None:
         image.verify()
 
 
+def capturable_types(tenant_id: uuid.UUID) -> Select[DocumentType]:
+    """The company's document types a report can be started with: switched on and with an active
+    template (one without would spend the extraction and then fail to render). Shared with the MCP
+    server's tools."""
+    has_template = exists().where(DocumentTemplate.document_type_id == DocumentType.id, DocumentTemplate.is_active.is_(True))
+    return select(DocumentType).where(DocumentType.tenant_id == tenant_id, DocumentType.is_active.is_(True), has_template)
+
+
 @router.get("/capture/document-types")
 async def capture_document_types(
     current_user: TenantUser = Depends(require_capturer), db: AsyncSession = Depends(get_db)
 ) -> list[CaptureDocumentType]:
-    """What the app offers to record: the company's active types that have a template (one without
-    would spend the extraction and then fail to render). Just the picker's fields: a technician
+    """What the app offers to record (capturable_types). Just the picker's fields: a technician
     has no business with the prompts or the recipients."""
-    has_template = exists().where(DocumentTemplate.document_type_id == DocumentType.id, DocumentTemplate.is_active.is_(True))
-    types = await db.scalars(
-        select(DocumentType)
-        .where(DocumentType.tenant_id == require_tenant_id(current_user), DocumentType.is_active.is_(True), has_template)
-        .order_by(DocumentType.name)
-    )
+    types = await db.scalars(capturable_types(require_tenant_id(current_user)).order_by(DocumentType.name))
     return [CaptureDocumentType(id=dt.id, name=dt.name, description=dt.description) for dt in types]
 
 
