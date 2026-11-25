@@ -342,6 +342,44 @@ async def test_a_registered_secret_is_stored_encrypted_and_required(
     assert with_secret.status_code == 200
 
 
+@pytest.mark.parametrize("sent", ["with its length", "in chunks"])
+async def test_a_registration_over_16_kb_is_refused_unread(http: httpx2.AsyncClient, db: AsyncSession, sent: str) -> None:
+    body = json.dumps({"redirect_uris": [REDIRECT], "client_name": "Claude", "contacts": ["x" * 17_000]}).encode()
+
+    async def chunks() -> AsyncIterator[bytes]:
+        for start in range(0, len(body), 4096):
+            yield body[start : start + 4096]
+
+    content = body if sent == "with its length" else chunks()
+    response = await http.post("/oauth/register", content=content, headers={"Content-Type": "application/json"})
+
+    assert response.status_code == 413
+    assert await db.scalar(select(OAuthClient)) is None
+
+
+async def test_a_registration_stores_only_what_the_server_reads(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]
+) -> None:
+    acme, _ = companies
+    extra = {
+        "contacts": ["ops@app.example"], "jwks": {"keys": [{"kty": "oct", "k": "x" * 1000}]}, "logo_uri": "https://app.example/logo.png",
+        "client_uri": "https://app.example", "software_id": "x" * 500, "tos_uri": "https://app.example/tos",
+    }
+    registered = await _register(http, **extra)
+    assert registered.status_code == 201, registered.text
+
+    stored = await db.scalar(select(OAuthClient))
+    assert stored is not None
+    assert set(stored.client_metadata) <= {
+        "redirect_uris", "token_endpoint_auth_method", "grant_types", "response_types", "client_name", "client_id_issued_at",
+        "client_secret_expires_at",
+    }
+    assert stored.client_metadata["client_name"] == "Claude" and stored.client_metadata["redirect_uris"] == [REDIRECT]
+    # And it connects as before.
+    client_id, (verifier, challenge) = registered.json()["client_id"], _pkce()
+    assert (await _exchange(http, client_id, await _code(http, acme["approver"], client_id, challenge), verifier)).status_code == 200
+
+
 async def test_registration_is_rate_limited_per_address(http: httpx2.AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
     from app.core import rate_limit
 

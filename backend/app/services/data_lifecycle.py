@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import ColumnElement, ScalarResult, and_, delete, func, select, update
+from sqlalchemy import ColumnElement, ScalarResult, and_, delete, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -18,12 +18,19 @@ from app.core.langgraph_checkpointer import get_checkpointer
 from app.models.document_template import DocumentTemplate
 from app.models.inbound_message import InboundMessage
 from app.models.job import Job
-from app.models.oauth import OAuthClient, OAuthCode, OAuthToken
+from app.models.oauth import (
+    OAuthClient,
+    OAuthCode,
+    OAuthGrant,
+    OAuthMetadataFetchFailure,
+    OAuthToken,
+)
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
 from app.services import audit
 from app.services.channels.web import WEB
+from app.services.oauth.clients import FETCH_FAILURE_TTL, METADATA_DOCUMENT_TTL
 
 logger = logging.getLogger(__name__)
 
@@ -177,8 +184,8 @@ def drop_stale_inbound_files() -> None:
 
 async def purge_unused_oauth_clients(db: AsyncSession) -> int:
     """Deletes the self-registered OAuth apps unused for KEEP_UNUSED_OAUTH_CLIENTS_FOR (no commit);
-    their dead grants go with them by CASCADE. Apps known by a metadata document stay: there is
-    one per real app, not one per stranger who registers."""
+    their dead grants go with them by CASCADE. Apps known by a metadata document have their own
+    rule (purge_unconnected_metadata_document_clients)."""
     unused = await db.execute(
         delete(OAuthClient).where(
             OAuthClient.kind == "dcr",
@@ -186,6 +193,23 @@ async def purge_unused_oauth_clients(db: AsyncSession) -> int:
         )
     )
     return int(unused.rowcount)  # type: ignore[attr-defined]
+
+
+async def purge_unconnected_metadata_document_clients(db: AsyncSession) -> int:
+    """Deletes the apps known by a metadata document that nobody is connected to or approving (no
+    grant, no code) and whose cached document is past its day (no commit): anyone can make this
+    server fetch an address, and the next request that names one simply fetches it again. Forgets
+    the fetch failures past their ten minutes too."""
+    unconnected = await db.execute(
+        delete(OAuthClient).where(
+            OAuthClient.kind == "cimd",
+            OAuthClient.fetched_at.is_(None) | (OAuthClient.fetched_at < func.now() - METADATA_DOCUMENT_TTL),
+            ~exists().where(OAuthGrant.oauth_client_id == OAuthClient.id),
+            ~exists().where(OAuthCode.oauth_client_id == OAuthClient.id),
+        )
+    )
+    await db.execute(delete(OAuthMetadataFetchFailure).where(OAuthMetadataFetchFailure.failed_at < func.now() - FETCH_FAILURE_TTL))
+    return int(unconnected.rowcount)  # type: ignore[attr-defined]
 
 
 async def prune_expired_oauth_secrets(db: AsyncSession) -> None:

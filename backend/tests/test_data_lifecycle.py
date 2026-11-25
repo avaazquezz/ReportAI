@@ -24,7 +24,13 @@ from app.models.document_template import DocumentTemplate
 from app.models.execution_log import ExecutionLog
 from app.models.inbound_message import InboundMessage
 from app.models.job import Job
-from app.models.oauth import OAuthClient, OAuthCode, OAuthGrant, OAuthToken
+from app.models.oauth import (
+    OAuthClient,
+    OAuthCode,
+    OAuthGrant,
+    OAuthMetadataFetchFailure,
+    OAuthToken,
+)
 from app.models.password_reset_token import PasswordResetToken
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
@@ -325,6 +331,41 @@ async def test_self_registered_oauth_apps_nobody_used_for_30_days_are_purged(db:
 
     assert set(await db.scalars(select(OAuthClient.client_id))) == {"used-lately", "just-registered", "https://app.example/client.json"}
     assert await db.scalar(select(func.count()).select_from(OAuthGrant)) == 0  # its dead grant with it
+
+
+async def test_metadata_document_apps_nobody_is_connected_through_go_once_their_copy_is_stale(db: AsyncSession) -> None:
+    acme = await _company(db, "Acme")
+    grant = await db.get(OAuthGrant, acme["ids"]["grant_id"])
+    assert grant is not None
+    now = datetime.now(UTC)
+    day_ago = now - timedelta(hours=25)
+    apps = {
+        name: OAuthClient(client_id=f"https://{name}.example/client.json", kind="cimd", client_metadata={}, fetched_at=fetched_at)
+        for name, fetched_at in [("stale", day_ago), ("refused", None), ("fresh", now), ("connected", day_ago), ("approving", day_ago)]
+    }
+    db.add_all([*apps.values(), OAuthClient(client_id="registered", kind="dcr", client_metadata={})])
+    db.add_all(
+        [
+            OAuthMetadataFetchFailure(url="https://old.example/client.json", failed_at=now - timedelta(minutes=11)),
+            OAuthMetadataFetchFailure(url="https://recent.example/client.json", failed_at=now - timedelta(minutes=1)),
+        ]
+    )
+    await db.flush()
+    db.add_all(
+        [
+            OAuthGrant(tenant_id=grant.tenant_id, user_id=grant.user_id, oauth_client_id=apps["connected"].id, scope="reportai", resource="x"),
+            _oauth_code(apps["approving"].id, grant.tenant_id, grant.user_id, now + timedelta(minutes=10)),
+        ]
+    )
+    await db.commit()
+    before = set(await db.scalars(select(OAuthClient.client_id)))
+
+    assert await data_lifecycle.purge_unconnected_metadata_document_clients(db) == 2
+    await db.commit()
+
+    gone = {apps["stale"].client_id, apps["refused"].client_id}
+    assert set(await db.scalars(select(OAuthClient.client_id))) == before - gone
+    assert list(await db.scalars(select(OAuthMetadataFetchFailure.url))) == ["https://recent.example/client.json"]
 
 
 async def test_expired_oauth_codes_and_tokens_are_swept(db: AsyncSession) -> None:

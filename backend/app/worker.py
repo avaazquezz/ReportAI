@@ -137,10 +137,14 @@ async def apply_retention() -> None:
 async def prune_oauth() -> None:
     async with AsyncSessionLocal() as session:
         purged = await data_lifecycle.purge_unused_oauth_clients(session)
+        # Expired codes first: one left over would keep its app's cached document from going.
         await data_lifecycle.prune_expired_oauth_secrets(session)
+        unconnected = await data_lifecycle.purge_unconnected_metadata_document_clients(session)
         await session.commit()
     if purged:
         logger.info("Deleted %s self-registered OAuth apps nobody used for 30 days", purged)
+    if unconnected:
+        logger.info("Deleted %s cached OAuth app metadata documents nobody is connected through", unconnected)
 
 
 async def maintenance() -> None:
