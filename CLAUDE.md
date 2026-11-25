@@ -41,6 +41,9 @@ Backend on the host, from `backend/`:
 Frontend, from `frontend/` (`node_modules/.bin/<tool>` works where npm is missing; a fresh
 worktree needs `node_modules/.bin/nuxi prepare` before eslint can load its config):
 - `npm run lint`, `npm run typecheck`, `npm test`
+- `npm run test:e2e`: the main flow in Chromium (Playwright) against `infra/docker-compose.e2e.yml`
+  (production images, AI replaced by `infra/e2e/ai_stub.py`): first
+  `docker compose -f infra/docker-compose.e2e.yml up -d --build --wait` and `... run --rm seed`.
 
 CI (`.github/workflows/ci.yml`) runs all of the above except the eval, plus `npm run build` and the
 production image build.
