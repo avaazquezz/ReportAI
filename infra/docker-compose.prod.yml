@@ -21,6 +21,9 @@ x-backend: &backend
     # The hosted service promises it (FAQ, privacy policy), so it lives here and not in an
     # unversioned .env; tests/test_case_study_figures.py checks the pages quote the same number.
     AUDIO_RETENTION_DAYS: "90"
+    # AI assistants connect by signing in (OAuth) as well as with API keys. Off everywhere else,
+    # a company's own server included (infra/install/).
+    MCP_OAUTH_ENABLED: "true"
 
 services:
   postgres:
