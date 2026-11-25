@@ -245,6 +245,22 @@ async def test_the_history_searches_names_in_the_fields_and_filters_by_type_and_
     assert wildcard["total"] == 0  # a % typed in the box is a character, not "everything"
 
 
+async def test_the_history_searches_the_values_of_the_fields_never_their_names(panel: Panel) -> None:
+    report = await panel.report(status="delivered", extracted_fields={
+        "obra": "Calle Mayor 3", "plazo": None, "trabajadores": 42, "andamio_ok": True,
+        "medidas": [{"zona": "Andamio norte", "responsable": None}],
+    })
+
+    async def found(q: str) -> list[str]:
+        return [item["id"] for item in (await panel.call("GET", "/reports", params={"q": q})).json()["items"]]
+
+    # A field's name, a null, a boolean and the JSON's punctuation were matching every report.
+    for not_a_value in ("obra", "medidas", "zona", "null", "true", '": "', "{"):
+        assert await found(not_a_value) == [], not_a_value
+    for value in ("mayor", "andamio norte", "42"):  # a nested table row and a number are values
+        assert await found(value) == [str(report.id)], value
+
+
 async def test_the_csv_has_a_column_per_field_and_cannot_smuggle_formulas(panel: Panel) -> None:
     await panel.report(status="delivered", extracted_fields={"client": "=HYPERLINK(\"http://x\")", "visit_date": "2026-09-30"})
 
