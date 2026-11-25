@@ -71,9 +71,10 @@ a new report type is configuration, not a code change.
 - **One codebase, two run modes.** A hosted multi-tenant service, or one company per server with a
   one-line installer, a setup wizard, encrypted settings and `reportai update`.
 - **An AI assistant as a client, not a backdoor.** A remote MCP server (Streamable HTTP, stateless)
-  lets Claude search and read reports, hand over their PDF and start drafts with a personal API
-  key (that can expire) acting as its person through the panel's own checks; a draft still waits
-  for a human. An eval runs Claude against it for tool choice, the PDF, prompt injection and
+  lets Claude search and read reports, hand over their PDF and start drafts, acting as its person
+  through the panel's own checks; a draft still waits for a human. Assistants sign in with OAuth
+  2.1 (PKCE, Client ID Metadata Documents or dynamic registration, consent in the panel, rotating
+  refresh tokens bound to this server), or with a personal API key that can expire. An eval runs Claude against it for tool choice, the PDF, prompt injection and
   isolation (7 of 7 cases in the published run).
 - **The main flow tested in a browser.** A Playwright test in CI signs in, types a note, reviews and
   corrects the fields, approves, downloads the PDF and finds it in the recipient's mailbox, against
@@ -97,7 +98,7 @@ installation updated (`reportai update`) is the job of whoever maintains it.
 
 The dev stack runs in Docker (`cp .env.example .env`, then `make up` and `make migrate`); `make
 test` and `make lint` run the checks. See [`docs/local-development.md`](docs/local-development.md)
-and [`CLAUDE.md`](CLAUDE.md) for the full set of commands and the project's invariants.
+for the full set of commands and the project's invariants.
 
 ## Status
 
