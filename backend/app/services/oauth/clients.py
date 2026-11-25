@@ -25,10 +25,12 @@ isn't fetched again on every request.
 """
 
 import asyncio
+import functools
 import ipaddress
 import json
 import logging
 import socket
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit
@@ -59,14 +61,16 @@ MAX_CLIENT_ID_CHARS = 2048  # oauth_clients.client_id
 METADATA_DOCUMENT_TTL = timedelta(hours=24)
 METADATA_DOCUMENT_MAX_BYTES = 64 * 1024
 METADATA_DOCUMENT_TIMEOUT_SECONDS: float = 5  # waiting for a slot, resolving the host and downloading
-# The timeout above frees the request that waits, not the thread a hung DNS lookup holds: the
-# loop's resolver runs in its default executor, a small pool asyncio.to_thread shares. Without a
-# bound, strangers naming slow hosts could take every thread and stall the process's lookups and
-# file work. A fetch that gets no slot in its time is "unavailable", as if the publisher were down.
+# The timeout above frees the request that waits, not the thread a hung DNS lookup holds. So the
+# lookups run in a pool of their own, never in the loop's default executor (the one
+# asyncio.to_thread and its own lookups share): strangers naming slow hosts can tie up these
+# threads, and nothing else. Fetches take a slot too, so no more than this many run at once; one
+# that gets no slot in its time is "unavailable", but not remembered as the publisher's failure.
 # ponytail: per process, so a deployment's ceiling is this times its API processes. Upgrade path:
 # a limiter shared by every process (a Postgres advisory lock per slot, say) if that is too many.
 METADATA_FETCHES_AT_ONCE = 2
 _fetch_slots = asyncio.Semaphore(METADATA_FETCHES_AT_ONCE)
+_resolver = ThreadPoolExecutor(max_workers=METADATA_FETCHES_AT_ONCE, thread_name_prefix="metadata-dns")
 # A failed fetch, of either kind, is not tried again for this long.
 FETCH_FAILURE_TTL = timedelta(minutes=10)
 # ponytail: a document that can't be fetched is served from its last copy for up to 7 days past
@@ -98,6 +102,11 @@ class MetadataDocumentUnavailable(ClientMetadataError):
     """A document that could not be had right now (any status but 200 and 410, a body that is not a
     JSON document or is too big, DNS, network, timeout, no fetch slot): its last copy, if any,
     stays in service. Any other ClientMetadataError is a refusal."""
+
+
+class NoFetchSlot(MetadataDocumentUnavailable):
+    """Every fetch slot stayed busy for the whole budget: this server's congestion, not the
+    publisher's outage, so it is not remembered as a failed fetch."""
 
 
 def redirect_uri_allowed(uri: str) -> bool:
@@ -212,7 +221,9 @@ async def _metadata_document_client(db: AsyncSession, url: str, client_ip: str) 
     try:
         client = await fetch_metadata_document(url)
     except MetadataDocumentUnavailable as exc:
-        await _remember_failure(db, url)
+        # Our own queue being full says nothing about the publisher: the next request tries again.
+        if not isinstance(exc, NoFetchSlot):
+            await _remember_failure(db, url)
         await db.commit()
         if row is None or fallback is None:
             logger.warning("Could not fetch the client metadata document at %s: %s", url[:200], exc)
@@ -262,7 +273,8 @@ def _public(address: str) -> bool:
 
 async def _resolve(host: str) -> set[str]:
     try:
-        infos = await asyncio.get_running_loop().getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+        lookup = functools.partial(socket.getaddrinfo, host, 443, type=socket.SOCK_STREAM)
+        infos = await asyncio.get_running_loop().run_in_executor(_resolver, lookup)
     except UnicodeError as exc:  # IDNA: an empty label ("a..com"), or one longer than 63 characters
         raise ClientMetadataError(f"the host name is not valid ({exc})") from exc
     except OSError as exc:
@@ -301,7 +313,7 @@ async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
             body = await _download(url)
     except TimeoutError as exc:
         if not got_a_slot:
-            raise MetadataDocumentUnavailable(
+            raise NoFetchSlot(
                 f"no fetch slot came free within {METADATA_DOCUMENT_TIMEOUT_SECONDS} seconds ({METADATA_FETCHES_AT_ONCE} busy)"
             ) from exc
         raise MetadataDocumentUnavailable(f"no complete answer within {METADATA_DOCUMENT_TIMEOUT_SECONDS} seconds") from exc
