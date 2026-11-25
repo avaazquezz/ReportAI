@@ -432,7 +432,7 @@
         },
         "proof": {
           "label": "Cómo se demuestra",
-          "body": "627 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
+          "body": "753 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
         }
       },
       "block": {
@@ -616,21 +616,22 @@
     "quality": {
       "heading": "Cómo sé que funciona.",
       "plain": "No me basta con que el modelo «suele acertar». Cada cambio pasa por tests, tipos y CI; la extracción, por un golden set; y los cambios grandes, por una revisión independiente.",
+      "evalsLink": "Cada evaluación publicada, con su commit, su modelo y lo que costó",
       "figures": {
         "tests": {
-          "value": "627",
+          "value": "753",
           "label": "tests de backend",
           "source": "pytest contra Postgres real, en cada push"
         },
         "frontend": {
-          "value": "44",
+          "value": "61",
           "label": "tests de frontend",
-          "source": "más un smoke test del servidor compilado"
+          "source": "más un smoke test del servidor compilado y el recorrido completo en un navegador"
         },
         "invented": {
           "value": "0",
           "label": "datos inventados en el golden set",
-          "source": "83 casos, 3 pasadas: 99,8 %, 100 % y 99,7 % de campos correctos"
+          "source": "83 casos: Claude, 99,7 % de campos correctos; OpenAI, 97,5 %"
         },
         "a11y": {
           "value": "100",
@@ -664,7 +665,7 @@
           "ci": {
             "who": "CI",
             "name": "Lo demuestra",
-            "body": "Lint, tipos, migraciones contra los modelos, tests, build de la imagen y smoke test de la CSP."
+            "body": "Lint, tipos, migraciones contra los modelos, tests, el recorrido completo en un navegador, build de la imagen y smoke test de la CSP."
           }
         },
         "motto": "La IA escribe buena parte del código. De cada línea respondo yo."

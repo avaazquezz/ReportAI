@@ -84,3 +84,21 @@ def test_the_pages_promise_the_audio_retention_the_hosted_service_runs_with() ->
     for language, pattern in (("es", r"se borran a los (\d+) días"), ("en", r"deleted after (\d+) days")):
         promises = [_home(language)["faq"]["items"]["data"]["a"], _landing(language)["privacy"]["customerData"]["body"]]
         assert [int(m) for text in promises for m in re.findall(pattern, text)] == [days, days], language
+
+
+def _latest_published(provider_file: str) -> dict:
+    runs = sorted((FRONTEND.parent / "docs" / "evals").glob(f"*-golden-{provider_file}.json"))
+    assert runs, f"no published golden-set run for {provider_file} in docs/evals/"
+    return json.loads(runs[-1].read_text())
+
+
+@pytest.mark.parametrize(("language", "decimal"), [("es", ","), ("en", ".")])
+def test_the_pages_quote_the_latest_published_golden_set_runs(language: str, decimal: str) -> None:
+    # docs/evals/ keeps every paid run as the harness wrote it; the pages may only quote what is there.
+    quoted = [_built(language)["facts"]["eval"]["body"], _landing(language)["quality"]["figures"]["invented"]["source"]]
+    for provider_file in ("anthropic", "openai"):
+        run = _latest_published(provider_file)
+        assert run["verdicts"]["invented"] == 0 and not run["failed_cases"]
+        accuracy = f"{run['accuracy'] * 100:.1f}".replace(".", decimal)
+        for text in quoted:
+            assert accuracy in text, (provider_file, accuracy, text)
