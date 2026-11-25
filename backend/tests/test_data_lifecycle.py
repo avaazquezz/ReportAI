@@ -15,6 +15,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import worker
 from app.core.config import settings
 from app.core.database import Base
 from app.core.security import hash_password
@@ -341,7 +342,9 @@ async def test_metadata_document_apps_nobody_is_connected_through_go_once_their_
     day_ago = now - timedelta(hours=25)
     apps = {
         name: OAuthClient(client_id=f"https://{name}.example/client.json", kind="cimd", client_metadata={}, fetched_at=fetched_at)
-        for name, fetched_at in [("stale", day_ago), ("refused", None), ("fresh", now), ("connected", day_ago), ("approving", day_ago)]
+        for name, fetched_at in [
+            ("stale", day_ago), ("refused", None), ("fresh", now), ("connected", day_ago), ("approving", day_ago), ("disconnected", day_ago),
+        ]
     }
     db.add_all([*apps.values(), OAuthClient(client_id="registered", kind="dcr", client_metadata={})])
     db.add_all(
@@ -355,15 +358,20 @@ async def test_metadata_document_apps_nobody_is_connected_through_go_once_their_
         [
             OAuthGrant(tenant_id=grant.tenant_id, user_id=grant.user_id, oauth_client_id=apps["connected"].id, scope="reportai", resource="x"),
             _oauth_code(apps["approving"].id, grant.tenant_id, grant.user_id, now + timedelta(minutes=10)),
+            # A connection that ended holds nothing up: the app goes, and the dead grant with it.
+            OAuthGrant(
+                tenant_id=grant.tenant_id, user_id=grant.user_id, oauth_client_id=apps["disconnected"].id, scope="reportai", resource="x",
+                revoked_at=now,
+            ),
         ]
     )
     await db.commit()
     before = set(await db.scalars(select(OAuthClient.client_id)))
 
-    assert await data_lifecycle.purge_unconnected_metadata_document_clients(db) == 2
+    assert await data_lifecycle.purge_unconnected_metadata_document_clients(db) == 3
     await db.commit()
 
-    gone = {apps["stale"].client_id, apps["refused"].client_id}
+    gone = {apps["stale"].client_id, apps["refused"].client_id, apps["disconnected"].client_id}
     assert set(await db.scalars(select(OAuthClient.client_id))) == before - gone
     assert list(await db.scalars(select(OAuthMetadataFetchFailure.url))) == ["https://recent.example/client.json"]
 
@@ -390,3 +398,27 @@ async def test_expired_oauth_codes_and_tokens_are_swept(db: AsyncSession) -> Non
     # Left: the company's live refresh token, and the spent one, still there to catch its reuse.
     left = set(await db.scalars(select(OAuthToken.token_hash)))
     assert len(left) == 2 and "spent".ljust(64, "0") in left and "expired".ljust(64, "0") not in left
+
+
+async def test_grants_revoked_more_than_30_days_ago_are_pruned_with_their_tokens(db: AsyncSession, own_sessions: None) -> None:
+    acme = await _company(db, "Acme")
+    live = await db.get(OAuthGrant, acme["ids"]["grant_id"])
+    assert live is not None
+    now = datetime.now(UTC)
+    ended = {
+        name: OAuthGrant(
+            tenant_id=live.tenant_id, user_id=live.user_id, oauth_client_id=live.oauth_client_id, scope="reportai", resource="x",
+            revoked_at=revoked_at,
+        )
+        for name, revoked_at in [("long ago", now - timedelta(days=31)), ("lately", now - timedelta(days=29))]
+    }
+    db.add_all(ended.values())
+    await db.flush()
+    db.add(OAuthToken(token_hash="old".ljust(64, "0"), grant_id=ended["long ago"].id, kind="refresh", expires_at=now + timedelta(days=1)))
+    await db.commit()
+
+    await worker.prune_oauth()  # the worker's maintenance round
+
+    assert set(await db.scalars(select(OAuthGrant.id))) == {live.id, ended["lately"].id}
+    assert "old".ljust(64, "0") not in set(await db.scalars(select(OAuthToken.token_hash)))
+    assert await db.scalar(select(func.count()).select_from(OAuthToken).where(OAuthToken.grant_id == live.id))  # its own stay

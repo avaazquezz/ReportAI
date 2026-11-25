@@ -47,6 +47,10 @@ PUBLIC_DEMO_TTL = timedelta(hours=24)
 # refreshed): anyone can register one, so the ones nobody uses don't pile up. As long as the
 # refresh token's life (30 days), so an app that is purged holds no token still good.
 KEEP_UNUSED_OAUTH_CLIENTS_FOR = timedelta(days=30)
+# A revoked OAuth grant is kept this long, then deleted with its tokens. Nothing points at one by
+# foreign key but its tokens (a draft names its grant in its meta only), and its revocation stays
+# in the audit log.
+KEEP_REVOKED_OAUTH_GRANTS_FOR = timedelta(days=30)
 
 # Under the storage folder, a company's own files live in <folder>/<tenant id>, and a report's
 # (document, audio) in <report id>.
@@ -197,14 +201,15 @@ async def purge_unused_oauth_clients(db: AsyncSession) -> int:
 
 async def purge_unconnected_metadata_document_clients(db: AsyncSession) -> int:
     """Deletes the apps known by a metadata document that nobody is connected to or approving (no
-    grant, no code) and whose cached document is past its day (no commit): anyone can make this
-    server fetch an address, and the next request that names one simply fetches it again. Forgets
-    the fetch failures past their ten minutes too."""
+    grant not revoked, no code) and whose cached document is past its day (no commit), their
+    revoked grants with them by CASCADE: anyone can make this server fetch an address, and the next
+    request that names one simply fetches it again. Forgets the fetch failures past their ten
+    minutes too."""
     unconnected = await db.execute(
         delete(OAuthClient).where(
             OAuthClient.kind == "cimd",
             OAuthClient.fetched_at.is_(None) | (OAuthClient.fetched_at < func.now() - METADATA_DOCUMENT_TTL),
-            ~exists().where(OAuthGrant.oauth_client_id == OAuthClient.id),
+            ~exists().where(OAuthGrant.oauth_client_id == OAuthClient.id, OAuthGrant.revoked_at.is_(None)),
             ~exists().where(OAuthCode.oauth_client_id == OAuthClient.id),
         )
     )
@@ -217,3 +222,11 @@ async def prune_expired_oauth_secrets(db: AsyncSession) -> None:
     spent refresh token stays until then, so presenting it again is still caught as reuse."""
     await db.execute(delete(OAuthCode).where(OAuthCode.expires_at < func.now()))
     await db.execute(delete(OAuthToken).where(OAuthToken.expires_at < func.now()))
+
+
+async def prune_revoked_oauth_grants(db: AsyncSession) -> int:
+    """Deletes the grants revoked more than KEEP_REVOKED_OAUTH_GRANTS_FOR ago, their tokens with
+    them by CASCADE (no commit): a revoked grant is never valid again, and without this an app's
+    reconnections would pile them up for as long as the app is in use."""
+    pruned = await db.execute(delete(OAuthGrant).where(OAuthGrant.revoked_at < func.now() - KEEP_REVOKED_OAUTH_GRANTS_FOR))
+    return int(pruned.rowcount)  # type: ignore[attr-defined]
