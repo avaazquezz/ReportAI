@@ -10,7 +10,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 const { t } = useI18n()
 
 const STAGES = ['capture', 'transcribe', 'agent', 'document', 'delivery'] as const
-const FACTS = ['tenancy', 'eval', 'install'] as const
+const FACTS = ['tenancy', 'eval', 'install', 'assistant'] as const
 const PROFILES = [
   { key: 'code', href: 'https://github.com/avaazquezz/ReportAI' },
   { key: 'portfolio', href: 'https://www.vazquezdev.pro' },
@@ -56,14 +56,14 @@ useMotionScope(root, (c) => {
         </div>
       </div>
 
-      <dl class="col-span-12 m-0 grid gap-y-0 border-y border-ink-900/10 md:grid-cols-3">
+      <dl class="col-span-12 m-0 grid gap-y-0 border-y border-ink-900/10 lg:grid-cols-4">
         <div
           v-for="(key, index) in FACTS"
           :key="key"
-          class="py-6 md:py-8"
+          class="py-6 lg:py-8"
           :class="[
-            index > 0 ? 'border-t border-ink-900/10 md:border-l md:border-t-0 md:pl-6' : '',
-            index < FACTS.length - 1 ? 'md:pr-6' : ''
+            index > 0 ? 'border-t border-ink-900/10 lg:border-l lg:border-t-0 lg:pl-6' : '',
+            index < FACTS.length - 1 ? 'lg:pr-6' : ''
           ]"
         >
           <dt class="text-[0.98rem] font-semibold">{{ t(`home.built.facts.${key}.title`) }}</dt>
