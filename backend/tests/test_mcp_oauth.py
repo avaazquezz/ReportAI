@@ -43,6 +43,7 @@ from app.services.oauth import (
     resource_url,
     token_hash,
 )
+from app.services.oauth.grants import MAX_CONNECTED_APPS_PER_USER
 from tests.test_mcp_server import (  # noqa: F401
     _company,
     _connect,
@@ -767,6 +768,91 @@ async def test_a_person_connects_at_most_ten_apps(
     assert (await _exchange(http, one_more, await _code(http, acme["approver"], one_more, challenge), verifier)).status_code == 200
     # ...and, back at ten, approving one of them again replaces its connection: no more room needed.
     assert await _code(http, acme["approver"], connected[0]["client_id"], _pkce()[1])
+
+
+async def _live_grants(db: AsyncSession, user: Any) -> list[uuid.UUID]:
+    return list(await db.scalars(select(OAuthGrant.id).where(OAuthGrant.user_id == user.id, OAuthGrant.revoked_at.is_(None))))
+
+
+async def _approved(http: httpx2.AsyncClient, user: Any, client_id: str) -> tuple[str, str, str]:
+    """A code `user` approved for the app, not yet exchanged: what _exchange takes."""
+    verifier, challenge = _pkce()
+    return client_id, await _code(http, user, client_id, challenge), verifier
+
+
+async def test_an_app_approved_twice_ends_with_one_connection_the_later_one(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]
+) -> None:
+    acme, _ = companies
+    first = await _connected(http, acme["approver"])
+    earlier_code = await _approved(http, acme["approver"], first["client_id"])
+    later_code = await _approved(http, acme["approver"], first["client_id"])
+    # Approving ends nothing: the connection works until the one replacing it exists.
+    assert (await _mcp(http, first["access_token"])).status_code == 200
+
+    earlier, later = await _exchange(http, *earlier_code), await _exchange(http, *later_code)
+
+    assert earlier.status_code == later.status_code == 200
+    assert await _live_grants(db, acme["approver"]) == [(await _grant(db, later.json()["access_token"])).id]
+    assert (await _mcp(http, first["access_token"])).status_code == 401
+    assert (await _mcp(http, earlier.json()["access_token"])).status_code == 401
+    assert (await _mcp(http, later.json()["access_token"])).status_code == 200
+
+
+async def test_an_exchange_that_fails_leaves_the_connection_it_would_replace_working(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]
+) -> None:
+    acme, _ = companies
+    first = await _connected(http, acme["approver"])
+    client_id, code, verifier = await _approved(http, acme["approver"], first["client_id"])
+
+    wrong_verifier = await _exchange(http, client_id, code, _pkce()[0])
+    await db.execute(update(OAuthCode).values(expires_at=datetime.now(UTC) - timedelta(seconds=1)))
+    await db.commit()
+    expired = await _exchange(http, client_id, code, verifier)
+
+    assert wrong_verifier.status_code == expired.status_code == 400
+    assert await _live_grants(db, acme["approver"]) == [(await _grant(db, first["access_token"])).id]
+    assert (await _mcp(http, first["access_token"])).status_code == 200
+
+
+async def test_codes_approved_before_any_is_exchanged_still_connect_at_most_ten_apps(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]
+) -> None:
+    acme, _ = companies
+    # Approved while nothing is connected yet, so the consent page lets each one through.
+    pending = [await _approved(http, acme["approver"], await _client_id(http)) for _ in range(MAX_CONNECTED_APPS_PER_USER + 1)]
+
+    exchanged = [await _exchange(http, *approved) for approved in pending]
+
+    assert [response.status_code for response in exchanged] == [200] * MAX_CONNECTED_APPS_PER_USER + [400]
+    refused = exchanged[-1].json()
+    assert refused["error"] == "invalid_grant" and f"{MAX_CONNECTED_APPS_PER_USER} connected apps" in refused["error_description"]
+    assert len(await _live_grants(db, acme["approver"])) == MAX_CONNECTED_APPS_PER_USER
+    assert await db.scalar(select(func.count()).select_from(OAuthCode)) == 0  # the refused code is spent too
+    assert all([(await _mcp(http, response.json()["access_token"])).status_code == 200 for response in exchanged[:-1]])
+
+
+@pytest.mark.parametrize("apps", ["two new apps, one place left", "one app, twice"])
+async def test_codes_exchanged_at_once_are_counted_one_after_the_other(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], apps: str
+) -> None:
+    acme, _ = companies
+    if apps == "one app, twice":
+        client_id = await _client_id(http)
+        pending = [await _approved(http, acme["approver"], client_id) for _ in range(2)]
+        expected, live = [200, 200], 1
+    else:
+        for _ in range(MAX_CONNECTED_APPS_PER_USER - 1):
+            await _connected(http, acme["approver"])
+        pending = [await _approved(http, acme["approver"], await _client_id(http)) for _ in range(2)]
+        expected, live = [200, 400], MAX_CONNECTED_APPS_PER_USER
+
+    # Each request has a database session of its own, as in production.
+    exchanged = await asyncio.gather(*(_exchange(http, *approved) for approved in pending))
+
+    assert sorted(response.status_code for response in exchanged) == expected
+    assert len(await _live_grants(db, acme["approver"])) == live
 
 
 async def test_signing_someone_out_everywhere_disconnects_their_apps(

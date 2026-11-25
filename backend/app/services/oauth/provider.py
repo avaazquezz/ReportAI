@@ -42,7 +42,14 @@ from app.models.tenant_user import TenantUser
 from app.services import audit
 from app.services.credentials import acting_person
 from app.services.oauth import SCOPE, clients, is_this_resource, resource_url, token_hash
-from app.services.oauth.grants import ACCESS_PREFIX, REFRESH_PREFIX, make_room_for, revoke_grant
+from app.services.oauth.grants import (
+    ACCESS_PREFIX,
+    REFRESH_PREFIX,
+    TOO_MANY_APPS,
+    check_room_for,
+    make_room_for,
+    revoke_grant,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +177,11 @@ class ReportAIProvider(OAuthAuthorizationServerProvider[StoredCode, StoredRefres
         if await acting_person(self.db, authorization_code.user_id, authorization_code.tenant_id) is None:
             await self.db.commit()  # the code stays spent
             raise TokenError("invalid_grant", "The person who approved this can no longer use ReportAI")
+        # Here, not at approval: the cap and the one-connection-per-app rule hold for the grants
+        # that exist, and the connection being replaced keeps working until its successor does.
+        if not await make_room_for(self.db, authorization_code.user_id, authorization_code.oauth_client_id):
+            await self.db.commit()  # the code stays spent; nothing else was changed
+            raise TokenError("invalid_grant", TOO_MANY_APPS)
         grant = OAuthGrant(
             tenant_id=authorization_code.tenant_id,
             user_id=authorization_code.user_id,
@@ -337,13 +349,14 @@ async def consent_client(db: AsyncSession, request: ConsentRequest, *, client_ip
 
 async def approve(db: AsyncSession, user: TenantUser, request: ConsentRequest, client: OAuthClientInformationFull) -> str:
     """Makes the code for `user`'s approval of `client`, as consent_client returned it (not
-    committed), and returns where to send the browser. Ends the connection `user` had to it, if
-    any; ConflictException (409) if they are connected to too many other apps."""
+    committed), and returns where to send the browser. ConflictException (409) if they are
+    connected to too many other apps already. Ends nothing: the connection `user` has to the app,
+    if any, is replaced when the code is exchanged (ReportAIProvider.exchange_authorization_code)."""
     tenant_id = require_tenant_id(user)
     oauth_client_id = await db.scalar(select(OAuthClient.id).where(OAuthClient.client_id == client.client_id))
     if oauth_client_id is None:  # gone since consent_client found it (purged, say)
         raise ResourceNotFoundException(_EXPIRED)
-    await make_room_for(db, user, oauth_client_id)
+    await check_room_for(db, user, oauth_client_id)
     code = _secret()
     db.add(
         OAuthCode(

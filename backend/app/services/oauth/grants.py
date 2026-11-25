@@ -82,20 +82,41 @@ async def person_of(db: AsyncSession, grant_id: uuid.UUID) -> TenantUser | None:
     return None if grant is None else await acting_person(db, grant.user_id, grant.tenant_id)
 
 
-async def make_room_for(db: AsyncSession, user: TenantUser, oauth_client_id: uuid.UUID) -> None:
-    """Gets `user` ready for a new grant to the app (not committed): ConflictException if they are
-    connected to MAX_CONNECTED_APPS_PER_USER other apps already, else revokes what they hold for this
-    one, since approving an app again replaces its connection: one per person and app."""
+TOO_MANY_APPS = f"You already have {MAX_CONNECTED_APPS_PER_USER} connected apps: disconnect one you no longer use"
+
+
+async def _has_room_for(db: AsyncSession, user_id: uuid.UUID, oauth_client_id: uuid.UUID) -> bool:
     others = await db.scalar(
-        select(func.count()).select_from(OAuthGrant).where(OAuthGrant.user_id == user.id, OAuthGrant.oauth_client_id != oauth_client_id, _CONNECTED)
+        select(func.count()).select_from(OAuthGrant).where(OAuthGrant.user_id == user_id, OAuthGrant.oauth_client_id != oauth_client_id, _CONNECTED)
     )
-    if (others or 0) >= MAX_CONNECTED_APPS_PER_USER:
-        raise ConflictException(f"You already have {MAX_CONNECTED_APPS_PER_USER} connected apps: disconnect one you no longer use")
+    return (others or 0) < MAX_CONNECTED_APPS_PER_USER
+
+
+async def check_room_for(db: AsyncSession, user: TenantUser, oauth_client_id: uuid.UUID) -> None:
+    """ConflictException if `user` is connected to MAX_CONNECTED_APPS_PER_USER other apps already.
+    Changes nothing: it only spares the person approving an app whose code would then be refused
+    (make_room_for decides, when the code is exchanged)."""
+    if not await _has_room_for(db, user.id, oauth_client_id):
+        raise ConflictException(TOO_MANY_APPS)
+
+
+async def make_room_for(db: AsyncSession, user_id: uuid.UUID, oauth_client_id: uuid.UUID) -> bool:
+    """Gets the person ready for the new grant to the app their code is being exchanged for, in the
+    transaction that will create it (not committed). False, changing nothing, if they are connected
+    to MAX_CONNECTED_APPS_PER_USER other apps already; else revokes what they hold for this one
+    (connecting an app again replaces its connection: one per person and app) and returns True.
+
+    Holds a lock on the person until the transaction ends, so two of their codes exchanged at once
+    are counted one after the other: neither can pass the cap, nor leave two grants to one app."""
+    await db.execute(select(func.pg_advisory_xact_lock(func.hashtext(f"oauth_grants:{user_id}"))))
+    if not await _has_room_for(db, user_id, oauth_client_id):
+        return False
     await db.execute(
         update(OAuthGrant)
-        .where(OAuthGrant.user_id == user.id, OAuthGrant.oauth_client_id == oauth_client_id, OAuthGrant.revoked_at.is_(None))
+        .where(OAuthGrant.user_id == user_id, OAuthGrant.oauth_client_id == oauth_client_id, OAuthGrant.revoked_at.is_(None))
         .values(revoked_at=func.now())
     )
+    return True
 
 
 async def revoke_grant(db: AsyncSession, grant_id: uuid.UUID) -> None:
