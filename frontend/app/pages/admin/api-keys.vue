@@ -100,8 +100,8 @@ async function createKey() {
 
 function expiryText(key: ApiKey) {
   if (!key.expires_at) return t('admin.apiKeys.list.neverExpires')
-  const expired = apiKeyStatus(key) === 'expired'
-  return t(expired ? 'admin.apiKeys.list.expiredOn' : 'admin.apiKeys.list.expires', { date: formatDate(key.expires_at) })
+  // Not apiKeyStatus: a revoked key whose date has passed also "expired on" it.
+  return t(isPastExpiry(key) ? 'admin.apiKeys.list.expiredOn' : 'admin.apiKeys.list.expires', { date: formatDate(key.expires_at) })
 }
 
 function statusText(key: ApiKey) {

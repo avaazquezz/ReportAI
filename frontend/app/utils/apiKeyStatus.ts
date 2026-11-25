@@ -12,6 +12,10 @@ export function apiKeyStatus(
   now: Date = new Date()
 ): ApiKeyStatus {
   if (key.revoked_at) return 'revoked'
-  if (key.expires_at && new Date(key.expires_at).getTime() <= now.getTime()) return 'expired'
-  return 'active'
+  return isPastExpiry(key, now) ? 'expired' : 'active'
+}
+
+/** Whether the key's expiry date has passed, revoked or not: what tense its expiry is told in. */
+export function isPastExpiry(key: { expires_at: string | null }, now: Date = new Date()): boolean {
+  return key.expires_at !== null && new Date(key.expires_at).getTime() <= now.getTime()
 }

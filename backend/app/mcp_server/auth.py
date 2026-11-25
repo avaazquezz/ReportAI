@@ -63,7 +63,7 @@ class ApiKeyAuth:
                 await rate_limit.mcp_by_key.record(db, str(principal.key_id))
         if principal is None:
             response = JSONResponse(
-                {"detail": "Missing, unknown or revoked ReportAI API key. Make one in ReportAI under API keys."},
+                {"detail": "Missing, unknown, revoked or expired ReportAI API key. Make one in ReportAI under API keys."},
                 status_code=401,
                 headers={"WWW-Authenticate": 'Bearer realm="ReportAI"'},
             )
