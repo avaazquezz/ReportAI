@@ -19,15 +19,29 @@ const loading = ref(true)
 const error = ref('')
 const answering = ref<'approve' | 'deny' | null>(null)
 
-function errorText(err: unknown) {
-  const status = (err as { response?: Response }).response?.status
-  // A request older than 10 minutes, altered, or for an app that is gone.
-  if (status === 400 || status === 404 || status === 422) return t('auth.consent.errors.expired')
-  // The read-only demo account, or one outside any company.
-  if (status === 403) return t('auth.consent.errors.notAllowed')
-  // Approving answers 409 for one reason only: the person's cap on connected apps.
-  if (status === 409) return t('auth.consent.errors.limit')
-  return t('auth.consent.errors.generic')
+const statusOf = (err: unknown) => (err as { response?: Response }).response?.status
+
+// What a 404 means depends on it: the API's public OAuth metadata is a 404 only while OAuth is off.
+async function oauthIsOn(): Promise<boolean> {
+  try {
+    await api('/oauth/metadata')
+    return true
+  } catch (err) {
+    // Any other failure can't tell: the 404 reads as an expired request, as it most often is.
+    return statusOf(err) !== 404
+  }
+}
+
+// The failed request explained (utils/consentFailure.ts), or, if the session ended, a sign-in that
+// brings the person back here with the app's request.
+async function explain(err: unknown) {
+  const status = statusOf(err)
+  const failure = consentFailure(status, status === 404 ? await oauthIsOn() : true)
+  if (failure === 'signIn') {
+    await navigateTo({ path: '/login', query: { next: route.fullPath } })
+    return
+  }
+  error.value = t(`auth.consent.errors.${failure}`)
 }
 
 onMounted(async () => {
@@ -39,7 +53,7 @@ onMounted(async () => {
   try {
     consent.value = await api<OAuthConsent>('/oauth/consent', { query: { request: sealed.value } })
   } catch (err) {
-    error.value = errorText(err)
+    await explain(err)
   } finally {
     loading.value = false
   }
@@ -56,7 +70,7 @@ async function answer(approve: boolean) {
     // Out of the panel and back to the app, with the code or the refusal: a full navigation.
     window.location.assign(redirect_to)
   } catch (err) {
-    error.value = errorText(err)
+    await explain(err)
     answering.value = null
   }
 }
