@@ -20,6 +20,8 @@ from mcp.server.auth.json_response import PydanticJSONResponse
 from mcp.server.auth.middleware.client_auth import AuthenticationError, ClientAuthenticator
 from mcp.server.auth.settings import ClientRegistrationOptions
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
+from starlette.types import Message
 
 from app.core import rate_limit
 from app.core.config import settings
@@ -59,6 +61,8 @@ async def _enabled() -> None:
 router = APIRouter(prefix="/oauth", tags=["oauth"], dependencies=[Depends(_enabled)])
 
 _NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
+# A registration is a few hundred bytes of JSON; anything far larger is not one.
+MAX_REGISTRATION_BYTES = 16 * 1024
 
 
 def _provider(request: Request, db: AsyncSession) -> ReportAIProvider:
@@ -111,8 +115,29 @@ async def register(request: Request, db: AsyncSession = Depends(get_db)) -> Resp
     ip = audit.client_ip(request)
     await rate_limit.oauth_register_by_ip.check(db, ip)
     await rate_limit.oauth_register_by_ip.record(db, ip)
+    body = await _body_within(request, MAX_REGISTRATION_BYTES)
+    if body is None:
+        return JSONResponse(
+            {"error": "invalid_client_metadata", "error_description": f"The request is larger than {MAX_REGISTRATION_BYTES} bytes"},
+            status_code=413,
+        )
+
+    async def replay() -> Message:
+        return {"type": "http.request", "body": body, "more_body": False}
+
     options = ClientRegistrationOptions(enabled=True, valid_scopes=[SCOPE], default_scopes=[SCOPE])
-    return await RegistrationHandler(_provider(request, db), options).handle(request)
+    return await RegistrationHandler(_provider(request, db), options).handle(Request(request.scope, receive=replay))
+
+
+async def _body_within(request: Request, limit: int) -> bytes | None:
+    """The request's body, or None once it passes `limit` bytes: read no further than that, so a
+    stranger can't make the server hold a body of any size (the SDK's handler reads it whole)."""
+    body = bytearray()
+    async for chunk in request.stream():
+        body += chunk
+        if len(body) > limit:
+            return None
+    return bytes(body)
 
 
 @router.post("/revoke")

@@ -62,6 +62,19 @@ FETCH_FAILURE_TTL = timedelta(minutes=10)
 # that fetch; after that the app is unknown until its publisher answers again. Upgrade path: a
 # longer ceiling, or an alert to the operator, if a publisher's outage ever lasts that long.
 STALE_DOCUMENT_CEILING = timedelta(days=7)
+# The fields of a client's metadata this server reads (to check it, to validate a redirect or a
+# token request, to name the app): nothing else a client sends is stored.
+_STORED_FIELDS = frozenset(
+    {
+        "redirect_uris",
+        "token_endpoint_auth_method",
+        "grant_types",
+        "response_types",
+        "client_name",
+        "client_id_issued_at",
+        "client_secret_expires_at",
+    }
+)
 # Tests swap these for an httpx.MockTransport and a fake resolver: the HTTP boundary, nothing else.
 _transport: httpx.AsyncBaseTransport | None = None
 
@@ -122,7 +135,7 @@ def _as_client(row: OAuthClient) -> OAuthClientInformationFull:
 
 
 def _stored_metadata(client: OAuthClientInformationFull) -> dict[str, Any]:
-    return client.model_dump(mode="json", exclude={"client_id", "client_secret", "scope"}, exclude_none=True)
+    return client.model_dump(mode="json", include=set(_STORED_FIELDS), exclude_none=True)
 
 
 async def register(db: AsyncSession, client: OAuthClientInformationFull) -> None:
