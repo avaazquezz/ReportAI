@@ -433,7 +433,7 @@
         },
         "proof": {
           "label": "Cómo se demuestra",
-          "body": "865 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
+          "body": "899 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
         }
       },
       "block": {
@@ -620,7 +620,7 @@
       "evalsLink": "Cada evaluación publicada, con su commit, su modelo y lo que costó",
       "figures": {
         "tests": {
-          "value": "865",
+          "value": "899",
           "label": "tests de backend",
           "source": "pytest contra Postgres real, en cada push"
         },
