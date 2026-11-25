@@ -59,11 +59,10 @@ MAX_CLIENT_ID_CHARS = 2048  # oauth_clients.client_id
 METADATA_DOCUMENT_TTL = timedelta(hours=24)
 METADATA_DOCUMENT_MAX_BYTES = 64 * 1024
 METADATA_DOCUMENT_TIMEOUT_SECONDS: float = 5  # waiting for a slot, resolving the host and downloading
-# The timeout above frees the request that waits, not the thread a hung DNS lookup holds (the loop's
-# resolver runs in a small shared pool): without a bound, strangers naming slow hosts could take
-# every thread and stall every lookup in the process. That pool is the loop's default executor,
-# which asyncio.to_thread shares. A fetch that gets no slot in its time is
-# "unavailable", as if the publisher were down.
+# The timeout above frees the request that waits, not the thread a hung DNS lookup holds: the
+# loop's resolver runs in its default executor, a small pool asyncio.to_thread shares. Without a
+# bound, strangers naming slow hosts could take every thread and stall the process's lookups and
+# file work. A fetch that gets no slot in its time is "unavailable", as if the publisher were down.
 # ponytail: per process, so a deployment's ceiling is this times its API processes. Upgrade path:
 # a limiter shared by every process (a Postgres advisory lock per slot, say) if that is too many.
 METADATA_FETCHES_AT_ONCE = 2
