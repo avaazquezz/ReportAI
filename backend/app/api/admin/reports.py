@@ -70,7 +70,7 @@ from app.services.agent.tools.extraction_schema import (
     missing_required_fields,
 )
 from app.services.channels.web import WEB, store_voice_note
-from app.services.delivery.deliveries import attachment_name, local_day, request_resend
+from app.services.delivery.deliveries import report_pdf_name, request_resend
 from app.services.i18n import t
 from app.services.jobs.queue import RUN, enqueue
 from app.services.rendering.report_document import MissingTemplateError, render_report_pdf
@@ -550,13 +550,7 @@ async def download_report(
     report = await visible_report(db, report_id, current_user)
     if not report.file_path:
         raise ResourceNotFoundException("No file available for this report")
-    tenant = await db.get(Tenant, report.tenant_id)
-    document_type = await db.get(DocumentType, report.document_type_id) if report.document_type_id else None
-    assert tenant is not None
-    name = attachment_name(
-        document_type.name if document_type else t(tenant.language, "report"), local_day(report, tenant.timezone)
-    )
-    return FileResponse(report.file_path, filename=name, media_type="application/pdf")
+    return FileResponse(report.file_path, filename=await report_pdf_name(db, report), media_type="application/pdf")
 
 
 @router.get("/{report_id}/audio")
