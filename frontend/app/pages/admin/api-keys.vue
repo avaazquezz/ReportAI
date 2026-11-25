@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ApiKey, ApiKeyCreated, ConnectedApp } from '~/types'
+import type { OAuthAvailability } from '~/utils/connectedApps'
 
 definePageMeta({ middleware: ['auth', 'require-company-user'], layout: 'app', titleKey: 'admin.layout.nav.apiKeys' })
 
@@ -39,8 +40,10 @@ async function load() {
 }
 // ── Apps connected by signing in (OAuth) ───────────────────────────────────────────────────
 // Only when this installation has OAuth on: the list answers 404 when it is off, and then neither
-// the section nor the sign-in way to connect is shown.
-const oauthOn = ref(false)
+// the section nor the sign-in way to connect is shown. Any other failure says nothing either way
+// (utils/connectedApps.ts): the error shows, but not steps for a sign-in that may not exist.
+const oauth = ref<OAuthAvailability>('unknown')
+const oauthOn = computed(() => oauth.value === 'on')
 const apps = ref<ConnectedApp[]>([])
 const appsLoading = ref(false)
 const appsError = ref('')
@@ -50,13 +53,12 @@ async function loadApps() {
   appsError.value = ''
   try {
     apps.value = await api<ConnectedApp[]>('/oauth/grants')
-    oauthOn.value = true
+    oauth.value = 'on'
   } catch (err) {
-    if ((err as { response?: Response }).response?.status === 404) {
-      oauthOn.value = false
+    if (availabilityAfterFailure((err as { response?: Response }).response?.status) === 'off') {
+      oauth.value = 'off'
     } else {
-      oauthOn.value = true
-      appsError.value = t('admin.apiKeys.apps.errors.load')
+      appsError.value = t('admin.apiKeys.apps.errors.load') // and what was known stays known
     }
   } finally {
     appsLoading.value = false
@@ -73,9 +75,9 @@ async function disconnect() {
     await api(`/oauth/grants/${app.id}`, { method: 'DELETE' })
     show(t('admin.apiKeys.apps.toast.disconnected', { name: app.client_name }), 'success')
   } catch (err) {
-    // 403: the read-only public demo account.
-    const readOnly = (err as { response?: Response }).response?.status === 403
-    show(t(readOnly ? 'admin.apiKeys.apps.errors.readOnly' : 'admin.apiKeys.apps.errors.disconnect'), 'error')
+    const outcome = disconnectOutcome((err as { response?: Response }).response?.status)
+    if (outcome === 'done') show(t('admin.apiKeys.apps.toast.disconnected', { name: app.client_name }), 'success')
+    else show(t(outcome === 'readOnly' ? 'admin.apiKeys.apps.errors.readOnly' : 'admin.apiKeys.apps.errors.disconnect'), 'error')
   }
   await loadApps()
 }
@@ -203,7 +205,7 @@ async function revoke() {
       <p class="mb-0 mt-3 text-sm text-ink-900/70">{{ t('admin.apiKeys.connect.note') }}</p>
     </v-card>
 
-    <v-card v-if="oauthOn" rounded="lg" elevation="0" border class="mb-6">
+    <v-card v-if="oauthOn || appsError" rounded="lg" elevation="0" border class="mb-6">
       <div class="px-6 pb-4 pt-6">
         <h2 class="m-0 font-display text-lg font-bold">{{ isAdmin ? t('admin.apiKeys.apps.company') : t('admin.apiKeys.apps.mine') }}</h2>
         <p class="mb-0 mt-1 text-sm text-ink-900/70">{{ isAdmin ? t('admin.apiKeys.apps.companyHelp') : t('admin.apiKeys.apps.help') }}</p>
