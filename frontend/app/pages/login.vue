@@ -63,7 +63,7 @@ async function onSubmit() {
       <NuxtLink to="/forgot-password" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-600">
         {{ t('auth.login.forgotPassword') }}
       </NuxtLink>
-      <NuxtLink to="/magic" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-600">
+      <NuxtLink :to="withNext('/magic', route.query.next)" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-600">
         {{ t('auth.login.technician') }}
       </NuxtLink>
       <NuxtLink
