@@ -108,6 +108,10 @@ mcp_by_grant = AttemptLimiter("mcp_grant", max_attempts=120, window_seconds=60)
 # Registering an OAuth client takes no sign-in and stores a row: generous for an app's servers,
 # which register on behalf of many people from few addresses, but not a way to fill the table.
 oauth_register_by_ip = AttemptLimiter("oauth_register_ip", max_attempts=30, window_seconds=60 * 60)
+# Fetching an app's metadata document (services/oauth/clients.py) on the say-so of whoever named
+# its address, signed in or not. Only real fetches count: a cached document is served free, and an
+# app's servers, few addresses for many people, fetch theirs once a day.
+oauth_metadata_fetch_by_ip = AttemptLimiter("oauth_cimd_fetch_ip", max_attempts=30, window_seconds=60 * 60)
 mcp_drafts_by_user = AttemptLimiter("mcp_drafts_user", max_attempts=20, window_seconds=60 * 60)
 # The landing's live demo is open to anyone and each try costs real AI: a few per visitor and a
 # ceiling for everyone, per day, with details the page tells apart (frontend/app/utils/demoFields.ts

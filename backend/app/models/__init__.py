@@ -11,7 +11,13 @@ from app.models.execution_log import ExecutionLog  # noqa: F401
 from app.models.inbound_message import InboundMessage  # noqa: F401
 from app.models.instance_setting import InstanceSetting  # noqa: F401
 from app.models.job import Job  # noqa: F401
-from app.models.oauth import OAuthClient, OAuthCode, OAuthGrant, OAuthToken  # noqa: F401
+from app.models.oauth import (  # noqa: F401
+    OAuthClient,
+    OAuthCode,
+    OAuthGrant,
+    OAuthMetadataFetchFailure,
+    OAuthToken,
+)
 from app.models.password_reset_token import PasswordResetToken  # noqa: F401
 from app.models.rate_limit_hit import RateLimitHit  # noqa: F401
 from app.models.report import Report  # noqa: F401

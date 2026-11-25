@@ -3,12 +3,15 @@ it: register (or a metadata document), authorize, the person approves in the pan
 tokens, the tokens reach /mcp as that person and nothing more, and every way of ending it ends it.
 """
 
+import asyncio
 import base64
 import hashlib
 import json
+import logging
 import secrets
+import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -17,14 +20,20 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import httpx2
 import pytest
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.crypto import seal
 from app.main import app
 from app.models.audit_event import AuditEvent
-from app.models.oauth import OAuthClient, OAuthCode, OAuthGrant, OAuthToken
+from app.models.oauth import (
+    OAuthClient,
+    OAuthCode,
+    OAuthGrant,
+    OAuthMetadataFetchFailure,
+    OAuthToken,
+)
 from app.models.report import Report
 from app.services.oauth import (
     SCOPE,
@@ -46,6 +55,7 @@ from tests.test_mcp_server import (  # noqa: F401
 from tests.test_tenant_isolation import _auth
 
 REDIRECT = "https://claude.ai/api/mcp/auth_callback"
+_real_resolve = clients._resolve  # before any test swaps it for a fake
 
 
 @pytest.fixture(autouse=True)
@@ -622,19 +632,27 @@ def _document(**changes: Any) -> dict[str, Any]:
 
 class Fetches:
     """The fetch at the HTTP boundary: app.example resolves to a public address and answers with
-    `response`; every request made lands in `requests`."""
+    `response`, after `delay` seconds; every request made lands in `requests`."""
 
     def __init__(self) -> None:
         self.requests: list[httpx.Request] = []
-        self.response = httpx.Response(200, json=_document())
+        self.response: httpx.Response | httpx.HTTPError = httpx.Response(200, json=_document())
+        self.delay = 0.0
+        self.during: Callable[[], None] | None = None  # runs while the request is in flight
 
     async def handle(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if self.during is not None:
+            self.during()
+        await asyncio.sleep(self.delay)
+        if isinstance(self.response, httpx.HTTPError):
+            raise self.response
         return self.response
 
 
 @pytest.fixture
-def fetches(monkeypatch: pytest.MonkeyPatch) -> Fetches:
+def fetches(monkeypatch: pytest.MonkeyPatch, db: AsyncSession) -> Fetches:
+    # `db`, used or not: it empties the tables after the test, and a failed fetch leaves a row.
     fake = Fetches()
 
     async def resolve(host: str) -> set[str]:
@@ -692,6 +710,8 @@ async def test_a_metadata_document_a_day_old_is_fetched_again(
         (httpx.Response(200, content=json.dumps(_document()).encode() + b" " * 70_000, headers={"content-type": "application/json"}), "larger than"),
         (httpx.Response(200, text=json.dumps(_document())), "not JSON"),
         (httpx.Response(200, content=b"{not json", headers={"content-type": "application/json"}), "not JSON"),
+        # Nested past the parser's depth: a RecursionError, not a ValueError.
+        (httpx.Response(200, content=b"[" * 60_000, headers={"content-type": "application/json"}), "not JSON"),
     ],
 )
 async def test_a_metadata_document_that_fails_a_check_is_an_unknown_client(
@@ -733,3 +753,154 @@ async def test_a_metadata_document_url_must_be_plain_https_on_443_with_a_path(
 
     assert refused.status_code == 400
     assert fetches.requests == []
+
+
+@pytest.mark.parametrize(
+    "url", ["https://a..com/client.json", f"https://{'a' * 64}.example/client.json", "https://app.example:port/client.json"]
+)
+async def test_a_metadata_document_url_that_can_not_be_read_is_an_unknown_client(
+    http: httpx2.AsyncClient, fetches: Fetches, monkeypatch: pytest.MonkeyPatch, url: str
+) -> None:
+    # The real resolver: these names fail before any lookup leaves the machine (IDNA encoding).
+    monkeypatch.setattr(clients, "_resolve", _real_resolve)
+
+    refused = await _authorize(http, url, _pkce()[1])
+
+    assert refused.status_code == 400 and refused.json()["error"] == "invalid_request"  # not a server_error
+    assert fetches.requests == []
+
+
+@pytest.mark.parametrize("hangs", ["resolver", "server"])
+async def test_a_fetch_that_hangs_is_cut_at_the_time_allowed(
+    http: httpx2.AsyncClient, fetches: Fetches, monkeypatch: pytest.MonkeyPatch, hangs: str
+) -> None:
+    monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
+    if hangs == "resolver":
+        async def slow(host: str) -> set[str]:
+            await asyncio.sleep(5)
+            return {"93.184.215.14"}
+
+        monkeypatch.setattr(clients, "_resolve", slow)
+    else:
+        fetches.delay = 5
+    started = time.monotonic()
+
+    refused = await _authorize(http, DOCUMENT_URL, _pkce()[1])
+
+    assert refused.status_code == 400
+    assert time.monotonic() - started < 2
+
+
+async def test_no_database_transaction_is_open_while_the_document_is_fetched(db: AsyncSession, fetches: Fetches) -> None:
+    open_during: list[bool] = []
+    fetches.during = lambda: open_during.append(db.in_transaction())
+
+    client = await clients.get_client(db, DOCUMENT_URL, client_ip="203.0.113.7")
+
+    assert client is not None and client.client_name == "Example AI"
+    assert open_during == [False]
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [httpx.Response(503), httpx.ConnectError("connection refused"), httpx.Response(404), httpx.Response(200, json=_document(client_name=None))],
+)
+async def test_a_failing_document_is_fetched_once_in_ten_minutes(
+    http: httpx2.AsyncClient, db: AsyncSession, fetches: Fetches, failure: httpx.Response | httpx.HTTPError
+) -> None:
+    fetches.response = failure
+
+    first = await _authorize(http, DOCUMENT_URL, _pkce()[1])
+    again = await _authorize(http, DOCUMENT_URL, _pkce()[1])
+
+    assert first.status_code == again.status_code == 400
+    assert len(fetches.requests) == 1
+    await db.execute(update(OAuthMetadataFetchFailure).values(failed_at=datetime.now(UTC) - timedelta(minutes=11)))
+    await db.commit()
+    fetches.response = httpx.Response(200, json=_document())
+    assert (await _authorize(http, DOCUMENT_URL, _pkce()[1])).status_code == 302
+    assert len(fetches.requests) == 2
+    assert await db.scalar(select(OAuthMetadataFetchFailure)) is None
+
+
+async def test_document_fetches_are_counted_per_address_and_a_cached_one_is_free(
+    http: httpx2.AsyncClient, fetches: Fetches, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core import rate_limit
+
+    monkeypatch.setattr(rate_limit.oauth_metadata_fetch_by_ip, "max_attempts", 1)
+
+    fetched = await _authorize(http, DOCUMENT_URL, _pkce()[1])
+    another = await _authorize(http, "https://app.example/another.json", _pkce()[1])
+    cached = await _authorize(http, DOCUMENT_URL, _pkce()[1])
+
+    assert fetched.status_code == 302 and cached.status_code == 302
+    assert another.status_code == 400 and another.json()["error"] == "invalid_request"  # an unknown client
+    assert [str(request.url) for request in fetches.requests] == [DOCUMENT_URL]
+
+
+@pytest.mark.parametrize(
+    "outage", [httpx.Response(503), httpx.Response(429), httpx.ConnectError("connection refused"), httpx.ReadTimeout("slow"), "hangs"]
+)
+async def test_while_its_publisher_is_down_an_app_keeps_its_last_document_for_a_week(
+    http: httpx2.AsyncClient, db: AsyncSession, fetches: Fetches, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch,
+    outage: httpx.Response | httpx.HTTPError | str,
+) -> None:
+    assert (await _authorize(http, DOCUMENT_URL, _pkce()[1])).status_code == 302
+    await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(hours=25)))
+    await db.commit()
+    if isinstance(outage, str):
+        monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
+        fetches.delay = 5
+    else:
+        fetches.response = outage
+
+    with caplog.at_level(logging.ERROR, logger=clients.__name__):
+        during = await _authorize(http, DOCUMENT_URL, _pkce()[1])
+
+    assert during.status_code == 302
+    assert any(record.levelno == logging.ERROR and "Serving its copy" in record.getMessage() for record in caplog.records)
+    # Past a week, the copy is too old to vouch for the app.
+    await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(days=8)))
+    await db.execute(delete(OAuthMetadataFetchFailure))
+    await db.commit()
+    assert (await _authorize(http, DOCUMENT_URL, _pkce()[1])).status_code == 400
+
+
+async def test_a_refused_document_ends_its_cached_copy_but_not_its_grants(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], fetches: Fetches
+) -> None:
+    acme, _ = companies
+    verifier, challenge = _pkce()
+    code = (await _answer(http, acme["approver"], _consent_request(await _authorize(http, DOCUMENT_URL, challenge))))["code"][0]
+    tokens = (await _exchange(http, DOCUMENT_URL, code, verifier)).json()
+    await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(hours=25)))
+    await db.commit()
+    fetches.response = httpx.Response(200, json=_document(redirect_uris=["http://evil.example/cb"]))
+
+    refused = await _refresh(http, DOCUMENT_URL, tokens["refresh_token"])
+
+    assert refused.status_code == 401 and refused.json()["error"] == "invalid_client"
+    stored = await db.scalar(select(OAuthClient).execution_options(populate_existing=True))
+    assert stored is not None and stored.fetched_at is None
+    assert (await _grant(db, tokens["access_token"])).revoked_at is None  # back once the document is fixed
+
+
+async def test_the_fetch_ignores_proxies_from_the_environment(
+    http: httpx2.AsyncClient, fetches: Fetches, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A proxy from the environment would make the request from somewhere the address check never
+    # saw. httpx ignores the environment's proxies whenever a transport is given, as the tests'
+    # mock is, so what is checked is how the client is built.
+    built: list[dict[str, Any]] = []
+
+    class Recorded(httpx.AsyncClient):
+        def __init__(self, **kwargs: Any) -> None:
+            built.append(kwargs)
+            super().__init__(**kwargs)
+
+    monkeypatch.setattr(clients.httpx, "AsyncClient", Recorded)
+
+    assert (await _authorize(http, DOCUMENT_URL, _pkce()[1])).status_code == 302
+    assert [kwargs["trust_env"] for kwargs in built] == [False]
+    assert built[0]["follow_redirects"] is False

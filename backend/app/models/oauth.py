@@ -102,3 +102,14 @@ class OAuthToken(Base):
     kind: Mapped[str] = mapped_column(String(8), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class OAuthMetadataFetchFailure(Base):
+    """A client metadata document that could not be fetched, or was refused, at `url`: remembered
+    for a few minutes (services/oauth/clients.py) so a failing address is not fetched again on
+    every request that names it. The worker deletes the old ones (data_lifecycle)."""
+
+    __tablename__ = "oauth_metadata_fetch_failures"
+
+    url: Mapped[str] = mapped_column(String(2048), primary_key=True)
+    failed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
