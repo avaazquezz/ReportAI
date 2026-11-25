@@ -9,6 +9,7 @@ import hashlib
 import json
 import logging
 import secrets
+import socket
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
@@ -994,6 +995,8 @@ async def test_a_metadata_document_a_day_old_is_fetched_again(
         (httpx.Response(200, json=_document(redirect_uris=["http://evil.example/cb"])), "redirect_uris must be https"),
         (httpx.Response(200, json=_document(token_endpoint_auth_method="client_secret_post")), "token_endpoint_auth_method"),
         (httpx.Response(302, headers={"location": "http://169.254.169.254/latest"}), "answered 302"),
+        (httpx.Response(404), "answered 404"),
+        (httpx.Response(410), "answered 410"),
         (httpx.Response(200, content=json.dumps(_document()).encode() + b" " * 70_000, headers={"content-type": "application/json"}), "larger than"),
         (httpx.Response(200, text=json.dumps(_document())), "not JSON"),
         (httpx.Response(200, content=b"{not json", headers={"content-type": "application/json"}), "not JSON"),
@@ -1162,28 +1165,50 @@ async def test_document_fetches_are_counted_per_address_and_a_cached_one_is_free
     assert [str(request.url) for request in fetches.requests] == [DOCUMENT_URL]
 
 
-@pytest.mark.parametrize(
-    "outage",
-    [
-        httpx.Response(503), httpx.Response(429), httpx.ConnectError("connection refused"), httpx.ReadTimeout("slow"), "hangs",
-        "every fetch slot taken",
-    ],
-)
+# What a document that can't be had right now looks like: its last copy stays in service.
+_OUTAGES: dict[str, httpx.Response | httpx.HTTPError] = {
+    "503": httpx.Response(503),
+    "500": httpx.Response(500),
+    "429": httpx.Response(429),
+    "404": httpx.Response(404),
+    "403": httpx.Response(403),
+    "302 elsewhere": httpx.Response(302, headers={"location": "https://app.example/moved.json"}),
+    "an HTML page": httpx.Response(200, html="<h1>Down for maintenance</h1>"),
+    "typed JSON, not JSON": httpx.Response(200, content=b"{not json", headers={"content-type": "application/json"}),
+    "larger than 64 KB": httpx.Response(
+        200, content=json.dumps(_document()).encode() + b" " * 70_000, headers={"content-type": "application/json"}
+    ),
+    "connection refused": httpx.ConnectError("connection refused"),
+    "read timeout": httpx.ReadTimeout("slow"),
+}
+
+
+@pytest.mark.parametrize("outage", [*_OUTAGES, "DNS failure", "hangs", "every fetch slot taken"])
 async def test_while_its_publisher_is_down_an_app_keeps_its_last_document_for_a_week(
     http: httpx2.AsyncClient, db: AsyncSession, fetches: Fetches, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch,
-    outage: httpx.Response | httpx.HTTPError | str,
+    outage: str,
 ) -> None:
     assert (await _authorize(http, DOCUMENT_URL, _pkce()[1])).status_code == 302
     await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(hours=25)))
     await db.commit()
-    if outage == "hangs":
+    if outage == "DNS failure":
+        real_getaddrinfo = socket.getaddrinfo
+
+        def unknown_host(host: Any, *args: Any, **kwargs: Any) -> Any:
+            if host == "app.example":
+                raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
+            return real_getaddrinfo(host, *args, **kwargs)  # the database's own lookups
+
+        monkeypatch.setattr(clients, "_resolve", _real_resolve)
+        monkeypatch.setattr(socket, "getaddrinfo", unknown_host)
+    elif outage == "hangs":
         monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
         fetches.delay = 5
     elif outage == "every fetch slot taken":
         monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
         await _take_every_fetch_slot(monkeypatch)
     else:
-        fetches.response = outage
+        fetches.response = _OUTAGES[outage]
 
     with caplog.at_level(logging.ERROR, logger=clients.__name__):
         # Cut short by the fetch's own time, whatever the outage: a hang would be a failure.
@@ -1191,6 +1216,8 @@ async def test_while_its_publisher_is_down_an_app_keeps_its_last_document_for_a_
 
     assert during.status_code == 302
     assert any(record.levelno == logging.ERROR and "Serving its copy" in record.getMessage() for record in caplog.records)
+    stored = await db.scalar(select(OAuthClient).execution_options(populate_existing=True))
+    assert stored is not None and stored.fetched_at is not None  # still a copy to serve
     # Past a week, the copy is too old to vouch for the app.
     await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(days=8)))
     await db.execute(delete(OAuthMetadataFetchFailure))
@@ -1198,8 +1225,21 @@ async def test_while_its_publisher_is_down_an_app_keeps_its_last_document_for_a_
     assert (await _authorize(http, DOCUMENT_URL, _pkce()[1])).status_code == 400
 
 
+# What a document refused looks like: the publisher's own answer says no, so no copy is served.
+_REFUSALS: dict[str, httpx.Response] = {
+    "a redirect over plain http": httpx.Response(200, json=_document(redirect_uris=["http://evil.example/cb"])),
+    "another client_id": httpx.Response(200, json=_document(client_id="https://app.example/other.json")),
+    "a secret to authenticate with": httpx.Response(200, json=_document(token_endpoint_auth_method="client_secret_post")),
+    "no client_name": httpx.Response(200, json=_document(client_name=None)),
+    "not an object": httpx.Response(200, json=[_document()]),
+    "410 Gone": httpx.Response(410),
+}
+
+
+@pytest.mark.parametrize("refusal", [*_REFUSALS, "a private address"])
 async def test_a_refused_document_ends_its_cached_copy_but_not_its_grants(
-    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], fetches: Fetches
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], fetches: Fetches,
+    monkeypatch: pytest.MonkeyPatch, refusal: str,
 ) -> None:
     acme, _ = companies
     verifier, challenge = _pkce()
@@ -1207,7 +1247,13 @@ async def test_a_refused_document_ends_its_cached_copy_but_not_its_grants(
     tokens = (await _exchange(http, DOCUMENT_URL, code, verifier)).json()
     await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(hours=25)))
     await db.commit()
-    fetches.response = httpx.Response(200, json=_document(redirect_uris=["http://evil.example/cb"]))
+    if refusal == "a private address":
+        async def private(host: str) -> set[str]:
+            return {"10.0.0.5"}
+
+        monkeypatch.setattr(clients, "_resolve", private)
+    else:
+        fetches.response = _REFUSALS[refusal]
 
     refused = await _refresh(http, DOCUMENT_URL, tokens["refresh_token"])
 

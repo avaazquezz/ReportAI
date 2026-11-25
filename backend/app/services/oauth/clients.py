@@ -14,12 +14,14 @@ caller's address, and made with no database transaction open, so slow answers ca
 connection pool. A document that fails any check is an unknown client, and the reason goes to the
 log.
 
-Two kinds of failure, told apart. A document refused (not public, not its own client_id, redirect
-URIs or an auth method this server won't take, not client metadata) stops being served at once,
-cached or not. A document that can't be had right now (timeout, DNS, network, the publisher's 5xx)
-leaves the copy fetched before in service, so a publisher's outage doesn't cut off everyone
-connected through it. Either is remembered for ten minutes, so a failing address isn't fetched again
-on every request.
+Two kinds of failure, told apart. A document refused stops being served at once, cached or not:
+the address is not one to fetch (not public, not a valid URL), the publisher answered 410 Gone, or
+its JSON says something this server won't take (not its own client_id, a missing field, redirect
+URIs or an auth method it won't serve). Anything else means it can't be had right now (any other
+status, a body that is not a JSON document or is too big, timeout, DNS, network) and leaves the copy
+fetched before in service for up to a week, so a publisher's outage or a misconfigured CDN doesn't
+cut off everyone connected through it. Either is remembered for ten minutes, so a failing address
+isn't fetched again on every request.
 """
 
 import asyncio
@@ -94,8 +96,9 @@ class ClientMetadataError(Exception):
 
 
 class MetadataDocumentUnavailable(ClientMetadataError):
-    """A document that could not be had right now (timeout, DNS, network, the publisher's 5xx or
-    429): its last copy, if any, stays in service. Any other ClientMetadataError is a refusal."""
+    """A document that could not be had right now (any status but 200 and 410, a body that is not a
+    JSON document or is too big, DNS, network, timeout, no fetch slot): its last copy, if any,
+    stays in service. Any other ClientMetadataError is a refusal."""
 
 
 def redirect_uri_allowed(uri: str) -> bool:
@@ -270,8 +273,10 @@ async def _resolve(host: str) -> set[str]:
 
 async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
     """The client a Client ID Metadata Document describes, fetched from `url`. Raises
-    MetadataDocumentUnavailable when it can't be had right now, and ClientMetadataError for an
-    address it must not fetch or a document it must not trust."""
+    ClientMetadataError for an address it must not fetch (not https on 443 with a path, not public,
+    not a URL httpx can request), a 410, or a JSON document it must not trust (another client_id,
+    a field, redirect URI or auth method this server won't take); MetadataDocumentUnavailable for
+    anything else: any other status, a body that is not JSON or too big, DNS, network, timeout."""
     try:
         parts = urlsplit(url)
         port = parts.port
@@ -304,8 +309,9 @@ async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
     try:
         document = json.loads(body)
     except (ValueError, RecursionError) as exc:  # RecursionError: "[[[[…" nested past the parser's depth
-        raise ClientMetadataError("the document is not JSON") from exc
-    if not isinstance(document, dict):
+        raise MetadataDocumentUnavailable("the document is not JSON") from exc
+    # From here on it is JSON the publisher serves as its document, so what it says is its word.
+    if not isinstance(document, dict):  # then it names no client_id: as good as naming another
         raise ClientMetadataError("the document is not a JSON object")
     if document.get("client_id") != url:
         raise ClientMetadataError("the document's client_id is not its own URL")
@@ -333,18 +339,20 @@ async def _download(url: str) -> bytes:
     ) as http:
         try:
             async with http.stream("GET", url, headers={"Accept": "application/json"}) as response:
-                if response.status_code >= 500 or response.status_code == 429:
-                    raise MetadataDocumentUnavailable(f"the server answered {response.status_code}")
+                # Only Gone says the publisher withdrew the document. Any other status, like a body
+                # that is not the document, is as likely a CDN, a proxy or a deploy gone wrong.
+                if response.status_code == 410:
+                    raise ClientMetadataError("the server answered 410: the document is gone for good")
                 if response.status_code != 200:
-                    raise ClientMetadataError(f"the server answered {response.status_code}, not 200")
+                    raise MetadataDocumentUnavailable(f"the server answered {response.status_code}, not 200")
                 content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
                 if content_type != "application/json" and not content_type.endswith("+json"):
-                    raise ClientMetadataError(f"the document is {content_type or 'untyped'}, not JSON")
+                    raise MetadataDocumentUnavailable(f"the document is {content_type or 'untyped'}, not JSON")
                 body = bytearray()
                 async for chunk in response.aiter_bytes():
                     body += chunk
                     if len(body) > METADATA_DOCUMENT_MAX_BYTES:
-                        raise ClientMetadataError(f"the document is larger than {METADATA_DOCUMENT_MAX_BYTES} bytes")
+                        raise MetadataDocumentUnavailable(f"the document is larger than {METADATA_DOCUMENT_MAX_BYTES} bytes")
         except httpx.InvalidURL as exc:  # not an HTTPError: an address no request can be made to
             raise ClientMetadataError(f"not a valid URL ({exc})") from exc
         except httpx.HTTPError as exc:
