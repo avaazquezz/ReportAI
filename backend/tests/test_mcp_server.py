@@ -381,16 +381,25 @@ async def test_a_pdf_link_is_worth_no_more_than_its_key_when_it_is_opened(
     assert "ask your assistant for the PDF again" in response.json()["detail"]
 
 
-async def test_another_sealed_link_is_not_a_pdf_link(db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], tmp_path: Path) -> None:
-    # Signup links are sealed with the same key; one carrying a report id must still not open a PDF.
+@pytest.mark.parametrize(
+    "claims",
+    [
+        # Signup links are sealed with the same key; one carrying a report id must still not open a PDF.
+        {"purpose": "signup", "by": "api_key"},
+        # A link made before links named the kind of credential: dead, not a crash.
+        {"purpose": "report_pdf", "key": None},
+        {"purpose": "report_pdf", "by": "panel"},
+    ],
+)
+async def test_another_sealed_link_is_not_a_pdf_link(
+    db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], tmp_path: Path, claims: dict[str, Any]
+) -> None:
     acme, _ = companies
     report = await _delivered(db, acme["own"], tmp_path)
+    await _key(db, acme["technician"])
     key = await db.scalar(select(ApiKey).where(ApiKey.user_id == acme["technician"].id))
-    if key is None:
-        await _key(db, acme["technician"])
-        key = await db.scalar(select(ApiKey).where(ApiKey.user_id == acme["technician"].id))
     assert key is not None
-    forged = seal({"purpose": "signup", "report": str(report.id), "key": str(key.id)})
+    forged = seal({**claims, "report": str(report.id), "id": str(key.id), **({"key": str(key.id)} if "key" in claims else {})})
 
     response = await _open(f"{settings.FRONTEND_ORIGIN}{settings.API_ROOT_PATH}/pdf-links/{forged}")
 
