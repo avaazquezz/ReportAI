@@ -784,6 +784,12 @@
           "decision": "The demo's limits, in one step under a lock",
           "why": "A burst gets the same tries as someone clicking one at a time.",
           "rejected": "The login limiter's “may overshoot by a few”: here a burst got 20 tries through against a limit of 3."
+        },
+        "mcp": {
+          "date": "18 Nov 2026",
+          "decision": "Personal keys for the MCP server, not company ones",
+          "why": "A key acts as its person through the panel's own checks: an assistant never sees or does more than they can, and nothing is approved or sent from the AI.",
+          "rejected": "One key per company: a technician's assistant would see everyone's reports."
         }
       },
       "limitsTitle": "What it doesn't do yet",
