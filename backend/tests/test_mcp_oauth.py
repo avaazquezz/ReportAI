@@ -313,10 +313,17 @@ async def test_registration_takes_https_or_loopback_redirects_only(
         assert await db.scalar(select(OAuthClient)) is None
 
 
+async def test_a_registration_keeps_only_the_grants_this_server_gives(http: httpx2.AsyncClient, db: AsyncSession) -> None:
+    response = await _register(http, grant_types=["authorization_code", "refresh_token", "client_credentials"])
+
+    assert response.status_code == 201, response.text
+    stored = await db.scalar(select(OAuthClient).where(OAuthClient.client_id == response.json()["client_id"]))
+    assert stored is not None and stored.client_metadata["grant_types"] == ["authorization_code", "refresh_token"]
+
+
 @pytest.mark.parametrize(
     "metadata",
     [
-        {"grant_types": ["authorization_code", "client_credentials"]},
         {"grant_types": ["refresh_token"]},
         {"scope": "reportai admin"},
         {"client_name": "x" * 201},
@@ -1116,6 +1123,31 @@ async def test_a_fetch_that_finds_every_slot_taken_gives_up_in_its_time_as_unava
     slots.release()
     assert (await clients.fetch_metadata_document(DOCUMENT_URL)).client_name == "Example AI"
     assert resolved == ["app.example"]
+
+
+# Claude's published identity (https://claude.ai/oauth/mcp-oauth-client-metadata, 2026-11-25):
+# it also lists the jwt-bearer grant it uses for enterprise sign-in elsewhere.
+_CLAUDE_LIKE = _document(
+    client_uri="https://app.example",
+    grant_types=["authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:jwt-bearer"],
+    response_types=["code"],
+)
+
+
+async def test_a_document_that_also_lists_grants_this_server_does_not_give_is_served_without_them(
+    http: httpx2.AsyncClient, db: AsyncSession, fetches: Fetches
+) -> None:
+    fetches.response = httpx.Response(200, json=_CLAUDE_LIKE)
+
+    client = await clients.get_client(db, DOCUMENT_URL, client_ip="203.0.113.7")
+
+    assert client is not None and client.grant_types == ["authorization_code", "refresh_token"]
+    # The grant it listed and this server doesn't give stays unusable at the token endpoint.
+    response = await http.post("/oauth/token", data={
+        "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer", "client_id": DOCUMENT_URL, "assertion": "x.y.z",
+    })
+    assert response.status_code == 400 and response.json()["error"] in {"unsupported_grant_type", "invalid_request"}
+    assert await db.scalar(select(func.count()).select_from(OAuthToken)) == 0
 
 
 async def test_our_own_queue_being_full_is_not_remembered_as_the_publisher_failing(
