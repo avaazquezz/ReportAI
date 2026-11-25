@@ -50,6 +50,31 @@ def test_a_heartbeat_url_that_is_not_a_web_address_refuses_to_start(url: str) ->
         Settings(_env_file=None, **_GIVEN, WORKER_HEARTBEAT_URL=url)  # type: ignore[call-arg]
 
 
+@pytest.mark.parametrize(
+    ("origin", "accepted"),
+    [
+        ("https://reportai.example", True),
+        ("http://localhost:3000", True),
+        ("http://127.0.0.1:3000", True),
+        ("http://reportai.example", False),
+        ("http://192.168.1.20:3000", False),
+        ("http://localhost.evil.example", False),
+        ("reportai.example", False),
+    ],
+)
+def test_oauth_needs_the_panel_on_https_but_on_a_developers_machine(origin: str, accepted: bool) -> None:
+    def make() -> Settings:
+        return Settings(_env_file=None, **_GIVEN, FRONTEND_ORIGIN=origin, MCP_OAUTH_ENABLED=True)  # type: ignore[call-arg]
+
+    if accepted:
+        assert make().MCP_OAUTH_ENABLED is True
+    else:
+        with pytest.raises(ValidationError, match="MCP_OAUTH_ENABLED=true needs FRONTEND_ORIGIN on https"):
+            make()
+    # Off, the panel's address is none of OAuth's business: self-hosted installs on plain HTTP start.
+    assert Settings(_env_file=None, **_GIVEN, FRONTEND_ORIGIN=origin).MCP_OAUTH_ENABLED is False  # type: ignore[call-arg]
+
+
 def test_a_heartbeat_more_often_than_every_ten_seconds_is_refused() -> None:
     with pytest.raises(ValidationError):
         Settings(_env_file=None, **_GIVEN, WORKER_HEARTBEAT_SECONDS=1)  # type: ignore[call-arg]

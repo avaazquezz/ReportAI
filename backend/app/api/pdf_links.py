@@ -3,10 +3,10 @@ person on the other end can download the document from any client: an AI client 
 PDF embedded in a tool result, or only a small one.
 
 The link is a sealed token (app/core/crypto.py: encrypted, unalterable, dated) that names the report
-and the API key that asked for it. It is checked again when it is opened, so it is never worth more
-than that key is then: revoking the key, or switching its person off, kills it at once, and it
-reaches only a report the key's person can still see. It lasts ten minutes, so one copied into a
-chat or a log is soon worth nothing.
+and the credential that asked for it (an API key, or a connected app's grant). It is checked again
+when it is opened, so it is never worth more than that credential is then: revoking it, or switching
+its person off, kills it at once, and it reaches only a report its person can still see. It lasts
+ten minutes, so one copied into a chat or a log is soon worth nothing.
 """
 
 import uuid
@@ -21,7 +21,8 @@ from app.core.config import settings
 from app.core.crypto import seal, unseal
 from app.core.database import get_db
 from app.core.exceptions import ResourceNotFoundException
-from app.services import api_keys
+from app.mcp_server.auth import person_of
+from app.services.credentials import Credential
 from app.services.delivery.deliveries import report_pdf_name
 
 PDF_LINK_TTL = timedelta(minutes=10)
@@ -32,10 +33,10 @@ _GONE = "This download link is wrong or has expired: ask your assistant for the 
 router = APIRouter(prefix="/pdf-links", tags=["reports"])
 
 
-def pdf_link(report_id: uuid.UUID, key_id: uuid.UUID) -> str:
+def pdf_link(report_id: uuid.UUID, credential: Credential) -> str:
     # Every installation serves the API under its panel's origin (Traefik on the hosted service,
     # Caddy on a server of its own); only in development is the API on a port of its own.
-    token = seal({"purpose": _PURPOSE, "report": str(report_id), "key": str(key_id)})
+    token = seal({"purpose": _PURPOSE, "report": str(report_id), "by": credential.kind, "id": str(credential.id)})
     return f"{settings.FRONTEND_ORIGIN}{settings.API_ROOT_PATH}{router.prefix}/{token}"
 
 
@@ -45,9 +46,11 @@ async def download_by_link(token: str, db: AsyncSession = Depends(get_db)) -> Fi
         claims = unseal(token, PDF_LINK_TTL)
     except ValueError as exc:
         raise ResourceNotFoundException(_GONE) from exc
-    if claims.get("purpose") != _PURPOSE:
+    # A link sealed before links named the kind of credential (it carried "key", not "by") is
+    # refused too: links last ten minutes, so none of those is still in anyone's hands.
+    if claims.get("purpose") != _PURPOSE or claims.get("by") not in ("api_key", "oauth"):
         raise ResourceNotFoundException(_GONE)
-    user = await api_keys.person_of(db, uuid.UUID(claims["key"]))
+    user = await person_of(db, Credential(claims["by"], uuid.UUID(claims["id"])))
     if user is None:
         raise ResourceNotFoundException(_GONE)
     try:

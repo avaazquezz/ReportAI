@@ -15,7 +15,7 @@
     "typecheck": "nuxi typecheck",
     "test:smoke": "node --test tests/securityHeaders.smoke.mjs",
     "test:e2e": "playwright test",
-    "test": "jiti tests/savings.test.ts && jiti tests/planNotice.test.ts && jiti tests/auditSummary.test.ts && jiti tests/captureQueue.test.ts && jiti tests/locale.test.ts && jiti tests/session.test.ts && jiti tests/securityHeaders.test.ts && jiti tests/demoFields.test.ts && jiti tests/companyAi.test.ts && jiti tests/mcpConnection.test.ts && jiti tests/apiKeyStatus.test.ts"
+    "test": "jiti tests/savings.test.ts && jiti tests/planNotice.test.ts && jiti tests/auditSummary.test.ts && jiti tests/captureQueue.test.ts && jiti tests/locale.test.ts && jiti tests/session.test.ts && jiti tests/securityHeaders.test.ts && jiti tests/demoFields.test.ts && jiti tests/companyAi.test.ts && jiti tests/mcpConnection.test.ts && jiti tests/apiKeyStatus.test.ts && jiti tests/safeNext.test.ts && jiti tests/oauthDocuments.test.ts && jiti tests/connectedApps.test.ts && jiti tests/consentFailure.test.ts"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",

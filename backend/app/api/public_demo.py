@@ -8,7 +8,6 @@ the one-click demo's (DEMO_USER_EMAIL), which anyone can sign into: a visitor's 
 that visitor only. Every try costs AI, so a few per visitor, a ceiling for everyone and a budget of
 its own, per day. Switched off, every route here is a 404 like one that doesn't exist."""
 
-import ipaddress
 import os
 import tempfile
 import uuid
@@ -56,21 +55,6 @@ _FAILED = ("failed", "cancelled")
 _PREVIEW = "demo-preview.pdf"
 
 Locale = Literal["es", "en"]
-
-
-def _visitor(request: Request) -> str:
-    """Whom the per-visitor limits count: the address, or an IPv6 address's /64, which one home or
-    one server gets whole (otherwise changing its last bits would buy more tries)."""
-    ip = audit.client_ip(request)
-    try:
-        address = ipaddress.ip_address(ip)
-    except ValueError:  # no address to read ("unknown"): those all share one count
-        return ip
-    if isinstance(address, ipaddress.IPv6Address):
-        if address.ipv4_mapped is not None:
-            return str(address.ipv4_mapped)
-        return str(ipaddress.IPv6Network((address, 64), strict=False))
-    return ip
 
 
 async def _within_budget(db: AsyncSession, tenant_id: uuid.UUID) -> None:
@@ -175,7 +159,7 @@ async def capture_demo_report(
     """Starts a demo report from a voice note and/or a typed note. A try is counted only once it
     is accepted, and simultaneous tries are counted one after another (rate_limit.claim), so a
     burst gets the same tries as a visitor clicking one at a time."""
-    visitor = _visitor(request)
+    visitor = audit.requester(request)
     # A first look without the lock, so most refused tries stop before anything is stored.
     await rate_limit.demo_capture_by_ip.check(db, visitor)
     await rate_limit.demo_capture_total.check(db, rate_limit.DEMO_TOTAL_KEY)
@@ -261,7 +245,7 @@ async def demo_report_pdf(report_id: uuid.UUID, request: Request, db: AsyncSessi
         raise ConflictException("Nothing has been extracted from this report yet")
     preview = Path(settings.DOCUMENT_STORAGE_PATH) / str(report.id) / _PREVIEW
     if not preview.exists():
-        await rate_limit.claim(db, "demo_pdf", (rate_limit.demo_pdf_by_ip, _visitor(request)))
+        await rate_limit.claim(db, "demo_pdf", (rate_limit.demo_pdf_by_ip, audit.requester(request)))
         preview.parent.mkdir(parents=True, exist_ok=True)
         # Rendered beside its final place, then moved in whole: two first asks at once can't
         # leave half a file behind.

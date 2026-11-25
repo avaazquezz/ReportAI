@@ -134,6 +134,22 @@ async def apply_retention() -> None:
     await asyncio.to_thread(data_lifecycle.drop_stale_inbound_files)
 
 
+async def prune_oauth() -> None:
+    async with AsyncSessionLocal() as session:
+        purged = await data_lifecycle.purge_unused_oauth_clients(session)
+        # Expired codes first: one left over would keep its app's cached document from going.
+        await data_lifecycle.prune_expired_oauth_secrets(session)
+        revoked = await data_lifecycle.prune_revoked_oauth_grants(session)
+        unconnected = await data_lifecycle.purge_unconnected_metadata_document_clients(session)
+        await session.commit()
+    if purged:
+        logger.info("Deleted %s self-registered OAuth apps nobody used for 30 days", purged)
+    if revoked:
+        logger.info("Deleted %s OAuth connections revoked more than 30 days ago", revoked)
+    if unconnected:
+        logger.info("Deleted %s cached OAuth app metadata documents nobody is connected through", unconnected)
+
+
 async def maintenance() -> None:
     for job_id, report_id in await fail_abandoned():
         logger.error("Job %s was abandoned by a dead worker with no attempts left", job_id)
@@ -150,6 +166,7 @@ async def maintenance() -> None:
     await purge_deleted_companies()
     await purge_public_demo_reports()
     await apply_retention()
+    await prune_oauth()
 
 
 async def main() -> None:

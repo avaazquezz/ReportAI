@@ -19,6 +19,10 @@ export default defineNuxtConfig({
     // The page the service worker keeps on the phone (modules/service-worker): rendered with nothing
     // in it, so the app can draw whichever page was asked for with no coverage.
     '/app-shell': { ssr: false },
+    // An AI assistant sends the browser here from its own site, and the session cookies are
+    // SameSite=Strict: the server never sees them on that visit, so the page decides in the browser
+    // whether the person is signed in (pages/oauth/consent.vue).
+    '/oauth/consent': { ssr: false },
     // Asked for on every visit, so a fixed service worker reaches the phones on their next one.
     '/sw.js': { headers: { 'cache-control': 'no-cache' } }
   },

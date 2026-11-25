@@ -63,7 +63,7 @@
     "privacy": {
       "title": "Política de privacidad",
       "seoDescription": "Qué datos personales trata ReportAI, para qué, cuánto tiempo los guarda y cómo ejercer tus derechos.",
-      "updated": "Última actualización: 17 de noviembre de 2026",
+      "updated": "Última actualización: 25 de noviembre de 2026",
       "intro": "Esta política explica qué datos personales se tratan cuando visitas esta web, pruebas la demo, escribes al correo de contacto o usas ReportAI: para qué, durante cuánto tiempo y qué derechos tienes, conforme al Reglamento General de Protección de Datos (RGPD) y a la Ley Orgánica 3/2018 (LOPDGDD).",
       "controller": {
         "heading": "Responsable del tratamiento",
@@ -103,7 +103,7 @@
         },
         "account": {
           "heading": "Tener una cuenta de prueba",
-          "data": "Nombre, correo, nombre de la empresa, la contraseña guardada de forma irreversible (los técnicos entran sin contraseña, con un enlace por correo) y un registro de seguridad de accesos y cambios con la dirección IP.",
+          "data": "Nombre, correo, nombre de la empresa, la contraseña guardada de forma irreversible (los técnicos entran sin contraseña, con un enlace por correo) y un registro de seguridad de accesos y cambios con la dirección IP. Si conectas un asistente de IA, también sus claves y conexiones: solo una huella irreversible de cada clave o token, qué app es y cuándo se usó por última vez.",
           "purpose": "Darte acceso a la prueba que hemos acordado, enviarte los correos del servicio (enlaces de acceso y avisos) y proteger las cuentas.",
           "basis": "La prueba que pides (art. 6.1.b RGPD); el registro de seguridad, el interés legítimo en proteger las cuentas (art. 6.1.f).",
           "retention": "Mientras la empresa siga activa. Si pide el borrado, la cuenta se bloquea al momento y todo se borra a los 30 días. El registro de seguridad se guarda 365 días como máximo."
@@ -124,6 +124,7 @@
         "zoho": "buzón del correo de contacto, en sus centros de datos de la Unión Europea.",
         "ownAi": "Cada empresa conecta su propia cuenta de IA (Anthropic, OpenAI o Groq): las grabaciones y los informes de sus visitas los procesa el proveedor que ella elige, con su propia cuenta y bajo el contrato que tiene con él. ReportAI solo guarda su clave, cifrada, para hacer esas llamadas en su nombre.",
         "connectors": "Si una empresa conecta su propio bot de Telegram o un buzón de correo, los mensajes que entran por esa vía pasan también por esos servicios, que contrata la propia empresa.",
+        "assistants": "Si alguien conecta un asistente de IA (Claude, ChatGPT…), lo que le pida y los informes que el asistente lea con su permiso pasan también por ese asistente, que elige y contrata esa persona o su empresa. Desde ReportAI no se aprueba ni se envía nada.",
         "authorities": "Fuera de eso, solo se comunicarán datos a una autoridad cuando una ley lo exija."
       },
       "transfers": {
@@ -432,7 +433,7 @@
         },
         "proof": {
           "label": "Cómo se demuestra",
-          "body": "753 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
+          "body": "865 tests, un golden set que no admite ni un dato inventado, revisión independiente de los cambios grandes, código público y demo en vivo."
         }
       },
       "block": {
@@ -565,7 +566,7 @@
       "items": {
         "isolation": {
           "title": "Aislamiento en el código, probado ruta a ruta",
-          "body": "Cada ruta toma la empresa del usuario autenticado, nunca de la petición, y carga las filas con un solo helper que filtra por ella. Un informe de otra empresa responde 404, no 403: un 403 confirmaría que el id existe. Un test recorre el OpenAPI con dos empresas, prueba las 30 rutas con id y falla si aparece una ruta nueva sin clasificar."
+          "body": "Cada ruta toma la empresa del usuario autenticado, nunca de la petición, y carga las filas con un solo helper que filtra por ella. Un informe de otra empresa responde 404, no 403: un 403 confirmaría que el id existe. Un test recorre el OpenAPI con dos empresas, prueba las 31 rutas con id y falla si aparece una ruta nueva sin clasificar."
         },
         "spend": {
           "title": "Cuotas y gasto con tope",
@@ -582,7 +583,7 @@
       },
       "codeLabel": "backend/app/core/scoping.py",
       "matrixLabel": "Matriz de aislamiento",
-      "matrixCaption": "30 rutas con id, pedidas por el administrador de otra empresa: 30 respuestas 404 y nada cambiado. Con un técnico, 403 o 404: nunca un 2xx.",
+      "matrixCaption": "31 rutas con id, pedidas por el administrador de otra empresa: 31 respuestas 404 y nada cambiado. Con un técnico, 403 o 404: nunca un 2xx.",
       "why": "Aislamiento en el código y no con RLS de Postgres, por ahora: un solo sitio que revisar y un test que lo cubre entero. RLS llegará con la primera empresa que lo pida."
     },
     "fieldApp": {
@@ -619,12 +620,12 @@
       "evalsLink": "Cada evaluación publicada, con su commit, su modelo y lo que costó",
       "figures": {
         "tests": {
-          "value": "753",
+          "value": "865",
           "label": "tests de backend",
           "source": "pytest contra Postgres real, en cada push"
         },
         "frontend": {
-          "value": "61",
+          "value": "81",
           "label": "tests de frontend",
           "source": "más un smoke test del servidor compilado y el recorrido completo en un navegador"
         },
@@ -791,6 +792,12 @@
           "decision": "Claves personales para el MCP, no de empresa",
           "why": "La clave actúa como su persona, con las mismas comprobaciones del panel: un asistente nunca ve ni hace más que ella, y desde la IA nada se aprueba ni se envía.",
           "rejected": "Una clave por empresa: el asistente de un técnico vería los informes de todos."
+        },
+        "oauth": {
+          "date": "25 nov 2026",
+          "decision": "OAuth 2.1 propio para el MCP, con CIMD",
+          "why": "claude.ai y ChatGPT se conectan sin copiar claves; cada token vale solo para este servidor, rota y muere con la cuenta de su persona.",
+          "rejected": "Un proveedor de identidad externo (WorkOS, Auth0): otro encargado del tratamiento, y el self-host no puede depender de él."
         }
       },
       "limitsTitle": "Lo que todavía no hace",

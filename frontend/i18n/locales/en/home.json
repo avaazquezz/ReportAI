@@ -243,7 +243,7 @@
       "facts": {
         "tenancy": {
           "title": "One company never sees another",
-          "body": "30 routes with an id, requested by another company's admin: all 30 answer 404."
+          "body": "31 routes with an id, requested by another company's admin: all 31 answer 404."
         },
         "eval": {
           "title": "Measured, not assumed",
@@ -255,7 +255,7 @@
         },
         "assistant": {
           "title": "From your AI assistant",
-          "body": "Claude or any MCP-compatible assistant searches and reads your reports and starts drafts. Approving and sending stays with a person."
+          "body": "Claude or any MCP-compatible assistant searches and reads your reports, hands you the PDF and starts drafts. It connects by signing in with OAuth, no keys to copy. Approving and sending stays with a person."
         }
       },
       "who": {

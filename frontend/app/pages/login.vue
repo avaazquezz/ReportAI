@@ -4,6 +4,7 @@ definePageMeta({ layout: 'auth', titleKey: 'auth.login.title' })
 const authStore = useAuthStore()
 const { t } = useI18n()
 const { status } = useInstance()
+const route = useRoute()
 
 const email = ref('')
 const password = ref('')
@@ -15,7 +16,8 @@ async function onSubmit() {
   loading.value = true
   try {
     await authStore.login(email.value, password.value)
-    await navigateTo('/dashboard')
+    // The page that sent them here (an AI assistant's sign-in request, say), if it is this site's.
+    await navigateTo(safeNext(route.query.next) ?? '/dashboard')
   } catch {
     error.value = t('auth.login.error')
   } finally {
@@ -61,7 +63,7 @@ async function onSubmit() {
       <NuxtLink to="/forgot-password" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-600">
         {{ t('auth.login.forgotPassword') }}
       </NuxtLink>
-      <NuxtLink to="/magic" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-600">
+      <NuxtLink :to="withNext('/magic', route.query.next)" class="block text-center font-body text-sm text-ink-900/70 hover:text-capture-600">
         {{ t('auth.login.technician') }}
       </NuxtLink>
       <NuxtLink

@@ -63,7 +63,7 @@
     "privacy": {
       "title": "Privacy policy",
       "seoDescription": "What personal data ReportAI processes, why, how long it keeps it and how to exercise your rights.",
-      "updated": "Last updated: 17 November 2026",
+      "updated": "Last updated: 25 November 2026",
       "intro": "This policy explains what personal data is processed when you visit this website, try the demo, write to the contact address or use ReportAI: why, for how long and what your rights are, under the General Data Protection Regulation (GDPR) and Spanish Organic Law 3/2018 (LOPDGDD).",
       "controller": {
         "heading": "Data controller",
@@ -103,7 +103,7 @@
         },
         "account": {
           "heading": "Having a trial account",
-          "data": "Name, email, company name, your password stored irreversibly (technicians sign in without a password, through an emailed link), and a security log of sign-ins and changes with the IP address.",
+          "data": "Name, email, company name, your password stored irreversibly (technicians sign in without a password, through an emailed link), and a security log of sign-ins and changes with the IP address. If you connect an AI assistant, also its keys and connections: only an irreversible fingerprint of each key or token, which app it is and when it was last used.",
           "purpose": "Giving you access to the trial we agreed, sending the service's emails (sign-in links and notices) and protecting the accounts.",
           "basis": "The trial you ask for (GDPR art. 6(1)(b)); for the security log, the legitimate interest in protecting the accounts (art. 6(1)(f)).",
           "retention": "While the company stays active. If it asks for deletion, the account is locked at once and everything is deleted after 30 days. The security log is kept for at most 365 days."
@@ -124,6 +124,7 @@
         "zoho": "the contact address's mailbox, in its European Union data centres.",
         "ownAi": "Each company connects its own AI account (Anthropic, OpenAI or Groq): the recordings and reports of its visits are processed by the provider it chooses, under its own account and the contract it has with that provider. ReportAI only keeps its key, encrypted, to make those calls on its behalf.",
         "connectors": "If a company connects its own Telegram bot or mailbox, the messages that arrive that way also go through those services, which the company itself contracts.",
+        "assistants": "If someone connects an AI assistant (Claude, ChatGPT…), what they ask it and the reports it reads with their permission also go through that assistant, which that person or their company chooses and contracts. Nothing is approved or sent from it.",
         "authorities": "Beyond that, data will only be disclosed to an authority when a law requires it."
       },
       "transfers": {
@@ -432,7 +433,7 @@
         },
         "proof": {
           "label": "How it's proven",
-          "body": "753 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
+          "body": "865 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
         }
       },
       "block": {
@@ -565,7 +566,7 @@
       "items": {
         "isolation": {
           "title": "Isolation in code, tested route by route",
-          "body": "Every route takes the company from the signed-in user, never from the request, and loads rows through one helper that filters by it. Another company's report answers 404, not 403: a 403 would confirm the id exists. A test walks the OpenAPI with two companies, tries all 30 routes with an id, and fails if a new route shows up unclassified."
+          "body": "Every route takes the company from the signed-in user, never from the request, and loads rows through one helper that filters by it. Another company's report answers 404, not 403: a 403 would confirm the id exists. A test walks the OpenAPI with two companies, tries all 31 routes with an id, and fails if a new route shows up unclassified."
         },
         "spend": {
           "title": "Quotas and capped spend",
@@ -582,7 +583,7 @@
       },
       "codeLabel": "backend/app/core/scoping.py",
       "matrixLabel": "Isolation matrix",
-      "matrixCaption": "30 routes with an id, requested by another company's admin: 30 answers of 404 and nothing changed. As a technician, 403 or 404: never a 2xx.",
+      "matrixCaption": "31 routes with an id, requested by another company's admin: 31 answers of 404 and nothing changed. As a technician, 403 or 404: never a 2xx.",
       "why": "Isolation in code rather than Postgres RLS, for now: one place to review and one test that covers it all. RLS comes with the first company that asks for it."
     },
     "fieldApp": {
@@ -619,12 +620,12 @@
       "evalsLink": "Every evaluation published, with its commit, its model and what it cost",
       "figures": {
         "tests": {
-          "value": "753",
+          "value": "865",
           "label": "backend tests",
           "source": "pytest against a real Postgres, on every push"
         },
         "frontend": {
-          "value": "61",
+          "value": "81",
           "label": "frontend tests",
           "source": "plus a smoke test of the built server and the whole flow in a browser"
         },
@@ -791,6 +792,12 @@
           "decision": "Personal keys for the MCP server, not company ones",
           "why": "A key acts as its person through the panel's own checks: an assistant never sees or does more than they can, and nothing is approved or sent from the AI.",
           "rejected": "One key per company: a technician's assistant would see everyone's reports."
+        },
+        "oauth": {
+          "date": "25 Nov 2026",
+          "decision": "Our own OAuth 2.1 for the MCP server, with CIMD",
+          "why": "claude.ai and ChatGPT connect without copying keys; each token is good for this server only, rotates and dies with its person's account.",
+          "rejected": "An external identity provider (WorkOS, Auth0): one more data processor, and self-host can't depend on it."
         }
       },
       "limitsTitle": "What it doesn't do yet",

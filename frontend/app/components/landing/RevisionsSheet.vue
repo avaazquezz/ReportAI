@@ -5,7 +5,7 @@
 // decision on a phone.
 const { t } = useI18n()
 
-const ROWS = ['graph', 'queue', 'empty', 'onecode', 'rls', 'pwa', 'login', 'sw', 'lock', 'mcp'] as const
+const ROWS = ['graph', 'queue', 'empty', 'onecode', 'rls', 'pwa', 'login', 'sw', 'lock', 'mcp', 'oauth'] as const
 const COLUMNS = ['why', 'rejected'] as const
 const LIMITS = ['billing', 'cycle', 'languages', 'ios', 'rls'] as const
 const row = (key: string, field: string) => t(`landing.revisions.rows.${key}.${field}`)

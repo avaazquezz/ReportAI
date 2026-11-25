@@ -4,8 +4,9 @@ Stateless and JSON: each POST is a whole exchange and nothing is kept between re
 of the API's workers can answer any request (a session kept in one worker's memory would be missing
 in the other) and there is nothing to clean up.
 
-Every tool acts as the API key's person through the same functions the panel uses
-(`visible_report`, `own_reports_only`): whatever the panel would hide from them, the tools hide too,
+Every tool acts as the person behind the caller's API key or connected app, through the same
+functions the panel uses (`visible_report`, `own_reports_only`): whatever the panel would hide from
+them, the tools hide too,
 and another company's report is "not found", never "forbidden". The one write is a draft, and a
 draft is never sent: a person reviews and approves it in ReportAI.
 """
@@ -37,7 +38,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.deps import CAPTURER_ROLES
 from app.core.exceptions import ReportAIException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
-from app.mcp_server.auth import ApiKeyAuth, current_principal
+from app.mcp_server.auth import McpAuth, current_principal
 from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.models.tenant import Tenant
@@ -52,6 +53,7 @@ from app.services.agent.tools.extraction_schema import (
     missing_required_fields,
 )
 from app.services.channels.web import WEB, web_connection
+from app.services.credentials import Credential
 from app.services.delivery.deliveries import report_pdf_name
 from app.services.i18n import t
 
@@ -128,6 +130,12 @@ class DraftCreated(BaseModel):
     next_step: str
 
 
+def _credential_meta(credential: Credential) -> dict[str, str]:
+    """What a draft records about the credential that started it, for whoever reviews it later."""
+    name = "api_key_id" if credential.kind == "api_key" else "oauth_grant_id"
+    return {name: str(credential.id)}
+
+
 def _url(report_id: uuid.UUID) -> str:
     return f"{settings.FRONTEND_ORIGIN}/admin/reports/{report_id}"
 
@@ -192,7 +200,7 @@ async def search_reports(
     async with AsyncSessionLocal() as db:
         user = await _caller(db)
         tenant = await db.get(Tenant, require_tenant_id(user))
-        assert tenant is not None  # a key's person is in an active company (api_keys.authenticate)
+        assert tenant is not None  # the caller's person is in an active company (credentials.acting_person)
         zone = ZoneInfo(tenant.timezone)
         filters = own_reports_only(
             ReportFilters(
@@ -272,7 +280,7 @@ async def get_report_pdf(
             )
         name = await report_pdf_name(db, report)
     path = Path(report.file_path)
-    link = pdf_link(report.id, current_principal().key_id)
+    link = pdf_link(report.id, current_principal().credential)
     # A recorded PDF missing from disk is a bug, not an answer: stat() raises and the SDK logs it.
     if path.stat().st_size > MAX_EMBEDDED_PDF_BYTES:
         return [TextContent(text=f"{name}: download it (link valid 10 minutes) from {link} — too big to attach here. In ReportAI: {_url(report.id)}")]
@@ -325,7 +333,7 @@ async def create_report_draft(
             text=text,
             media_reference=None,
             sender_label=user.full_name,
-            meta={"via": "mcp", "api_key_id": str(current_principal().key_id)},
+            meta={"via": "mcp", **_credential_meta(current_principal().credential)},
             requester_user_id=user.id,
             document_type_id=document_type.id,
         )
@@ -377,7 +385,7 @@ class McpEndpoint:
             transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
         )
         async with server.session_manager.run():
-            self._app = ApiKeyAuth(app)
+            self._app = McpAuth(app)
             try:
                 yield
             finally:

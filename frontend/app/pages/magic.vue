@@ -21,7 +21,10 @@ async function signIn(body: { token: string } | { email: string; code: string })
   loading.value = true
   try {
     await authStore.magicSignIn(body)
-    await navigateTo('/capture') // a technician's home: recording a report
+    // The page that sent them to sign in (an AI assistant's sign-in request, say), if it is this
+    // site's; else a technician's home, recording a report. Only a code typed in this same tab
+    // brings it: the emailed link is made by the API, which knows nothing of it.
+    await navigateTo(safeNext(route.query.next) ?? '/capture')
   } catch {
     error.value = t('auth.magic.error')
   } finally {

@@ -1,14 +1,16 @@
 import type { User } from '~/types'
 
-export default defineNuxtRouteMiddleware(async () => {
+export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
   const { access, refresh } = useSessionCookies()
+  // Back to this page once signed in (the login page checks it is one of this site's: utils/safeNext.ts).
+  const toLogin = { path: '/login', query: { next: to.fullPath } }
 
   if (!access.value && !refresh.value) {
     // A user left over from a session that has since ended must not keep the panel open (FE-3).
     authStore.user = null
     forgetOfflineCopies()
-    return navigateTo('/login')
+    return navigateTo(toLogin)
   }
 
   const sessionUserId = tokenSubject(refresh.value ?? access.value)
@@ -39,7 +41,7 @@ export default defineNuxtRouteMiddleware(async () => {
         return
       }
       authStore.user = null
-      return navigateTo('/login')
+      return navigateTo(toLogin)
     }
   }
   // Kept on every navigation in the browser, wherever the profile came from (a server-rendered

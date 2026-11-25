@@ -785,7 +785,11 @@
           "header": "Under “Request headers”, add “authorization” with the value “{value}” (including “Bearer” and the space)."
         },
         "note": "Request headers are in beta and only some Claude organizations see them. On Team and Enterprise plans an Owner adds the connector for the whole organization, and everyone there would act as you: use your key only on your own account.",
-        "yourKey": "your key"
+        "yourKey": "your key",
+        "oauth": {
+          "signIn": "Leave the sign-in option as it comes (OAuth) and click “Connect”: ReportAI opens for you to sign in and approve it. No key to copy.",
+          "withKey": "Or with a key, instead of signing in:"
+        }
       },
       "create": {
         "title": "New key",
@@ -846,6 +850,27 @@
         "readOnly": "This account is read-only: it can't create or revoke keys.",
         "limit": "You already have the most active keys allowed: revoke one you no longer use, then create the new one.",
         "copy": "It couldn't be copied. Select the text and copy it by hand."
+      },
+      "apps": {
+        "mine": "Connected apps",
+        "company": "Company connected apps",
+        "help": "The assistants you connected by signing in. They act as you, like a key.",
+        "companyHelp": "The whole team's: you can disconnect anyone's.",
+        "empty": "No apps connected yet.",
+        "connected": "Connected {date}",
+        "disconnect": "Disconnect",
+        "confirm": {
+          "title": "Disconnect app",
+          "message": "Disconnect “{name}”? It loses access at once; to use it again, connect it again."
+        },
+        "toast": {
+          "disconnected": "“{name}” disconnected."
+        },
+        "errors": {
+          "load": "The connected apps couldn't be loaded.",
+          "disconnect": "The app couldn't be disconnected.",
+          "readOnly": "This account is read-only: it can't disconnect apps."
+        }
       }
     },
     "capture": {
