@@ -126,3 +126,60 @@ jobs:
 
       - name: Smoke test the built server (CSP nonce, security headers)
         run: npm run test:smoke
+
+  # The product's main flow in a real browser: sign in, type a note, review and correct the fields,
+  # approve, download the PDF and find it in the recipient's mailbox. Against the production images
+  # laid out as a self-hosted installation (infra/docker-compose.e2e.yml), with the AI provider
+  # replaced by a local stub: no key, no cost. The paid eval (eval.yml) never runs here.
+  e2e:
+    runs-on: ubuntu-26.04
+
+    env:
+      E2E_COMPOSE: docker compose -f infra/docker-compose.e2e.yml
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build and start the stack
+        run: $E2E_COMPOSE up -d --build --wait --wait-timeout 300
+
+      - name: Set up the installation (setup wizard, document type, recipient)
+        run: $E2E_COMPOSE run --rm seed
+
+      - name: Run the end-to-end test
+        working-directory: frontend
+        run: npm run test:e2e
+
+      - name: Collect the services' logs
+        if: failure()
+        run: |
+          mkdir -p frontend/test-results
+          $E2E_COMPOSE logs --no-color --timestamps > frontend/test-results/services.log 2>&1
+
+      - name: Upload the Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+
+      - name: Tear down the stack
+        if: always()
+        run: $E2E_COMPOSE down -v --remove-orphans
