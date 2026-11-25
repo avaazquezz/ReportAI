@@ -26,8 +26,12 @@ def _landing(language: str) -> dict:
     return json.loads((FRONTEND / "i18n" / "locales" / language / "landing.json").read_text())["landing"]
 
 
+def _home(language: str) -> dict:
+    return json.loads((FRONTEND / "i18n" / "locales" / language / "home.json").read_text())["home"]
+
+
 def _built(language: str) -> dict:
-    return json.loads((FRONTEND / "i18n" / "locales" / language / "home.json").read_text())["home"]["built"]
+    return _home(language)["built"]
 
 
 def _numbers(text: str) -> list[int]:
@@ -69,3 +73,14 @@ def test_the_drawn_matrix_has_one_cell_per_route() -> None:
     drawn = re.search(r"const ROUTES_WITH_AN_ID = (\d+)", sheet)
     assert drawn is not None
     assert int(drawn.group(1)) == len(ID_ROUTES)
+
+
+def test_the_pages_promise_the_audio_retention_the_hosted_service_runs_with() -> None:
+    # The hosted service's compose pins it; an .env can't quietly break the FAQ and privacy policy.
+    compose = (FRONTEND.parent / "infra" / "docker-compose.prod.yml").read_text()
+    pinned = re.search(r'^\s+AUDIO_RETENTION_DAYS: "(\d+)"$', compose, re.MULTILINE)
+    assert pinned is not None, "docker-compose.prod.yml must pin AUDIO_RETENTION_DAYS"
+    days = int(pinned.group(1))
+    for language, pattern in (("es", r"se borran a los (\d+) días"), ("en", r"deleted after (\d+) days")):
+        promises = [_home(language)["faq"]["items"]["data"]["a"], _landing(language)["privacy"]["customerData"]["body"]]
+        assert [int(m) for text in promises for m in re.findall(pattern, text)] == [days, days], language
