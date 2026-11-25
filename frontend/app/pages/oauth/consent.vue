@@ -90,6 +90,10 @@ const buttonClass = 'w-full rounded-md px-4 py-2.5 font-body text-sm font-semibo
       <p class="mt-4 break-words font-body text-sm text-ink-900/80">
         {{ t('auth.consent.returnsTo') }} <span class="font-mono font-semibold">{{ consent.redirect_host }}</span>
       </p>
+      <p v-if="consent.published_by" class="mt-2 break-words font-body text-sm text-ink-900/80">
+        {{ t('auth.consent.publishedBy') }} <span class="font-mono font-semibold">{{ consent.published_by }}</span>
+      </p>
+      <p v-else class="mt-2 font-body text-sm text-ink-900/80">{{ t('auth.consent.selfRegistered') }}</p>
       <p class="mt-2 font-body text-sm text-ink-900/70">{{ t('auth.consent.onlyYours') }}</p>
 
       <p v-if="error" class="mt-4 font-body text-sm text-red-600" role="alert">{{ error }}</p>

@@ -440,8 +440,9 @@ export interface ApiKeyCreated extends ApiKey {
 
 // backend/app/schemas/oauth.py
 export interface OAuthConsent {
-  client_name: string
+  client_name: string // what the app calls itself: anyone can register one called "Claude"
   client_id: string
+  published_by: string | null // the site publishing its metadata document; null: it registered itself
   redirect_host: string // where the answer goes back to
   scopes: string[]
 }

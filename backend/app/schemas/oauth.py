@@ -10,8 +10,10 @@ MAX_CONSENT_REQUEST_CHARS = 8000
 class ConsentDetails(BaseModel):
     """What the consent page shows about the app asking."""
 
-    client_name: str
+    client_name: str  # what the app calls itself: anyone can register one called "Claude"
     client_id: str
+    # The site that publishes the app's metadata document; None for an app that registered itself.
+    published_by: str | None
     redirect_host: str  # where the answer goes: the one thing an impostor can't fake
     scopes: list[str]
 

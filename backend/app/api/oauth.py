@@ -140,9 +140,12 @@ async def consent_details(
 ) -> ConsentDetails:
     consent = read_consent_request(sealed)
     client = await consent_client(db, consent)
+    # A metadata document's address names who publishes the app; a registered app named itself.
+    published = urlsplit(client.client_id).hostname if client.client_id.startswith("https://") else None
     return ConsentDetails(
         client_name=client.client_name or client.client_id,
         client_id=client.client_id,
+        published_by=published,
         redirect_host=urlsplit(consent.redirect_uri).netloc,
         scopes=[SCOPE],
     )
@@ -158,7 +161,7 @@ async def answer_consent(
     consent = read_consent_request(body.request)
     client = await consent_client(db, consent)
     if body.approve:
-        redirect_to = await approve(db, current_user, consent)
+        redirect_to = await approve(db, current_user, consent, client)
     else:
         redirect_to = deny(consent)
     await audit.record(
