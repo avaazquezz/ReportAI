@@ -100,8 +100,7 @@ async def revocable_key(db: AsyncSession, user: TenantUser, key_id: uuid.UUID) -
 
 async def revoke_all(db: AsyncSession, user: TenantUser) -> int:
     """Revokes every key of `user` not yet revoked, expired ones too (not committed), and says how
-    many: signing someone out
-    everywhere also ends any key a stolen session may have made."""
+    many: signing someone out everywhere also ends any key a stolen session may have made."""
     result = await db.execute(
         update(ApiKey).where(ApiKey.user_id == user.id, ApiKey.revoked_at.is_(None)).values(revoked_at=func.now())
     )
