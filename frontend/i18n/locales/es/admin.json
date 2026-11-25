@@ -792,7 +792,15 @@
         "help": "Una por asistente o dispositivo: así puedes revocar solo la que ya no uses.",
         "placeholder": "Claude en mi portátil",
         "submit": "Crear clave",
-        "maxLength": "Como mucho {max} caracteres"
+        "maxLength": "Como mucho {max} caracteres",
+        "expiry": "Caduca",
+        "expiryHint": "Al caducar deja de funcionar: crea otra cuando la necesites.",
+        "expiryOptions": {
+          "30": "En 30 días",
+          "90": "En 90 días",
+          "365": "En 1 año",
+          "never": "Nunca"
+        }
       },
       "created": {
         "title": "Clave «{name}» creada",
@@ -813,7 +821,11 @@
         "neverUsed": "Sin usar todavía",
         "active": "Activa",
         "revoked": "Revocada el {date}",
-        "revoke": "Revocar"
+        "revoke": "Revocar",
+        "expires": "Caduca el {date}",
+        "expiredOn": "Caducó el {date}",
+        "neverExpires": "No caduca",
+        "expired": "Caducada"
       },
       "confirmRevoke": {
         "title": "Revocar clave",

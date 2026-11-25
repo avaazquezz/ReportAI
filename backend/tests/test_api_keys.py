@@ -43,8 +43,8 @@ async def _company(db: AsyncSession, name: str = "Acme") -> dict[str, Any]:
     return {"tenant": tenant, **people}
 
 
-async def _make(client: AsyncClient, user: TenantUser, name: str = "Claude") -> dict[str, Any]:
-    response = await client.post("/api-keys", json={"name": name}, headers=_auth(user))
+async def _make(client: AsyncClient, user: TenantUser, name: str = "Claude", **extra: Any) -> dict[str, Any]:
+    response = await client.post("/api-keys", json={"name": name, **extra}, headers=_auth(user))
     assert response.status_code == 201, response.text
     body: dict[str, Any] = response.json()
     return body
@@ -197,3 +197,71 @@ async def test_use_is_recorded_at_most_every_few_minutes(client: AsyncClient, db
     await api_keys.authenticate(db, made["secret"])
     later = await last_used()
     assert later is not None and later > first - timedelta(minutes=1)
+
+
+async def _expire(db: AsyncSession, key_id: str, at: datetime) -> None:
+    await db.execute(update(ApiKey).where(ApiKey.id == uuid.UUID(key_id)).values(expires_at=at))
+    await db.commit()
+
+
+@pytest.mark.parametrize("days", [30, 90, 365])
+async def test_a_key_may_expire_after_30_90_or_365_days(client: AsyncClient, db: AsyncSession, days: int) -> None:
+    acme = await _company(db)
+
+    made = await _make(client, acme["approver"], expires_in_days=days)
+
+    expected = datetime.now(UTC) + timedelta(days=days)
+    expires_at = datetime.fromisoformat(made["expires_at"])
+    assert abs(expires_at - expected) < timedelta(minutes=1)
+    listed = (await client.get("/api-keys", headers=_auth(acme["approver"]))).json()
+    assert datetime.fromisoformat(listed[0]["expires_at"]) == expires_at
+    event = await db.scalar(select(AuditEvent).where(AuditEvent.action == "api_key.created"))
+    assert event is not None and event.details["expires_in_days"] == days
+
+
+@pytest.mark.parametrize("body", [{}, {"expires_in_days": None}])
+async def test_without_an_expiry_a_key_never_expires(client: AsyncClient, db: AsyncSession, body: dict[str, Any]) -> None:
+    acme = await _company(db)
+
+    made = await _make(client, acme["approver"], **body)
+
+    assert made["expires_at"] is None
+    assert (await client.get("/api-keys", headers=_auth(acme["approver"]))).json()[0]["expires_at"] is None
+    assert await api_keys.authenticate(db, made["secret"]) is not None
+
+
+@pytest.mark.parametrize("days", [0, 1, 7, 60, 366, -30, "90", "never"])
+async def test_any_other_expiry_is_refused(client: AsyncClient, db: AsyncSession, days: Any) -> None:
+    acme = await _company(db)
+
+    response = await client.post("/api-keys", json={"name": "Claude", "expires_in_days": days}, headers=_auth(acme["approver"]))
+
+    assert response.status_code == 422
+    assert (await db.scalar(select(ApiKey))) is None
+
+
+async def test_a_key_works_until_it_expires_and_never_after(client: AsyncClient, db: AsyncSession) -> None:
+    acme = await _company(db)
+    made = await _make(client, acme["approver"], expires_in_days=30)
+
+    assert await api_keys.authenticate(db, made["secret"]) is not None
+    await _expire(db, made["id"], datetime.now(UTC) + timedelta(minutes=1))
+    assert await api_keys.authenticate(db, made["secret"]) is not None
+    await _expire(db, made["id"], datetime.now(UTC) - timedelta(seconds=1))
+    assert await api_keys.authenticate(db, made["secret"]) is None  # same answer as an unknown key
+    listed = (await client.get("/api-keys", headers=_auth(acme["approver"]))).json()
+    assert [key["id"] for key in listed] == [made["id"]]  # still listed, so the panel can show it expired
+
+
+async def test_expired_keys_do_not_count_towards_the_cap(client: AsyncClient, db: AsyncSession) -> None:
+    acme = await _company(db)
+    for _ in range(api_keys.MAX_ACTIVE_KEYS_PER_USER):
+        await _make(client, acme["viewer"], expires_in_days=30)
+    refused = await client.post("/api-keys", json={"name": "one more"}, headers=_auth(acme["viewer"]))
+
+    await db.execute(update(ApiKey).values(expires_at=datetime.now(UTC) - timedelta(days=1)))
+    await db.commit()
+    after_expiry = await client.post("/api-keys", json={"name": "one more"}, headers=_auth(acme["viewer"]))
+
+    assert refused.status_code == 400  # unexpired keys count
+    assert after_expiry.status_code == 201

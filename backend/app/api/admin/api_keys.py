@@ -27,6 +27,7 @@ def _response(key: ApiKey, owner_name: str) -> ApiKeyResponse:
         created_at=key.created_at,
         last_used_at=key.last_used_at,
         revoked_at=key.revoked_at,
+        expires_at=key.expires_at,
     )
 
 
@@ -44,8 +45,11 @@ async def create_api_key(
     current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> ApiKeyCreated:
-    new = await api_keys.create(db, current_user, body.name.strip() or "API key")
-    await audit.record(db, "api_key.created", actor=current_user, target=new.key.id, request=request, name=new.key.name, prefix=new.key.prefix)
+    new = await api_keys.create(db, current_user, body.name.strip() or "API key", body.expires_in_days)
+    await audit.record(
+        db, "api_key.created", actor=current_user, target=new.key.id, request=request,
+        name=new.key.name, prefix=new.key.prefix, expires_in_days=body.expires_in_days,
+    )
     await db.commit()
     await db.refresh(new.key)
     return ApiKeyCreated(**_response(new.key, current_user.full_name).model_dump(), secret=new.secret)

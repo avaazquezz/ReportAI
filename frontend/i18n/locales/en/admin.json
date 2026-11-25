@@ -792,7 +792,15 @@
         "help": "One per assistant or device, so you can revoke just the one you no longer use.",
         "placeholder": "Claude on my laptop",
         "submit": "Create key",
-        "maxLength": "{max} characters at most"
+        "maxLength": "{max} characters at most",
+        "expiry": "Expires",
+        "expiryHint": "Once it expires it stops working: make a new one when you need it.",
+        "expiryOptions": {
+          "30": "In 30 days",
+          "90": "In 90 days",
+          "365": "In 1 year",
+          "never": "Never"
+        }
       },
       "created": {
         "title": "Key “{name}” created",
@@ -813,7 +821,11 @@
         "neverUsed": "Not used yet",
         "active": "Active",
         "revoked": "Revoked {date}",
-        "revoke": "Revoke"
+        "revoke": "Revoke",
+        "expires": "Expires {date}",
+        "expiredOn": "Expired {date}",
+        "neverExpires": "Never expires",
+        "expired": "Expired"
       },
       "confirmRevoke": {
         "title": "Revoke key",
