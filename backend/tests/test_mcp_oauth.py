@@ -641,6 +641,43 @@ async def test_a_client_id_refused_on_sight_is_logged(
     assert any(says in r.getMessage() for r in caplog.records if r.name == "app.services.oauth.clients")
 
 
+_CJK_PATH = "".join(chr(0x4E00 + n) for n in range(1500))  # 1500 characters, 4500 bytes in UTF-8
+
+
+@pytest.mark.parametrize(
+    "client_id",
+    [
+        "https://app.example/a\x01b.json",
+        "https://app.example/a\x7f.json",
+        f"https://app.example/{_CJK_PATH}",
+        f"{'x' * 100}\x00",
+    ],
+    ids=["control character", "DEL", "1500 CJK characters", "NUL in a registered id"],
+)
+async def test_a_client_id_that_is_not_printable_ascii_is_an_unknown_client(
+    http: httpx2.AsyncClient, db: AsyncSession, fetches: "Fetches", caplog: pytest.LogCaptureFixture, client_id: str
+) -> None:
+    with caplog.at_level(logging.INFO, logger="app.services.oauth.clients"):
+        authorized = await _authorize(http, client_id, _pkce()[1])
+        token = await _refresh(http, client_id, "rpr_unknown")
+
+    assert authorized.status_code == 400 and authorized.json()["error"] == "invalid_request"
+    assert token.status_code == 401 and token.json()["error"] == "invalid_client"
+    assert fetches.requests == []
+    assert await db.scalar(select(func.count()).select_from(OAuthMetadataFetchFailure)) == 0
+    assert any("printable ASCII" in r.getMessage() for r in caplog.records if r.name == "app.services.oauth.clients")
+
+
+async def test_an_address_the_http_client_will_not_request_is_refused_not_unavailable(fetches: "Fetches") -> None:
+    # Past get_client's own check: what httpx refuses to build a request for is a bad address.
+    with pytest.raises(clients.ClientMetadataError) as refused:
+        await clients.fetch_metadata_document("https://app.example/a\x01b.json")
+
+    assert not isinstance(refused.value, clients.MetadataDocumentUnavailable)
+    assert "not a valid URL" in str(refused.value)
+    assert fetches.requests == []
+
+
 async def test_consent_for_a_redirect_the_document_no_longer_lists_is_logged(
     http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], fetches: "Fetches",
     caplog: pytest.LogCaptureFixture,
