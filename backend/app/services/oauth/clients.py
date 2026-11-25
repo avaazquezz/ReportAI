@@ -154,11 +154,17 @@ async def register(db: AsyncSession, client: OAuthClientInformationFull) -> None
 
 
 async def get_client(db: AsyncSession, client_id: str, *, client_ip: str) -> OAuthClientInformationFull | None:
-    """The client `client_id` names, or None: an id nobody registered, or a metadata document that
-    can't be fetched or fails a check. `client_ip` is who asked: fetches are counted against it.
+    """The client `client_id` names, or None: an id nobody registered, one too long or not printable
+    ASCII (refused before any lookup), or a metadata document that can't be fetched or fails a
+    check. `client_ip` is who asked: fetches are counted against it.
     May commit whatever `db` holds, before a fetch and after it (the document cached)."""
     if len(client_id) > MAX_CLIENT_ID_CHARS:
         logger.info("Refused a client_id of %s characters, more than %s", len(client_id), MAX_CLIENT_ID_CHARS)
+        return None
+    # A UUID of ours, or a URL (non-ASCII is percent-encoded in one): so each character is a byte,
+    # and an id within the length above fits the columns' btree indexes, which take ~2700 bytes.
+    if not (client_id.isascii() and client_id.isprintable()):
+        logger.info("Refused a client_id that is not printable ASCII: %r", client_id[:200])
         return None
     if client_id.startswith("https://"):
         return await _metadata_document_client(db, client_id, client_ip)
@@ -322,6 +328,8 @@ async def _download(url: str) -> bytes:
                     body += chunk
                     if len(body) > METADATA_DOCUMENT_MAX_BYTES:
                         raise ClientMetadataError(f"the document is larger than {METADATA_DOCUMENT_MAX_BYTES} bytes")
+        except httpx.InvalidURL as exc:  # not an HTTPError: an address no request can be made to
+            raise ClientMetadataError(f"not a valid URL ({exc})") from exc
         except httpx.HTTPError as exc:
             raise MetadataDocumentUnavailable(f"the request failed ({type(exc).__name__}: {exc})") from exc
     return bytes(body)
