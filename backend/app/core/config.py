@@ -2,6 +2,7 @@ import re
 import uuid
 from collections.abc import Iterator
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -192,6 +193,17 @@ class Settings(BaseSettings):
         # A typo here would only show as an alert that never stops: refuse to start instead.
         if self.WORKER_HEARTBEAT_URL and not re.match(r"https?://[^/\s]+", self.WORKER_HEARTBEAT_URL):
             raise ValueError("WORKER_HEARTBEAT_URL must be an http(s) address")
+        return self
+
+    @model_validator(mode="after")
+    def _oauth_issuer_is_https(self) -> "Settings":
+        # FRONTEND_ORIGIN is the OAuth issuer: codes and tokens travel through it, and AI clients
+        # refuse an issuer over plain HTTP. Only a developer's own machine may do without.
+        if not self.MCP_OAUTH_ENABLED:
+            return self
+        origin = urlsplit(self.FRONTEND_ORIGIN)
+        if origin.scheme != "https" and not (origin.scheme == "http" and origin.hostname in ("localhost", "127.0.0.1")):
+            raise ValueError("MCP_OAUTH_ENABLED=true needs FRONTEND_ORIGIN on https (http only for localhost or 127.0.0.1)")
         return self
 
     @model_validator(mode="after")
