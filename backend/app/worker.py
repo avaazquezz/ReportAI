@@ -139,10 +139,13 @@ async def prune_oauth() -> None:
         purged = await data_lifecycle.purge_unused_oauth_clients(session)
         # Expired codes first: one left over would keep its app's cached document from going.
         await data_lifecycle.prune_expired_oauth_secrets(session)
+        revoked = await data_lifecycle.prune_revoked_oauth_grants(session)
         unconnected = await data_lifecycle.purge_unconnected_metadata_document_clients(session)
         await session.commit()
     if purged:
         logger.info("Deleted %s self-registered OAuth apps nobody used for 30 days", purged)
+    if revoked:
+        logger.info("Deleted %s OAuth connections revoked more than 30 days ago", revoked)
     if unconnected:
         logger.info("Deleted %s cached OAuth app metadata documents nobody is connected through", unconnected)
 
