@@ -247,7 +247,7 @@
         },
         "eval": {
           "title": "Medido, no supuesto",
-          "body": "83 visitas de prueba en 3 pasadas: 99,8 %, 100 % y 99,7 % de campos correctos, sin un solo dato inventado."
+          "body": "83 casos de prueba: Claude acierta el 99,7 % de los campos y OpenAI el 97,5 %, sin un solo dato inventado. Cada pasada, publicada."
         },
         "install": {
           "title": "Alojado o en tu servidor",

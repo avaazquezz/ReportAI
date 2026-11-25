@@ -59,7 +59,9 @@ a new report type is configuration, not a code change.
   restart.
 - **Extraction you can check.** The field schema belongs to each company and becomes a Pydantic
   model at run time; the model answers with structured output and a quote per field. A golden set
-  gates accuracy at 90 % with zero invented values.
+  of 83 generated cases gates accuracy at 90 % with zero invented values; the latest runs (Claude
+  99.7 %, OpenAI 97.5 %, none invented) are published with their commit and cost in
+  [docs/evals.md](docs/evals.md).
 - **Multi-tenant by construction.** The company always comes from the signed-in user, another
   company's record answers 404, and a test walks every route with an id using another company's
   token.
@@ -71,8 +73,11 @@ a new report type is configuration, not a code change.
 - **An AI assistant as a client, not a backdoor.** A remote MCP server (Streamable HTTP, stateless)
   lets Claude search and read reports, hand over their PDF and start drafts with a personal API
   key (that can expire) acting as its person through the panel's own checks; a draft still waits
-  for a human. An eval runs Claude
-  against it for tool choice, prompt injection and isolation.
+  for a human. An eval runs Claude against it for tool choice, the PDF, prompt injection and
+  isolation (7 of 7 cases in the published run).
+- **The main flow tested in a browser.** A Playwright test in CI signs in, types a note, reviews and
+  corrects the fields, approves, downloads the PDF and finds it in the recipient's mailbox, against
+  the production images with the AI provider replaced by a local stub.
 - **Guardrails for running it.** Per-plan quotas, a daily AI spend breaker, an audit log, data
   export, account deletion with a grace period and audio retention.
 

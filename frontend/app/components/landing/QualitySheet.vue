@@ -61,6 +61,9 @@ useMotionScope(root, (c) => {
           <dd class="order-3 m-0 mt-2 font-body text-[12.5px] leading-snug text-white/65">{{ t(`landing.quality.figures.${figure}.source`) }}</dd>
         </div>
       </dl>
+      <p class="m-0 mt-5 font-body text-[13px] text-white/70">
+        <a href="https://github.com/avaazquezz/ReportAI/blob/main/docs/evals.md" target="_blank" rel="noopener" class="font-semibold text-white underline decoration-white/35 underline-offset-[0.3em] transition-colors hover:decoration-white">{{ t('landing.quality.evalsLink') }}</a>
+      </p>
 
       <div class="mt-20">
         <h3 class="m-0 font-plan text-[1.35rem] font-extrabold tracking-[-0.02em] text-white">{{ t('landing.quality.method.title') }}</h3>

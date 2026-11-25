@@ -247,7 +247,7 @@
         },
         "eval": {
           "title": "Measured, not assumed",
-          "body": "83 test visits over 3 runs: 99.8%, 100% and 99.7% of fields right, with not a single invented detail."
+          "body": "83 test cases: Claude gets 99.7% of fields right and OpenAI 97.5%, with not a single invented detail. Every run, published."
         },
         "install": {
           "title": "Hosted or on your server",

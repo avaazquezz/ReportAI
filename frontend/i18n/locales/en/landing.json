@@ -432,7 +432,7 @@
         },
         "proof": {
           "label": "How it's proven",
-          "body": "627 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
+          "body": "753 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
         }
       },
       "block": {
@@ -616,21 +616,22 @@
     "quality": {
       "heading": "How I know it works.",
       "plain": "“The model is usually right” isn't enough for me. Every change goes through tests, types and CI; extraction through a golden set; and major changes through an independent review.",
+      "evalsLink": "Every evaluation published, with its commit, its model and what it cost",
       "figures": {
         "tests": {
-          "value": "627",
+          "value": "753",
           "label": "backend tests",
           "source": "pytest against a real Postgres, on every push"
         },
         "frontend": {
-          "value": "44",
+          "value": "61",
           "label": "frontend tests",
-          "source": "plus a smoke test of the built server"
+          "source": "plus a smoke test of the built server and the whole flow in a browser"
         },
         "invented": {
           "value": "0",
           "label": "invented details in the golden set",
-          "source": "83 cases, 3 runs: 99.8%, 100% and 99.7% of fields right"
+          "source": "83 cases: Claude, 99.7% of fields right; OpenAI, 97.5%"
         },
         "a11y": {
           "value": "100",
@@ -664,7 +665,7 @@
           "ci": {
             "who": "CI",
             "name": "Prove",
-            "body": "Lint, types, migrations against the models, tests, the image build and a CSP smoke test."
+            "body": "Lint, types, migrations against the models, tests, the whole flow in a browser, the image build and a CSP smoke test."
           }
         },
         "motto": "AI writes much of the code. I answer for every line."
