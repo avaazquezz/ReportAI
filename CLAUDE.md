@@ -6,7 +6,7 @@ backend, Nuxt panel. See `PROJECT_ROADMAP.md` for decisions and the current phas
 
 Two run modes, one codebase:
 - **SaaS, multi-tenant** (`SINGLE_TENANT=false`, the default): a super admin creates tenants;
-  self-serve signup is coming.
+  self-serve signup is built but stays off (`SIGNUP_ENABLED`): ReportAI is not on sale (2026-11-11).
 - **Self-host** (`SINGLE_TENANT=true`, the Enterprise plan): one company per server, installed by
   `infra/install/install.sh`, set up through the panel's setup wizard (`docs/install.md`).
 

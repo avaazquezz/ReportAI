@@ -174,7 +174,7 @@ requests.
 - [x] **Uptime monitor** on the hosted service: the panel and `/api/health` from outside (UptimeRobot,
   every 5 minutes; `/api/health` alerts when `"status":"ok"` is missing), and the worker's heartbeat
   (healthchecks.io, a ping every minute, 5 minutes' grace).
-- [x] **Agent, MCP and API, on reports** — a remote MCP server over Streamable HTTP (`/api/mcp`)
+- [x] **Agent and MCP, on reports** — a remote MCP server over Streamable HTTP (`/api/mcp`)
   whose tools go through the panel's own checks: list the document types, search and read reports,
   and start a draft that a person reviews (never approve or send). Personal API keys (hashed,
   revocable, acting as their person and their role), managed in the panel; an eval of an assistant
@@ -190,6 +190,9 @@ requests.
 - **Client portal and signature:** when someone wants to use ReportAI with real company data.
 - **Dedicated server, off-site backups and a restore drill for the hosted service:** before the
   first company with real data.
+- **A public REST API with the same personal keys:** the keys serve only the MCP server, and the
+  API's own docs stay off in production; back when someone needs to integrate ReportAI without an
+  AI assistant.
 - **Slack and Microsoft Teams adapters:** only for a specific client that asks (see the
   2026-08-10 log entries for why Teams needs that client's IT admin).
 
@@ -213,7 +216,8 @@ requests.
   demo and sample data (see "Deferred").
 - The live demo records visitors' voices: covered by the privacy policy, its own daily limits and
   a 24-hour purge.
-- Extraction quality depends on the configured model: only Claude has passed the golden set.
+- Extraction quality depends on the configured model: Claude and OpenAI have passed the golden
+  set; any other model is unvalidated.
 - Scope discipline: no new feature without a trigger from a real user (see §5 and §6).
 
 ## 8. Decisions log
@@ -252,3 +256,4 @@ requests.
 | 2026-11-17 | Finish line set: v0.5.0 (README and roadmap matching the product, the installer verified end to end, a release, an uptime monitor), then company AI keys on the hosted service, then the agent, MCP and API on reports, then v1.0.0 and maintenance on demand. A global daily AI spend breaker is set on the hosted service. | Confirmed |
 | 2026-11-17 | Hosted service: each company brings its own AI provider key, entered when it sets the service up; the platform's key serves only the companies the super admin marks (the live demo), so the platform no longer pays for other companies' AI and one trial account can't exhaust the breaker for everyone. The hosted service takes a closed list of providers with fixed URLs: a free base URL would let any company point the worker at internal addresses (SSRF). Self-host keeps the free base URL and its installation-wide settings. | Confirmed |
 | 2026-11-18 | AI assistants reach ReportAI through an MCP server with **personal** API keys, not company-wide ones: a key acts as its person through the panel's own checks (role, company, a technician's own reports), so it never sees or does more than they can, and dies while they can't sign in. Tools are read-only plus starting a draft that a person reviews; nothing approves or sends. Its own bearer-key auth, not the SDK's OAuth (there is no authorization server to discover). Decided with it: signing someone out everywhere also revokes their keys; no feature flag on self-host (with no keys the endpoint is inert, and making a key is the opt-in, person by person); no per-IP limit on failed keys (256 random bits; each failure is one indexed lookup); a retried draft may create a second one (bounded by 20 drafts per person per hour, and a person reviews each). | Confirmed |
+| 2026-11-25 | After an outside review of v1.0.0: the report search matches only field values (it searched the fields' JSON as text, so a field's name or `null` matched every report); the hosted compose pins the 90-day audio retention the FAQ and privacy policy promise; "Agent, MCP and API" becomes "Agent and MCP" — the personal keys serve only the MCP server, and a public REST API waits for someone who needs it (see Deferred), because a public API is a versioned contract to keep. | Confirmed |
