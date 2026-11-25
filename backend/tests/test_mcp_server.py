@@ -218,6 +218,10 @@ async def test_search_filters_and_pages(db: AsyncSession, companies: tuple[dict[
     second = _data(await _call(secret, "reportai_search_reports", limit=1, offset=first["next_offset"]))
 
     assert [i["id"] for i in by_words["items"]] == [str(acme["colleagues"].id)]
+    # Every report has an "obra" field and an empty "deficiencias": a field's name is not a value.
+    # (Not "null": the SDK parses a JSON-looking argument, so query="null" arrives as no query.)
+    assert _data(await _call(secret, "reportai_search_reports", query="obra"))["total"] == 0
+    assert _data(await _call(secret, "reportai_search_reports", query="deficiencias"))["total"] == 0
     assert [i["id"] for i in by_status["items"]] == [str(acme["own"].id)]
     assert first["next_offset"] == 1 and second["next_offset"] is None
     assert {first["items"][0]["id"], second["items"][0]["id"]} == {str(acme["own"].id), str(acme["colleagues"].id)}

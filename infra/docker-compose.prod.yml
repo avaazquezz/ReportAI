@@ -17,6 +17,10 @@ x-backend: &backend
     target: runtime
   env_file:
     - .env
+  environment:
+    # The hosted service promises it (FAQ, privacy policy), so it lives here and not in an
+    # unversioned .env; tests/test_case_study_figures.py checks the pages quote the same number.
+    AUDIO_RETENTION_DAYS: "90"
 
 services:
   postgres:

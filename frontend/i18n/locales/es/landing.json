@@ -784,6 +784,12 @@
           "decision": "Los límites de la demo, en un solo paso bajo candado",
           "why": "Una ráfaga recibe los mismos intentos que alguien que pulsa de uno en uno.",
           "rejected": "El «se pasa por poco» del limitador del login: aquí una ráfaga colaba 20 intentos con un límite de 3."
+        },
+        "mcp": {
+          "date": "18 nov 2026",
+          "decision": "Claves personales para el MCP, no de empresa",
+          "why": "La clave actúa como su persona, con las mismas comprobaciones del panel: un asistente nunca ve ni hace más que ella, y desde la IA nada se aprueba ni se envía.",
+          "rejected": "Una clave por empresa: el asistente de un técnico vería los informes de todos."
         }
       },
       "limitsTitle": "Lo que todavía no hace",

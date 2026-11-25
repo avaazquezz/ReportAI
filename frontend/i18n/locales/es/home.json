@@ -252,6 +252,10 @@
         "install": {
           "title": "Alojado o en tu servidor",
           "body": "El mismo código. En tu servidor se instala con un comando."
+        },
+        "assistant": {
+          "title": "Desde tu asistente de IA",
+          "body": "Claude u otro asistente compatible con MCP busca y lee tus informes y empieza borradores. Aprobar y enviar sigue siendo cosa de una persona."
         }
       },
       "who": {
