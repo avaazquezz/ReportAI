@@ -63,7 +63,7 @@
     "privacy": {
       "title": "Política de privacidad",
       "seoDescription": "Qué datos personales trata ReportAI, para qué, cuánto tiempo los guarda y cómo ejercer tus derechos.",
-      "updated": "Última actualización: 25 de noviembre de 2026",
+      "updated": "Última actualización: 26 de noviembre de 2026",
       "intro": "Esta política explica qué datos personales se tratan cuando visitas esta web, pruebas la demo, escribes al correo de contacto o usas ReportAI: para qué, durante cuánto tiempo y qué derechos tienes, conforme al Reglamento General de Protección de Datos (RGPD) y a la Ley Orgánica 3/2018 (LOPDGDD).",
       "controller": {
         "heading": "Responsable del tratamiento",
@@ -120,7 +120,6 @@
         "hetzner": "alojamiento del servidor, en Helsinki (Finlandia).",
         "groq": "transcripción de las grabaciones de la demo en vivo y de las empresas que usan la IA de ReportAI, en Estados Unidos.",
         "anthropic": "interpretación de la visita y redacción del borrador en la demo en vivo y en las empresas que usan la IA de ReportAI, en Estados Unidos.",
-        "mailgun": "envío de los correos del servicio, desde su región de la Unión Europea.",
         "zoho": "buzón del correo de contacto, en sus centros de datos de la Unión Europea.",
         "ownAi": "Cada empresa conecta su propia cuenta de IA (Anthropic, OpenAI o Groq): las grabaciones y los informes de sus visitas los procesa el proveedor que ella elige, con su propia cuenta y bajo el contrato que tiene con él. ReportAI solo guarda su clave, cifrada, para hacer esas llamadas en su nombre.",
         "connectors": "Si una empresa conecta su propio bot de Telegram o un buzón de correo, los mensajes que entran por esa vía pasan también por esos servicios, que contrata la propia empresa.",

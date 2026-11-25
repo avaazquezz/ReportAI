@@ -12,7 +12,6 @@ const PROCESSORS = [
   { key: 'hetzner', name: 'Hetzner' },
   { key: 'groq', name: 'Groq' },
   { key: 'anthropic', name: 'Anthropic' },
-  { key: 'mailgun', name: 'Mailgun' },
   { key: 'zoho', name: 'Zoho' }
 ] as const
 const AEPD = 'https://www.aepd.es'
