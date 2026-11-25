@@ -10,6 +10,7 @@ import json
 import logging
 import secrets
 import socket
+import threading
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
@@ -1115,6 +1116,35 @@ async def test_a_fetch_that_finds_every_slot_taken_gives_up_in_its_time_as_unava
     slots.release()
     assert (await clients.fetch_metadata_document(DOCUMENT_URL)).client_name == "Example AI"
     assert resolved == ["app.example"]
+
+
+async def test_our_own_queue_being_full_is_not_remembered_as_the_publisher_failing(
+    db: AsyncSession, fetches: Fetches, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
+    slots = await _take_every_fetch_slot(monkeypatch)
+
+    assert await clients.get_client(db, DOCUMENT_URL, client_ip="203.0.113.7") is None
+    # Congestion here: the next request may fetch at once, it isn't told "failed, wait 10 minutes".
+    assert await db.scalar(select(func.count()).select_from(OAuthMetadataFetchFailure)) == 0
+    slots.release()
+    assert (await clients.get_client(db, DOCUMENT_URL, client_ip="203.0.113.7")) is not None
+
+
+async def test_host_lookups_run_on_threads_of_their_own(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A hung lookup holds its thread past the fetch's timeout: it must be one of this pool's, never
+    # one of the default executor that asyncio.to_thread and everything else share.
+    threads: list[str] = []
+    real_getaddrinfo = socket.getaddrinfo
+
+    def lookup(host: str, *args: Any, **kwargs: Any) -> Any:
+        threads.append(threading.current_thread().name)
+        return real_getaddrinfo("127.0.0.1", *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", lookup)
+
+    assert await _real_resolve("app.example") == {"127.0.0.1"}
+    assert threads and all(name.startswith("metadata-dns") for name in threads)
 
 
 async def test_no_database_transaction_is_open_while_the_document_is_fetched(db: AsyncSession, fetches: Fetches) -> None:
