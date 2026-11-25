@@ -13,7 +13,7 @@ from datetime import timedelta
 from sqlalchemy import ColumnElement, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import ResourceNotFoundException
+from app.core.exceptions import ConflictException, ResourceNotFoundException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.oauth import OAuthClient, OAuthGrant, OAuthToken
 from app.models.tenant_user import TenantUser
@@ -27,6 +27,8 @@ REFRESH_PREFIX = "rpr_"
 # last_used_at is a hint for the panel, as for keys: written at most this often.
 _TOUCH_AFTER = timedelta(minutes=5)
 _MAX_TOKEN_CHARS = 100
+# As for API keys: a person rarely needs more, and a stolen session can't connect apps by the hundred.
+MAX_CONNECTED_APPS_PER_USER = 10
 
 # Not revoked, and holding a refresh token still good: what the panel shows as connected. A grant
 # whose refresh token ran out can do nothing more, so it is listed no longer.
@@ -73,6 +75,22 @@ async def person_of(db: AsyncSession, grant_id: uuid.UUID) -> TenantUser | None:
     """Who the grant acts as right now, or None once it is revoked or its person may not act."""
     grant = await db.scalar(select(OAuthGrant).where(OAuthGrant.id == grant_id, OAuthGrant.revoked_at.is_(None)))
     return None if grant is None else await acting_person(db, grant.user_id, grant.tenant_id)
+
+
+async def make_room_for(db: AsyncSession, user: TenantUser, oauth_client_id: uuid.UUID) -> None:
+    """Gets `user` ready for a new grant to the app (not committed): ConflictException if they are
+    connected to MAX_CONNECTED_APPS_PER_USER other apps already, else revokes what they hold for this
+    one, since approving an app again replaces its connection: one per person and app."""
+    others = await db.scalar(
+        select(func.count()).select_from(OAuthGrant).where(OAuthGrant.user_id == user.id, OAuthGrant.oauth_client_id != oauth_client_id, _CONNECTED)
+    )
+    if (others or 0) >= MAX_CONNECTED_APPS_PER_USER:
+        raise ConflictException(f"You already have {MAX_CONNECTED_APPS_PER_USER} connected apps: disconnect one you no longer use")
+    await db.execute(
+        update(OAuthGrant)
+        .where(OAuthGrant.user_id == user.id, OAuthGrant.oauth_client_id == oauth_client_id, OAuthGrant.revoked_at.is_(None))
+        .values(revoked_at=func.now())
+    )
 
 
 async def revoke_grant(db: AsyncSession, grant_id: uuid.UUID) -> None:

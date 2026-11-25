@@ -25,6 +25,8 @@ function errorText(err: unknown) {
   if (status === 400 || status === 404 || status === 422) return t('auth.consent.errors.expired')
   // The read-only demo account, or one outside any company.
   if (status === 403) return t('auth.consent.errors.notAllowed')
+  // Approving answers 409 for one reason only: the person's cap on connected apps.
+  if (status === 409) return t('auth.consent.errors.limit')
   return t('auth.consent.errors.generic')
 }
 
