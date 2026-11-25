@@ -255,7 +255,7 @@
         },
         "assistant": {
           "title": "From your AI assistant",
-          "body": "Claude or any MCP-compatible assistant searches and reads your reports and starts drafts. Approving and sending stays with a person."
+          "body": "Claude or any MCP-compatible assistant searches and reads your reports, hands you the PDF and starts drafts. It connects by signing in with OAuth, no keys to copy. Approving and sending stays with a person."
         }
       },
       "who": {
