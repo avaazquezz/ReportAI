@@ -433,7 +433,7 @@
         },
         "proof": {
           "label": "How it's proven",
-          "body": "865 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
+          "body": "899 tests, a golden set that allows zero invented details, an independent review of major changes, public code and a live demo."
         }
       },
       "block": {
@@ -620,7 +620,7 @@
       "evalsLink": "Every evaluation published, with its commit, its model and what it cost",
       "figures": {
         "tests": {
-          "value": "865",
+          "value": "899",
           "label": "backend tests",
           "source": "pytest against a real Postgres, on every push"
         },
