@@ -785,7 +785,11 @@
           "header": "En «Request headers», añade «authorization» con el valor «{value}» (con «Bearer» y el espacio)."
         },
         "note": "Los «Request headers» están en beta y solo algunas organizaciones de Claude los ven. En los planes Team y Enterprise, un Owner añade el conector para toda la organización y todos actuarían como tú: usa tu clave solo en tu propia cuenta.",
-        "yourKey": "tu clave"
+        "yourKey": "tu clave",
+        "oauth": {
+          "signIn": "Deja la opción de inicio de sesión como viene (OAuth) y pulsa «Connect»: se abre ReportAI para que entres y lo apruebes. Sin claves que copiar.",
+          "withKey": "O con una clave, en lugar de iniciar sesión:"
+        }
       },
       "create": {
         "title": "Nueva clave",
@@ -846,6 +850,27 @@
         "readOnly": "Esta cuenta es de solo lectura: no puede crear ni revocar claves.",
         "limit": "Ya tienes el máximo de claves activas: revoca una que ya no uses y crea la nueva.",
         "copy": "No se pudo copiar. Selecciona el texto y cópialo a mano."
+      },
+      "apps": {
+        "mine": "Apps conectadas",
+        "company": "Apps conectadas de la empresa",
+        "help": "Los asistentes que has conectado iniciando sesión. Actúan como tú, como una clave.",
+        "companyHelp": "Las de todo el equipo: puedes desconectar la de cualquiera.",
+        "empty": "Aún no hay ninguna app conectada.",
+        "connected": "Conectada el {date}",
+        "disconnect": "Desconectar",
+        "confirm": {
+          "title": "Desconectar app",
+          "message": "¿Desconectar «{name}»? Perderá el acceso al momento; para volver a usarla, hay que conectarla otra vez."
+        },
+        "toast": {
+          "disconnected": "«{name}» desconectada."
+        },
+        "errors": {
+          "load": "No se pudieron cargar las apps conectadas.",
+          "disconnect": "No se pudo desconectar la app.",
+          "readOnly": "Esta cuenta es de solo lectura: no puede desconectar apps."
+        }
       }
     },
     "capture": {
