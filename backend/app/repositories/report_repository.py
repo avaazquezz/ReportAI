@@ -4,7 +4,19 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, TypeVar
 
-from sqlalchemy import Select, Text, cast, func, or_, select, update
+from sqlalchemy import (
+    Exists,
+    Select,
+    cast,
+    exists,
+    func,
+    literal,
+    literal_column,
+    or_,
+    select,
+    update,
+)
+from sqlalchemy.dialects.postgresql import JSONPATH
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document_type import DocumentType
@@ -21,6 +33,17 @@ TERMINAL_STATUSES = (*FINISHED_STATUSES, "failed", "cancelled")
 ALL_STATUSES = (*ACTIVE_STATUSES, *TERMINAL_STATUSES)
 
 _Query = TypeVar("_Query", bound=Select[*tuple[Any, ...]])
+
+# Every string and number anywhere in the fields, nested table rows included, never a key: searching
+# the JSON as text matched field names ("obra"), nulls and its punctuation in every report.
+_FIELD_VALUES = cast(literal('strict $.** ? (@.type() == "string" || @.type() == "number")'), JSONPATH)
+
+
+def _a_field_value_matches(pattern: str) -> Exists:
+    # ponytail: a sequential scan of the company's reports, as the text search was; a generated
+    # search column with a pg_trgm index when a history passes ~50k reports.
+    values = func.jsonb_path_query(Report.extracted_fields, _FIELD_VALUES).alias("field_value")
+    return exists().select_from(values).where(literal_column("field_value #>> '{}'").ilike(literal(pattern)))
 
 
 @dataclass(frozen=True)
@@ -56,7 +79,7 @@ class ReportFilters:
                 or_(
                     Report.requester_identifier.ilike(pattern),
                     Report.source_text.ilike(pattern),
-                    cast(Report.extracted_fields, Text).ilike(pattern),
+                    _a_field_value_matches(pattern),
                 )
             )
         return query

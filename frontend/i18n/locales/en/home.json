@@ -252,6 +252,10 @@
         "install": {
           "title": "Hosted or on your server",
           "body": "The same code. On your server it installs with one command."
+        },
+        "assistant": {
+          "title": "From your AI assistant",
+          "body": "Claude or any MCP-compatible assistant searches and reads your reports and starts drafts. Approving and sending stays with a person."
         }
       },
       "who": {
