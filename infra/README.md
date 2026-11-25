@@ -13,9 +13,8 @@ on the external `web` network with a certificate resolver named `le`.
 
 `reportai.is-a.dev` was the original plan (see the 2026-08-13 decisions-log
 entry) but is-a.dev's Terms of Service rule it out on multiple counts:
-commercial/for-profit use is explicitly prohibited (§4.8), AI-agent products
-are called out by name as disallowed (§4.15), and PRs authored by an AI
-coding tool are explicitly rejected on sight (§5) — see the 2026-08-16
+commercial/for-profit use is explicitly prohibited (§4.8) and AI-agent
+products are called out by name as disallowed (§4.15) — see the 2026-08-16
 decisions-log entry. `vazquezlabs.com` is an owned, currently-unused domain
 earmarked as the umbrella brand for presenting all of this developer's
 projects — a subdomain per project (`reportai.vazquezlabs.com` here) reads
@@ -27,7 +26,7 @@ whatever DNS host manages `vazquezlabs.com`.
 ### 2. Server checkout + environment
 
 ```bash
-cd /home/vazquezdev/proyectos   # convention this server already uses for every other project
+cd PROJECTS_DIR   # wherever this server keeps its projects
 git clone https://github.com/avaazquezz/ReportAI.git && cd ReportAI
 cp .env.example .env   # then fill EVERY value with real production secrets
 ```
@@ -130,13 +129,17 @@ No demo-reset cron line — there is no demo tenant to reset while the public de
 
 ### 6. Monitoring (minimal, deliberate)
 
-- Container health: every service defines a Docker healthcheck — `docker compose ps` shows it.
+- Container health: `docker compose ps` shows each service's Docker healthcheck (the worker's is
+  disabled: the image's check calls the API's port, which the worker doesn't serve). The worker is
+  watched by its own heartbeat instead (`WORKER_HEARTBEAT_URL`, see
+  [`docs/operations.md`](../docs/operations.md#health-and-monitoring)).
 - External uptime: a free UptimeRobot monitor on `https://reportai.vazquezlabs.com/api/health`.
   It returns **503** when the database is unreachable, so any monitor that only looks at the
   status code catches it.
-- Logs are one JSON object per line. Follow one report across its steps with
-  `docker logs reportai_backend | grep '"report_id": "<uuid>"'` (every line inside a pipeline
-  run carries `report_id` and `tenant_id`; failures include the traceback).
-- Reports whose pipeline dies with the process (a deploy, a crash) are marked `failed`, and their
-  sender is told, once they show no progress for `STUCK_REPORT_MINUTES` (15). A stop-gap until
-  reports run on a durable queue.
+- Logs are one JSON object per line. The pipeline runs in the worker, so follow one report across
+  its steps with `docker logs reportai_worker | grep '"report_id": "<uuid>"'` (every line inside a
+  job carries `report_id` and `tenant_id`; failures include the traceback).
+- A job whose worker dies (a deploy, a crash) is claimed again by the next worker once its
+  120-second lease expires, and resumes from the report's last checkpoint; one that dies on its
+  last attempt is marked `failed` and its sender told
+  ([`docs/how-it-works/job-queue-and-checkpoints.md`](../docs/how-it-works/job-queue-and-checkpoints.md)).

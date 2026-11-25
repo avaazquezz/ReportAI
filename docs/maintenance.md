@@ -45,6 +45,9 @@ from a bad update, not a backup. What to back up, off this server:
 - `/opt/reportai/.env` — **without its `ENCRYPTION_KEY` the stored AI keys, mail password and bot
   tokens cannot be read**, and have to be entered again.
 
+The commands, a backup script that verifies what it keeps, and how to restore are in
+[Operations](operations.md#backups-and-restore), with every setting `.env` can hold.
+
 ## Knowing it is down before your technicians do
 
 Two checks, both from **outside** the server (a monitor on the same machine goes down with it):
