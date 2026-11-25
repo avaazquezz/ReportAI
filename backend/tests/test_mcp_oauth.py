@@ -155,7 +155,9 @@ async def test_a_person_connects_an_app_that_then_acts_as_them_until_its_grant_e
     sealed = _consent_request(await _authorize(http, client_id, challenge))
     shown = await http.get("/oauth/consent", params={"request": sealed}, headers=_auth(technician))
     assert shown.status_code == 200
-    assert shown.json() == {"client_name": "Claude", "client_id": client_id, "redirect_host": "claude.ai", "scopes": [SCOPE]}
+    assert shown.json() == {
+        "client_name": "Claude", "client_id": client_id, "published_by": None, "redirect_host": "claude.ai", "scopes": [SCOPE]
+    }
     approved = await _answer(http, technician, sealed)
     tokens = await _exchange(http, client_id, approved["code"][0], verifier, resource=resource_url())
     assert tokens.status_code == 200, tokens.text
@@ -654,7 +656,7 @@ async def test_an_app_known_by_its_metadata_document_connects(
     code = (await _answer(http, acme["approver"], sealed))["code"][0]
     tokens = await _exchange(http, DOCUMENT_URL, code, verifier)
 
-    assert shown["client_name"] == "Example AI" and shown["client_id"] == DOCUMENT_URL
+    assert (shown["client_name"], shown["client_id"], shown["published_by"]) == ("Example AI", DOCUMENT_URL, "app.example")
     assert tokens.status_code == 200, tokens.text
     assert (await _mcp(http, tokens.json()["access_token"])).status_code == 200
     # Fetched once, then cached for a day.

@@ -31,8 +31,9 @@ def issuer() -> str:
 
 
 def _api(path: str) -> str:
-    # Every installation serves the API under its panel's origin; only in development is the API
-    # on a port of its own, where FRONTEND_ORIGIN still names the panel that relays to it.
+    # Every installation serves the API under its panel's origin (as pdf_links.py assumes too). In
+    # development, with the API on a port of its own, these addresses name the panel's port, so a
+    # real client can't follow them there: tests call the routes directly.
     return f"{issuer()}{settings.API_ROOT_PATH}{path}"
 
 

@@ -315,12 +315,12 @@ async def consent_client(db: AsyncSession, request: ConsentRequest) -> OAuthClie
     return client
 
 
-async def approve(db: AsyncSession, user: TenantUser, request: ConsentRequest) -> str:
-    """Makes the code for `user`'s approval (not committed) and returns where to send the browser."""
+async def approve(db: AsyncSession, user: TenantUser, request: ConsentRequest, client: OAuthClientInformationFull) -> str:
+    """Makes the code for `user`'s approval of `client`, as consent_client returned it (not
+    committed), and returns where to send the browser."""
     tenant_id = require_tenant_id(user)
-    await consent_client(db, request)
-    oauth_client_id = await db.scalar(select(OAuthClient.id).where(OAuthClient.client_id == request.client_id))
-    assert oauth_client_id is not None  # consent_client found it, and get_client caches what it fetches
+    oauth_client_id = await db.scalar(select(OAuthClient.id).where(OAuthClient.client_id == client.client_id))
+    assert oauth_client_id is not None  # consent_client found it, and get_client stores what it fetches
     code = _secret()
     db.add(
         OAuthCode(
