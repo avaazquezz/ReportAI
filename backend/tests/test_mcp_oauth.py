@@ -642,13 +642,15 @@ async def test_consent_for_a_redirect_the_document_no_longer_lists_is_logged(
 
 
 async def test_a_401_from_mcp_says_where_to_sign_in(http: httpx2.AsyncClient) -> None:
-    response = await _mcp(http, "rpo_made-up")
+    body = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+    without = await http.post("/mcp", json=body, headers={"Accept": "application/json, text/event-stream"})
+    refused = await _mcp(http, "rpo_made-up")
 
-    assert response.status_code == 401
-    assert response.headers["www-authenticate"] == (
-        f'Bearer realm="ReportAI", resource_metadata="{settings.FRONTEND_ORIGIN}/.well-known/oauth-protected-resource'
-        f'{settings.API_ROOT_PATH}/mcp", scope="{SCOPE}"'
-    )
+    where = f'resource_metadata="{settings.FRONTEND_ORIGIN}/.well-known/oauth-protected-resource{settings.API_ROOT_PATH}/mcp", scope="{SCOPE}"'
+    assert without.status_code == 401 and without.headers["www-authenticate"] == f'Bearer realm="ReportAI", {where}'
+    # A token presented and refused is named as such (RFC 6750 §3.1).
+    assert refused.status_code == 401
+    assert refused.headers["www-authenticate"] == f'Bearer realm="ReportAI", error="invalid_token", {where}'
 
 
 async def test_with_oauth_off_nothing_of_it_exists(

@@ -62,15 +62,18 @@ def _bearer(scope: Scope) -> str | None:
     return secret.strip() or None
 
 
-def _unauthorized() -> JSONResponse:
+def _unauthorized(*, presented: bool) -> JSONResponse:
+    """The 401; `presented` when the request carried a bearer token, refused."""
     if not settings.MCP_OAUTH_ENABLED:
         return JSONResponse(
             {"detail": "Missing, unknown, revoked or expired ReportAI API key. Make one in ReportAI under API keys."},
             status_code=401,
             headers={"WWW-Authenticate": 'Bearer realm="ReportAI"'},
         )
-    # RFC 9728 §5.1: where a client learns how to sign in.
-    challenge = f'Bearer realm="ReportAI", resource_metadata="{resource_metadata_url()}", scope="{SCOPE}"'
+    # RFC 9728 §5.1: where a client learns how to sign in. RFC 6750 §3.1: a token that was refused
+    # is named as such, so the client refreshes or signs in again instead of retrying it.
+    refused = ', error="invalid_token"' if presented else ""
+    challenge = f'Bearer realm="ReportAI"{refused}, resource_metadata="{resource_metadata_url()}", scope="{SCOPE}"'
     return JSONResponse(
         {"detail": "Missing, unknown, revoked or expired ReportAI credential. Sign in to ReportAI again, or use an API key."},
         status_code=401,
@@ -101,7 +104,7 @@ class McpAuth:
                     return
                 await limiter.record(db, str(principal.credential.id))
         if principal is None:
-            await _unauthorized()(scope, receive, send)
+            await _unauthorized(presented=secret is not None)(scope, receive, send)
             return
         token = _principal.set(principal)
         try:
