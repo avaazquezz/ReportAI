@@ -1,8 +1,9 @@
 # Evaluations
 
 ReportAI is graded by two paid evals that call real AI providers. They are run by hand
-(`make eval`, never in CI) and every published run is kept here as the JSON the harness wrote,
-with the commit it graded, the model, every verdict and what it cost.
+(`make eval`, or the manual *Eval* workflow in `.github/workflows/eval.yml`), never on a push, and
+every published run is kept here as the JSON the harness wrote, with the commit it graded, the
+model, every verdict and what it cost.
 
 ## Results
 

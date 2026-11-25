@@ -35,7 +35,7 @@ flowchart LR
     App[Field app<br/>voice, photos, offline queue] --> API[FastAPI]
     Conn[Telegram bot / inbound email] --> API
     Panel[Admin panel] --> API
-    MCP[AI assistant: Claude via MCP<br/>personal API key] --> API
+    MCP[AI assistant via MCP<br/>personal API key or OAuth] --> API
     API --> In[Idempotent ingestion<br/>+ plan quota]
     In --> Q[(Postgres job queue)]
     Q --> W[Worker: LangGraph agent]
@@ -99,6 +99,18 @@ installation updated (`reportai update`) is the job of whoever maintains it.
 The dev stack runs in Docker (`cp .env.example .env`, then `make up` and `make migrate`); `make
 test` and `make lint` run the checks. See [`docs/local-development.md`](docs/local-development.md)
 for the full set of commands and the project's invariants.
+
+## Documentation
+
+| To | Read |
+|---|---|
+| Understand the system: components, one report end to end, data model, invariants | [`docs/architecture.md`](docs/architecture.md) |
+| See how a subsystem works inside | [`docs/how-it-works/`](docs/how-it-works/): [job queue and checkpoints](docs/how-it-works/job-queue-and-checkpoints.md), [report lifecycle](docs/how-it-works/lifecycle.md), [sign-in and sessions](docs/how-it-works/auth-and-sessions.md), [MCP server and OAuth](docs/how-it-works/mcp-and-oauth.md), [field app offline](docs/how-it-works/field-app-offline.md), [AI providers and spend caps](docs/how-it-works/ai-providers.md), [storage and retention](docs/how-it-works/storage-and-retention.md), [database sessions](docs/how-it-works/database-sessions.md), [channel adapters](docs/channel-adapter.md) |
+| Know why it is built this way | [`docs/decisions/`](docs/decisions/README.md) (one record per decision) |
+| Install it on a company's server | [`docs/install.md`](docs/install.md), then [`docs/maintenance.md`](docs/maintenance.md) |
+| Run it: every setting, backups, upgrades, monitoring, troubleshooting | [`docs/operations.md`](docs/operations.md) |
+| Develop and test it | [`docs/local-development.md`](docs/local-development.md), [`docs/evals.md`](docs/evals.md) |
+| Look up a term | [`docs/glossary.md`](docs/glossary.md) |
 
 ## Status
 

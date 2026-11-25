@@ -37,14 +37,23 @@
 make seed-demo   # demo tenant, one document type, a self-generated template
 ```
 
-Get the demo Telegram connection id and its webhook secret (seeded connections
-carry one, and the route rejects requests without it) and simulate an incoming
-text message:
+The commands below run from the repository root, where the dev compose file is not the default
+one, so name it once:
 ```
-CONN_ID=$(docker compose exec postgres psql -U reportai -d reportai -tAc \
+COMPOSE="docker compose --project-directory . -f infra/docker-compose.yml"
+```
+
+Get the demo Telegram connection id and its webhook secret (seeded connections
+carry one, and the route rejects requests without it), let the simulated sender
+in (a connection with an empty allow-list refuses everyone unless
+`ALLOW_ANY_SENDER=true`), and simulate an incoming text message:
+```
+CONN_ID=$($COMPOSE exec -T postgres psql -U reportai -d reportai -tAc \
   "select id from channel_connections where channel_type='telegram' limit 1;")
-SECRET=$(docker compose exec postgres psql -U reportai -d reportai -tAc \
+SECRET=$($COMPOSE exec -T postgres psql -U reportai -d reportai -tAc \
   "select credentials->>'secret_token' from channel_connections where id='${CONN_ID}';")
+$COMPOSE exec -T postgres psql -U reportai -d reportai -c \
+  "update channel_connections set allowed_senders = '{123456}' where id='${CONN_ID}';"
 curl -s -X POST "http://localhost:8000/webhooks/telegram/${CONN_ID}" \
   -H "Content-Type: application/json" \
   -H "X-Telegram-Bot-Api-Secret-Token: ${SECRET}" \
@@ -54,14 +63,14 @@ Expect an immediate `200` — the webhook only records the message and a job; th
 
 Watch it progress node by node:
 ```
-watch -n1 'docker compose exec postgres psql -U reportai -d reportai -c \
+watch -n1 'docker compose --project-directory . -f infra/docker-compose.yml exec -T postgres psql -U reportai -d reportai -c \
   "select step, status, model_used, cost_usd, latency_ms, created_at from execution_logs order by created_at desc limit 15;"'
 ```
 It should end on a `status=interrupted` row for `await_human_approval` — the pipeline is waiting for a reply, not stuck or errored. Confirm the pause is real and durable:
 ```
-docker compose exec postgres psql -U reportai -d reportai -c "select id, status from reports order by created_at desc limit 1;"
+$COMPOSE exec -T postgres psql -U reportai -d reportai -c "select id, status from reports order by created_at desc limit 1;"
 # expect status = 'awaiting_approval'
-docker compose restart backend   # proves the checkpoint lives in Postgres, not process memory
+$COMPOSE restart worker   # proves the checkpoint lives in Postgres, not in the worker's memory
 ```
 Reply to resume:
 ```
@@ -118,6 +127,9 @@ CI (`.github/workflows/ci.yml`) runs all of the above except the paid eval, plus
 builds. The eval and how to publish a run: [`evals.md`](evals.md).
 
 ## Invariants
+
+The rules below are for changing the code; why the system relies on them is in
+[Architecture, invariants](architecture.md#invariants).
 
 - **Tenant isolation.** Every company-scoped route takes the company from the signed-in user
   (`require_tenant_id`) and loads rows with `get_scoped_or_404` (`backend/app/core/scoping.py`).
