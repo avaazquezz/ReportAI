@@ -1,7 +1,7 @@
 {
   "eval": "golden_set",
   "run_at": "2026-11-25T12:24:49+00:00",
-  "commit": "8fcc1f3",
+  "commit": "211c3cf",
   "provider": "installation",
   "models": [
     "claude-sonnet-5"

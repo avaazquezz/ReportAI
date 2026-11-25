@@ -12,7 +12,7 @@ with the commit it graded, the model, every verdict and what it cost.
 | [2026-11-25 golden set](evals/2026-11-25-golden-openai.json) | Extraction, 83 cases / 646 fields | `gpt-6.1-terra` (OpenAI) | **97.5 %** fields right (12 wrong, 4 missed) | **0** | $0.14 |
 | [2026-11-25 MCP agent](evals/2026-11-25-mcp-agent.json) | An assistant using the MCP server, 7 cases | `claude-opus-5-5` | **7 / 7** cases passed | — | $0.32 |
 
-All three graded commit `8fcc1f3`. Both providers clear the gate (≥ 90 % of fields right, no field
+All three graded commit `211c3cf`. Both providers clear the gate (≥ 90 % of fields right, no field
 invented), which is what lets a company pick either on the hosted service
 (`backend/app/services/ai_providers.py`). OpenAI's weak spot is table rows (`list[object]`: 44 of 55
 right against 55 of 55 for Claude); the per-type and per-field tables are in each JSON.
