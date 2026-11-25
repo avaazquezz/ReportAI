@@ -10,6 +10,8 @@ import asyncio
 import json
 import os
 import uuid
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -18,8 +20,8 @@ from app.core.config import settings
 from app.core.logging import describe_exception
 from app.services import company_ai, instance_settings, llm
 from app.services.agent.nodes.extract import extract_node, validate_node
-from app.services.agent.state import AgentState
-from tests.eval.golden import Case, Report, build_cases, grade
+from app.services.agent.state import AgentState, ToolUsage
+from tests.eval.golden import Case, Report, build_cases, current_commit, grade
 
 pytestmark = pytest.mark.eval
 
@@ -57,7 +59,28 @@ def _fresh_provider_clients() -> None:
     llm.clear_client_cache()
 
 
-async def _extract(case: Case) -> dict[str, object]:
+@dataclass
+class Spend:
+    """What the run cost, read off the same usage records production logs per call."""
+
+    calls: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cost_usd: float = 0.0
+    models: set[str] = field(default_factory=set)
+
+    def add(self, usage: ToolUsage | None) -> None:
+        if usage is None:
+            return
+        self.calls += 1
+        self.input_tokens += usage.input_tokens or 0
+        self.output_tokens += usage.output_tokens or 0
+        self.cost_usd += usage.cost_usd or 0.0
+        if usage.model_used:
+            self.models.add(usage.model_used)
+
+
+async def _extract(case: Case, spend: Spend) -> dict[str, object]:
     state = AgentState(
         thread_id=str(uuid.uuid4()),
         tenant_id=uuid.uuid4(),
@@ -77,7 +100,9 @@ async def _extract(case: Case) -> dict[str, object]:
     # The graph's own loop (graph._route_after_validate): an extraction that fails validation goes
     # back to the model with the error, up to the same limit as in production.
     while True:
-        state = await validate_node.__wrapped__(await extract_node.__wrapped__(state))
+        state = await extract_node.__wrapped__(state)
+        spend.add(state.last_tool_usage)
+        state = await validate_node.__wrapped__(state)
         if state.last_validation_error is None:
             return state.extracted_fields or {}
         if state.validation_retries >= settings.MAX_VALIDATION_RETRIES:
@@ -88,7 +113,7 @@ class InvalidExtraction(Exception):
     """The model's answer stayed invalid after every retry: a real failure, never retried."""
 
 
-async def run_golden_set(cases: list[Case]) -> Report:
+async def run_golden_set(cases: list[Case], spend: Spend) -> Report:
     report = Report()
     gate = asyncio.Semaphore(_CONCURRENCY)
 
@@ -96,7 +121,7 @@ async def run_golden_set(cases: list[Case]) -> Report:
         async with gate:
             for delay in (*_PROVIDER_RETRY_DELAYS, None):
                 try:
-                    actual = await _extract(case)
+                    actual = await _extract(case, spend)
                     break
                 except InvalidExtraction as exc:
                     report.errors[case.id] = f"invalid extraction: {exc}"
@@ -115,18 +140,35 @@ async def run_golden_set(cases: list[Case]) -> Report:
 
 
 async def test_extraction_meets_the_fase_2_gate() -> None:
-    report = await run_golden_set(build_cases())
+    spend = Spend()
+    report = await run_golden_set(build_cases(), spend)
     print("\n" + report.render())
+    print(f"\nSpend: {spend.calls} model calls, {spend.input_tokens} in / {spend.output_tokens} out tokens, ${spend.cost_usd:.4f}")
     if path := os.environ.get("EVAL_REPORT"):
-        Path(path).write_text(
-            json.dumps(
-                {"accuracy": report.accuracy, "invented": report.count("invented"),
-                 "by_field": report.breakdown("field"), "errors": report.errors},
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        Path(path).write_text(json.dumps(_published(report, spend), ensure_ascii=False, indent=2) + "\n")
 
     assert not report.errors, f"cases that produced no extraction: {report.errors}"
     assert report.count("invented") <= MAX_INVENTED, "fields were filled with values the message never said"
     assert report.accuracy >= MIN_ACCURACY, f"field accuracy {report.accuracy:.1%} is below {MIN_ACCURACY:.0%}"
+
+
+def _published(report: Report, spend: Spend) -> dict[str, object]:
+    """The run as docs/evals/ publishes it: enough to tell what was graded, with what, and how."""
+    return {
+        "eval": "golden_set",
+        "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "commit": current_commit(),
+        "provider": os.environ.get("EVAL_COMPANY_PROVIDER") or "installation",
+        "models": sorted(spend.models),
+        "gate": {"min_accuracy": MIN_ACCURACY, "max_invented": MAX_INVENTED},
+        "cases": len({o.case_id for o in report.outcomes} | set(report.errors)),
+        "fields": len(report.outcomes),
+        "accuracy": round(report.accuracy, 4),
+        "verdicts": {v: report.count(v) for v in ("correct", "wrong", "missed", "invented")},
+        "failed_cases": report.errors,
+        "retried_cases": len(report.retried),
+        "spend": {"model_calls": spend.calls, "input_tokens": spend.input_tokens,
+                  "output_tokens": spend.output_tokens, "cost_usd": round(spend.cost_usd, 4)},
+        "by_type": report.breakdown("type"),
+        "by_field": report.breakdown("field"),
+    }

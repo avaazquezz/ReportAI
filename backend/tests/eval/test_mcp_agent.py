@@ -20,6 +20,7 @@ import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import anthropic
@@ -41,6 +42,8 @@ from app.models.report import Report
 from app.models.tenant import Tenant
 from app.models.tenant_user import TenantUser
 from app.services import instance_settings
+from app.services.agent.tools.pricing import estimate_cost_usd
+from tests.eval.golden import current_commit
 
 pytestmark = pytest.mark.eval
 
@@ -233,13 +236,14 @@ async def test_an_assistant_uses_reportai_well_and_safely(db: AsyncSession) -> N
          ) if bad]),
     ]
 
-    lines, failures, tokens_in, tokens_out = [], [], 0, 0
+    lines, failures, graded, tokens_in, tokens_out = [], [], [], 0, 0
     for name, who, question, check in cases:  # in order: the draft case adds a report
         run = await _ask(llm, data[who], question)
         problems = check(run)
         tokens_in, tokens_out = tokens_in + run.input_tokens, tokens_out + run.output_tokens
         tools_used = ", ".join(call[0].removeprefix("reportai_") + ("!" if call[2] else "") for call in run.calls) or "none"
         lines.append(f"{'PASS' if not problems else 'FAIL'}  {name:<22} tools: {tools_used}")
+        graded.append({"case": name, "as": who, "passed": not problems, "problems": problems, "tools": [call[0] for call in run.calls]})
         if problems:
             failures.append(f"{name}: {problems}\n  answer: {run.answer[:500]}")
     drafts = (await db.scalars(select(Report).where(Report.tenant_id == data["acme"].id, Report.status == "pending"))).all()
@@ -248,5 +252,17 @@ async def test_an_assistant_uses_reportai_well_and_safely(db: AsyncSession) -> N
     print("\n".join(lines))
     print(f"tokens: {tokens_in} in, {tokens_out} out; reports created: {len(drafts)}")
     print(json.dumps({"failures": failures}, ensure_ascii=False, indent=2) if failures else "all cases passed")
+    if path := os.environ.get("EVAL_REPORT"):
+        cost = estimate_cost_usd(MODEL, tokens_in, tokens_out)
+        Path(path).write_text(json.dumps({
+            "eval": "mcp_agent",
+            "run_at": datetime.now(UTC).isoformat(timespec="seconds"),
+            "commit": current_commit(),
+            "model": MODEL,
+            "passed": sum(1 for case in graded if case["passed"]),
+            "cases": graded,
+            "reports_created": len(drafts),
+            "spend": {"input_tokens": tokens_in, "output_tokens": tokens_out, "cost_usd": round(cost, 4) if cost is not None else None},
+        }, ensure_ascii=False, indent=2) + "\n")
     assert not failures, "\n".join(failures)
     assert len(drafts) == 1, "the eval made more drafts than the one it asked for"

@@ -6,6 +6,7 @@ from datetime import timedelta
 
 import pytest
 
+from app.services.agent.state import ToolUsage
 from app.services.agent.tools.extraction_schema import build_extraction_model
 from tests.eval.golden import TODAY, VISIT_SCHEMA, Case, build_cases, grade, values_match
 
@@ -87,7 +88,7 @@ async def test_the_harness_retries_provider_hiccups_but_not_invalid_answers(monk
     flaky, broken = cases
     calls: dict[str, int] = {}
 
-    async def fake_extract(case: Case) -> dict[str, object]:
+    async def fake_extract(case: Case, spend: harness.Spend) -> dict[str, object]:
         calls[case.id] = calls.get(case.id, 0) + 1
         if case is broken:
             raise harness.InvalidExtraction("still invalid")
@@ -98,12 +99,31 @@ async def test_the_harness_retries_provider_hiccups_but_not_invalid_answers(monk
     monkeypatch.setattr(harness, "_extract", fake_extract)
     monkeypatch.setattr(harness, "_PROVIDER_RETRY_DELAYS", (0, 0))
 
-    report = await harness.run_golden_set(cases)
+    report = await harness.run_golden_set(cases, harness.Spend())
 
     assert calls == {flaky.id: 2, broken.id: 1}  # the invalid answer is never asked again
     assert list(report.retried) == [flaky.id] and "overloaded" in report.retried[flaky.id][0]
     assert list(report.errors) == [broken.id]
     assert report.count("invented") == 0 and report.accuracy == 1.0
+
+
+def test_the_published_run_says_what_was_graded_with_what_and_at_what_cost() -> None:
+    from tests.eval import test_golden_set as harness
+
+    case = build_cases()[0]
+    report = harness.Report(outcomes=grade(case, dict(case.expected)))
+    spend = harness.Spend()
+    spend.add(ToolUsage(model_used="claude-x", cost_usd=0.01, input_tokens=100, output_tokens=20))
+    spend.add(None)  # a call that logged no usage
+
+    published = harness._published(report, spend)
+
+    assert published["cases"] == 1 and published["fields"] == len(report.outcomes)
+    assert published["accuracy"] == 1.0 and published["verdicts"]["invented"] == 0
+    assert published["models"] == ["claude-x"]
+    assert published["spend"] == {"model_calls": 1, "input_tokens": 100, "output_tokens": 20, "cost_usd": 0.01}
+    assert published["gate"] == {"min_accuracy": harness.MIN_ACCURACY, "max_invented": harness.MAX_INVENTED}
+    assert isinstance(published["commit"], str) and published["commit"]
 
 
 def test_an_echo_of_the_message_is_wrong_but_only_an_unsaid_value_is_invented() -> None:
