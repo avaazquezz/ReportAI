@@ -33,7 +33,7 @@ def _response(key: ApiKey, owner_name: str) -> ApiKeyResponse:
 
 @router.get("")
 async def list_api_keys(
-    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db, scope="function")
 ) -> list[ApiKeyResponse]:
     return [_response(key, owner) for key, owner in await api_keys.visible_keys(db, current_user)]
 
@@ -43,7 +43,7 @@ async def create_api_key(
     body: ApiKeyCreate,
     request: Request,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ApiKeyCreated:
     new = await api_keys.create(db, current_user, body.name.strip() or "API key", body.expires_in_days)
     await audit.record(
@@ -60,7 +60,7 @@ async def revoke_api_key(
     key_id: uuid.UUID,
     request: Request,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> Response:
     key = await api_keys.revocable_key(db, current_user, key_id)
     if key.revoked_at is None:

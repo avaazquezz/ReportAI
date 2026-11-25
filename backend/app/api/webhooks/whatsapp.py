@@ -47,7 +47,7 @@ def _verify_signature(raw_body: bytes, signature_header: str | None) -> bool:
 
 @router.post("/webhooks/whatsapp")
 async def whatsapp_webhook(
-    request: Request, db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> dict[str, str]:
     raw_body = await request.body()
     # WhatsApp disables a webhook after repeated non-2xx responses — always

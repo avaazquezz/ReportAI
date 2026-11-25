@@ -61,20 +61,20 @@ def company_slug(name: str) -> str:
 
 
 @router.get("/status")
-async def setup_status(db: AsyncSession = Depends(get_db)) -> SetupStatusResponse:
+async def setup_status(db: AsyncSession = Depends(get_db, scope="function")) -> SetupStatusResponse:
     return SetupStatusResponse(
         single_tenant=settings.SINGLE_TENANT, needs_setup=await needs_setup(db), signup_enabled=settings.SIGNUP_ENABLED
     )
 
 
 @router.post("/verify", status_code=204)
-async def verify_code(payload: SetupCodeRequest, request: Request, db: AsyncSession = Depends(get_db)) -> None:
+async def verify_code(payload: SetupCodeRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> None:
     await _require_code(request, db, payload.code)
 
 
 @router.post("/check-ai")
 async def setup_check_ai(
-    payload: SetupAICheckRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: SetupAICheckRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> CheckResponse:
     await _require_code(request, db, payload.code)
     try:
@@ -89,7 +89,7 @@ async def setup_check_ai(
 
 @router.post("/check-email")
 async def setup_check_email(
-    payload: SetupEmailCheckRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: SetupEmailCheckRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> CheckResponse:
     await _require_code(request, db, payload.code)
     try:
@@ -101,7 +101,7 @@ async def setup_check_email(
 
 @router.post("/check-telegram")
 async def setup_check_telegram(
-    payload: SetupTelegramCheckRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: SetupTelegramCheckRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> TelegramBotResponse:
     await _require_code(request, db, payload.code)
     return TelegramBotResponse(username=await verify_telegram_bot(payload.bot_token))
@@ -109,7 +109,7 @@ async def setup_check_telegram(
 
 @router.post("/complete")
 async def complete_setup(
-    payload: SetupCompleteRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: SetupCompleteRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> TokenResponse:
     """Creates the company, its administrator and everything typed in the wizard, in one
     transaction, burns the code, and signs the administrator in."""

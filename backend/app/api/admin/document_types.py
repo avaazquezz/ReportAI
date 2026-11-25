@@ -39,7 +39,7 @@ def _dump_field_schema(field_schema: dict[str, FieldSchemaEntry]) -> dict[str, o
 async def create_document_type(
     payload: DocumentTypeCreateRequest,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> DocumentTypeResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(DocumentType, db)
@@ -63,7 +63,7 @@ async def list_document_types(
     skip: int = 0,
     limit: int = 100,
     current_user: TenantUser = Depends(require_tenant_member),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> PaginatedResponse[DocumentTypeResponse]:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(DocumentType, db)
@@ -82,7 +82,7 @@ async def list_document_types(
 async def get_document_type(
     document_type_id: uuid.UUID,
     current_user: TenantUser = Depends(require_tenant_member),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> DocumentTypeResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(DocumentType, db)
@@ -95,7 +95,7 @@ async def update_document_type(
     document_type_id: uuid.UUID,
     payload: DocumentTypeUpdateRequest,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> DocumentTypeResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(DocumentType, db)
@@ -120,7 +120,7 @@ async def upload_template(
     document_type_id: uuid.UUID,
     file: UploadFile,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> DocumentTemplateResponse:
     tenant_id = require_tenant_id(current_user)
     doc_type_repo = BaseRepository(DocumentType, db)
@@ -160,7 +160,7 @@ async def list_templates(
     skip: int = 0,
     limit: int = 100,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> PaginatedResponse[DocumentTemplateResponse]:
     tenant_id = require_tenant_id(current_user)
     doc_type_repo = BaseRepository(DocumentType, db)
@@ -183,7 +183,7 @@ async def download_template(
     document_type_id: uuid.UUID,
     template_id: uuid.UUID,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> FileResponse:
     """The Word file as it is, to adjust it in Word and upload it again as a new version."""
     tenant_id = require_tenant_id(current_user)

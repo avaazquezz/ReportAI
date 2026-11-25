@@ -54,7 +54,7 @@ def _has_account(email: str) -> Exists:
 
 
 @router.post("", status_code=202)
-async def sign_up(payload: SignupRequest, request: Request, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+async def sign_up(payload: SignupRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> MessageResponse:
     """The same answer for a new address, one that already has an account, and a bot, so the
     endpoint never says which. The owner of an existing account is told so by email instead."""
     email_key, ip_key = payload.email.lower(), audit.client_ip(request)
@@ -92,7 +92,7 @@ async def sign_up(payload: SignupRequest, request: Request, db: AsyncSession = D
 
 @router.post("/complete")
 async def complete_signup(
-    payload: SignupCompleteRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: SignupCompleteRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> TokenResponse:
     """Opens the emailed link: the address is proven, so the company is created on a trial with
     that person as its verified admin, who is signed in. A link works once: then its address has

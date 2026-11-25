@@ -36,7 +36,7 @@ async def create_tenant(
     payload: TenantCreateRequest,
     request: Request,
     current_user: TenantUser = Depends(require_super_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> TenantCreateResponse:
     tenant_repo = BaseRepository(Tenant, db)
     try:
@@ -69,7 +69,7 @@ async def create_tenant(
 
 @router.get("")
 async def list_tenants(
-    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
+    skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db, scope="function")
 ) -> PaginatedResponse[TenantResponse]:
     repo = BaseRepository(Tenant, db)
     items = await repo.list(skip=skip, limit=limit)
@@ -80,7 +80,7 @@ async def list_tenants(
 
 
 @router.get("/{tenant_id}")
-async def get_tenant(tenant_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> TenantResponse:
+async def get_tenant(tenant_id: uuid.UUID, db: AsyncSession = Depends(get_db, scope="function")) -> TenantResponse:
     repo = BaseRepository(Tenant, db)
     tenant = await repo.get_by_id(tenant_id)
     if tenant is None:
@@ -94,7 +94,7 @@ async def update_tenant(
     payload: TenantUpdateRequest,
     request: Request,
     current_user: TenantUser = Depends(require_super_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> TenantResponse:
     repo = BaseRepository(Tenant, db)
     tenant = await repo.get_by_id(tenant_id)
@@ -139,7 +139,7 @@ async def update_tenant(
 
 
 @router.post("/{tenant_id}/resend-invite")
-async def resend_invite(tenant_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+async def resend_invite(tenant_id: uuid.UUID, db: AsyncSession = Depends(get_db, scope="function")) -> MessageResponse:
     tenant_repo = BaseRepository(Tenant, db)
     tenant = await tenant_repo.get_by_id(tenant_id)
     if tenant is None:
@@ -156,7 +156,7 @@ async def resend_invite(tenant_id: uuid.UUID, db: AsyncSession = Depends(get_db)
 
 @router.get("/{tenant_id}/usage/summary")
 async def get_tenant_usage_summary(
-    tenant_id: uuid.UUID, days: int = 30, db: AsyncSession = Depends(get_db)
+    tenant_id: uuid.UUID, days: int = 30, db: AsyncSession = Depends(get_db, scope="function")
 ) -> UsageSummaryResponse:
     tenant_repo = BaseRepository(Tenant, db)
     tenant = await tenant_repo.get_by_id(tenant_id)

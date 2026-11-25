@@ -128,7 +128,7 @@ async def _checklist(db: AsyncSession, tenant_id: uuid.UUID) -> Checklist:
 
 @router.get("")
 async def get_dashboard(
-    current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db, scope="function")
 ) -> DashboardResponse:
     tenant_id = require_tenant_id(current_user)
     since = datetime.now(UTC) - _RECENT

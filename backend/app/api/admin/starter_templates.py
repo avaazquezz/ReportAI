@@ -32,7 +32,7 @@ async def _language(db: AsyncSession, tenant_id: object) -> str:
 
 @router.get("")
 async def list_starters(
-    current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db, scope="function")
 ) -> list[StarterResponse]:
     language = await _language(db, require_tenant_id(current_user))
     return [StarterResponse(**s) for s in starters.describe(language)]
@@ -40,7 +40,7 @@ async def list_starters(
 
 @router.post("/{key}/install", status_code=201)
 async def install_starter(
-    key: str, current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db)
+    key: str, current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db, scope="function")
 ) -> DocumentTypeResponse:
     """A new document type with the starter's fields and its template, ready for reports."""
     if key not in starters.STARTERS:

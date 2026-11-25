@@ -52,7 +52,7 @@ async def create_channel_connection(
     payload: ChannelConnectionCreateRequest,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ChannelConnectionResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(ChannelConnection, db)
@@ -89,7 +89,7 @@ async def list_channel_connections(
     skip: int = 0,
     limit: int = 100,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> PaginatedResponse[ChannelConnectionResponse]:
     tenant_id = require_tenant_id(current_user)
     # The app's own connection (made on its first capture) has nothing to set up: not listed.
@@ -109,7 +109,7 @@ async def list_channel_connections(
 async def get_channel_connection(
     connection_id: uuid.UUID,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ChannelConnectionResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(ChannelConnection, db)
@@ -124,7 +124,7 @@ async def update_channel_connection(
     payload: ChannelConnectionUpdateRequest,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ChannelConnectionResponse:
     tenant_id = require_tenant_id(current_user)
     repo = BaseRepository(ChannelConnection, db)
@@ -168,7 +168,7 @@ async def create_sender_invite(
     payload: SenderInviteCreateRequest,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> SenderInviteCreatedResponse:
     """An invitation for one person: a link to open (Telegram) or a code to send to the channel."""
     tenant_id = require_tenant_id(current_user)
@@ -193,7 +193,7 @@ async def create_sender_invite(
 async def list_sender_invites(
     connection_id: uuid.UUID,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> list[SenderInviteResponse]:
     tenant_id = require_tenant_id(current_user)
     await get_scoped_or_404(BaseRepository(ChannelConnection, db), connection_id, tenant_id=tenant_id)
@@ -209,7 +209,7 @@ async def revoke_sender_invite(
     invite_id: uuid.UUID,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> None:
     """An unused invitation stops working. (A used one is history: remove the sender instead.)"""
     tenant_id = require_tenant_id(current_user)

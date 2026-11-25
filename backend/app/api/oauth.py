@@ -82,19 +82,19 @@ async def protected_resource(request: Request) -> Response:
 
 
 @router.get("/authorize")
-async def authorize(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+async def authorize(request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> Response:
     """Sends the browser to the panel's consent page, or back to the app with an error."""
     return await AuthorizationHandler(_provider(request, db)).handle(request)
 
 
 @router.post("/authorize")
-async def authorize_by_form(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+async def authorize_by_form(request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> Response:
     """The same, with the parameters in a form (RFC 6749 §3.1 allows either)."""
     return await AuthorizationHandler(_provider(request, db)).handle(request)
 
 
 @router.post("/token")
-async def token(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+async def token(request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> Response:
     # RFC 8707: a token asked for another server is refused here, before any code is spent. The
     # SDK reads `resource` but leaves this check to the server.
     resource = (await request.form()).get("resource")
@@ -110,7 +110,7 @@ async def token(request: Request, db: AsyncSession = Depends(get_db)) -> Respons
 
 
 @router.post("/register")
-async def register(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+async def register(request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> Response:
     """Dynamic Client Registration (RFC 7591), for clients without a metadata document."""
     ip = audit.requester(request)
     await rate_limit.oauth_register_by_ip.check(db, ip)
@@ -141,7 +141,7 @@ async def _body_within(request: Request, limit: int) -> bytes | None:
 
 
 @router.post("/revoke")
-async def revoke(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+async def revoke(request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> Response:
     """RFC 7009: an app signing out. Not the SDK's RevocationHandler: it requires a client_secret
     field even from a public client, which has none, so every such app would get a 400."""
     provider = _provider(request, db)
@@ -166,7 +166,7 @@ async def consent_details(
     request: Request,
     sealed: str = Query(alias="request", min_length=1, max_length=MAX_CONSENT_REQUEST_CHARS),
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ConsentDetails:
     consent = read_consent_request(sealed)
     client = await consent_client(db, consent, client_ip=audit.requester(request))
@@ -186,7 +186,7 @@ async def answer_consent(
     body: ConsentAnswer,
     request: Request,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ConsentRedirect:
     consent = read_consent_request(body.request)
     client = await consent_client(db, consent, client_ip=audit.requester(request))
@@ -204,7 +204,7 @@ async def answer_consent(
 
 @router.get("/grants")
 async def list_grants(
-    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db, scope="function")
 ) -> list[OAuthGrantResponse]:
     """The apps connected by signing in; also how the panel learns OAuth is on (a 404 when off)."""
     return [
@@ -221,7 +221,7 @@ async def disconnect_app(
     grant_id: uuid.UUID,
     request: Request,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> Response:
     grant = await grants.revocable_grant(db, current_user, grant_id)
     if grant.revoked_at is None:

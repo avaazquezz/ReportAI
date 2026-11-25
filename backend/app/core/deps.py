@@ -34,7 +34,7 @@ async def can_sign_in(db: AsyncSession, user: TenantUser | None) -> bool:
 async def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> TenantUser:
     if credentials is None:
         raise AuthenticationException("Missing bearer token")

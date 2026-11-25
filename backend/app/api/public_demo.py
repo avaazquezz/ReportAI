@@ -154,7 +154,7 @@ async def capture_demo_report(
     text: Annotated[str | None, Form(max_length=MAX_TEXT_CHARS)] = None,
     audio: Annotated[UploadFile | None, File()] = None,
     locale: Annotated[Locale, Form()] = "es",
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CaptureResponse:
     """Starts a demo report from a voice note and/or a typed note. A try is counted only once it
     is accepted, and simultaneous tries are counted one after another (rate_limit.claim), so a
@@ -217,7 +217,7 @@ async def capture_demo_report(
 
 
 @router.get("/reports/{report_id}")
-async def get_demo_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> DemoReport:
+async def get_demo_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_db, scope="function")) -> DemoReport:
     """What the page polls: "ready" once the report waits for approval, with what was understood
     and the required fields it still lacks."""
     report, document_type = await _visible_report(db, report_id)
@@ -235,7 +235,7 @@ async def get_demo_report(report_id: uuid.UUID, db: AsyncSession = Depends(get_d
 
 
 @router.get("/reports/{report_id}/pdf")
-async def demo_report_pdf(report_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+async def demo_report_pdf(report_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db, scope="function")) -> Response:
     """The PDF the report would make; nothing is sent. It is rendered on the first ask and kept in
     the report's own folder, which the purge deletes with the report: a demo report never changes
     once extracted, and a render is a trip to the Gotenberg the paying companies share. Renders,

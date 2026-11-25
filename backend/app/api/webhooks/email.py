@@ -37,7 +37,7 @@ def _verify_signature(timestamp: str, token: str, signature: str) -> bool:
 
 @router.post("/webhooks/email")
 async def email_webhook(
-    request: Request, db: AsyncSession = Depends(get_db)
+    request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> dict[str, str]:
     form = await request.form()
 

@@ -41,7 +41,7 @@ def pdf_link(report_id: uuid.UUID, credential: Credential) -> str:
 
 
 @router.get("/{token}")
-async def download_by_link(token: str, db: AsyncSession = Depends(get_db)) -> FileResponse:
+async def download_by_link(token: str, db: AsyncSession = Depends(get_db, scope="function")) -> FileResponse:
     try:
         claims = unseal(token, PDF_LINK_TTL)
     except ValueError as exc:

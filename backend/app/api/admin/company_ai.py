@@ -36,7 +36,7 @@ _TRANSCRIPTION_KEYS = ("transcription_provider", "transcription_model", "transcr
 
 
 async def _company(
-    current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db, scope="function")
 ) -> Tenant:
     if settings.SINGLE_TENANT:
         raise ResourceNotFoundException()
@@ -103,7 +103,7 @@ async def _response(db: AsyncSession, tenant: Tenant) -> CompanyAISettingsRespon
 
 @router.get("")
 async def get_company_ai(
-    tenant: Tenant = Depends(_company), db: AsyncSession = Depends(get_db)
+    tenant: Tenant = Depends(_company), db: AsyncSession = Depends(get_db, scope="function")
 ) -> CompanyAISettingsResponse:
     return await _response(db, tenant)
 
@@ -114,7 +114,7 @@ async def update_company_ai(
     request: Request,
     tenant: Tenant = Depends(_company),
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CompanyAISettingsResponse:
     _refuse_if_platform(tenant)
     stored = await company_ai.load(db, tenant.id)
@@ -135,7 +135,7 @@ async def update_company_ai(
 async def check_company_ai(
     payload: CompanyAICheckRequest,
     tenant: Tenant = Depends(_company),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CheckResponse:
     """Tries the extraction model, the transcription service, or both, as typed (a saved key is
     used when the form doesn't resend it). Each try counts towards an hourly limit."""
