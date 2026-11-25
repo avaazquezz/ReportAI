@@ -539,6 +539,22 @@ async def test_a_bad_or_expired_consent_request_is_refused(
     assert gone.status_code == 404 and expired.status_code == 400 and anonymous.status_code == 401
 
 
+async def test_approving_an_app_gone_since_it_was_shown_is_a_404(
+    db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]
+) -> None:
+    from mcp.shared.auth import OAuthClientInformationFull
+
+    from app.core.exceptions import ResourceNotFoundException
+    from app.services.oauth.provider import ConsentRequest, approve
+
+    acme, _ = companies
+    gone = OAuthClientInformationFull.model_validate({"client_id": "gone", "redirect_uris": [REDIRECT]})
+    request = ConsentRequest("gone", REDIRECT, True, _pkce()[1], resource_url(), None)
+
+    with pytest.raises(ResourceNotFoundException):
+        await approve(db, acme["approver"], request, gone)
+
+
 async def test_the_read_only_demo_account_can_not_approve(
     http: httpx2.AsyncClient, companies: tuple[dict[str, Any], dict[str, Any]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
