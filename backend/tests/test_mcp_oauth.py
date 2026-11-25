@@ -1081,6 +1081,39 @@ async def test_a_fetch_that_hangs_is_cut_at_the_time_allowed(
     assert time.monotonic() - started < 2
 
 
+async def _take_every_fetch_slot(monkeypatch: pytest.MonkeyPatch) -> asyncio.Semaphore:
+    # A semaphore of the test's own, as large as the real one: once waited on, one is bound to its
+    # event loop, and every test runs in a loop of its own.
+    slots = asyncio.Semaphore(clients.METADATA_FETCHES_AT_ONCE)
+    monkeypatch.setattr(clients, "_fetch_slots", slots)
+    for _ in range(clients.METADATA_FETCHES_AT_ONCE):
+        await slots.acquire()
+    return slots
+
+
+async def test_a_fetch_that_finds_every_slot_taken_gives_up_in_its_time_as_unavailable(
+    fetches: Fetches, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
+    resolved: list[str] = []
+
+    async def resolve(host: str) -> set[str]:
+        resolved.append(host)
+        return {"93.184.215.14"}
+
+    monkeypatch.setattr(clients, "_resolve", resolve)
+    slots = await _take_every_fetch_slot(monkeypatch)
+
+    # The waiting counts against the fetch's own time: it gives up then, not when a slot frees.
+    with pytest.raises(clients.MetadataDocumentUnavailable, match="fetch slot"):
+        await asyncio.wait_for(clients.fetch_metadata_document(DOCUMENT_URL), timeout=2)
+
+    assert resolved == [] and fetches.requests == []
+    slots.release()
+    assert (await clients.fetch_metadata_document(DOCUMENT_URL)).client_name == "Example AI"
+    assert resolved == ["app.example"]
+
+
 async def test_no_database_transaction_is_open_while_the_document_is_fetched(db: AsyncSession, fetches: Fetches) -> None:
     open_during: list[bool] = []
     fetches.during = lambda: open_during.append(db.in_transaction())
@@ -1130,7 +1163,11 @@ async def test_document_fetches_are_counted_per_address_and_a_cached_one_is_free
 
 
 @pytest.mark.parametrize(
-    "outage", [httpx.Response(503), httpx.Response(429), httpx.ConnectError("connection refused"), httpx.ReadTimeout("slow"), "hangs"]
+    "outage",
+    [
+        httpx.Response(503), httpx.Response(429), httpx.ConnectError("connection refused"), httpx.ReadTimeout("slow"), "hangs",
+        "every fetch slot taken",
+    ],
 )
 async def test_while_its_publisher_is_down_an_app_keeps_its_last_document_for_a_week(
     http: httpx2.AsyncClient, db: AsyncSession, fetches: Fetches, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch,
@@ -1139,14 +1176,18 @@ async def test_while_its_publisher_is_down_an_app_keeps_its_last_document_for_a_
     assert (await _authorize(http, DOCUMENT_URL, _pkce()[1])).status_code == 302
     await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(hours=25)))
     await db.commit()
-    if isinstance(outage, str):
+    if outage == "hangs":
         monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
         fetches.delay = 5
+    elif outage == "every fetch slot taken":
+        monkeypatch.setattr(clients, "METADATA_DOCUMENT_TIMEOUT_SECONDS", 0.2)
+        await _take_every_fetch_slot(monkeypatch)
     else:
         fetches.response = outage
 
     with caplog.at_level(logging.ERROR, logger=clients.__name__):
-        during = await _authorize(http, DOCUMENT_URL, _pkce()[1])
+        # Cut short by the fetch's own time, whatever the outage: a hang would be a failure.
+        during = await asyncio.wait_for(_authorize(http, DOCUMENT_URL, _pkce()[1]), timeout=5)
 
     assert during.status_code == 302
     assert any(record.levelno == logging.ERROR and "Serving its copy" in record.getMessage() for record in caplog.records)

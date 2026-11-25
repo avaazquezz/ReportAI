@@ -9,9 +9,10 @@ exactly), so an approval can't be sent to a page someone else runs over plain HT
 
 The document is fetched from an address a stranger chose, by an unauthenticated request: it is the
 one place this server reaches out on someone else's say-so, so the fetch is fenced (https on 443,
-public addresses only, no redirects, 5 seconds in all, 64 KB of JSON), counted per caller's address,
-and made with no database transaction open, so slow answers can't tie up the connection pool. A
-document that fails any check is an unknown client, and the reason goes to the log.
+public addresses only, no redirects, two at a time, 5 seconds in all, 64 KB of JSON), counted per
+caller's address, and made with no database transaction open, so slow answers can't tie up the
+connection pool. A document that fails any check is an unknown client, and the reason goes to the
+log.
 
 Two kinds of failure, told apart. A document refused (not public, not its own client_id, redirect
 URIs or an auth method this server won't take, not client metadata) stops being served at once,
@@ -55,7 +56,16 @@ MAX_CLIENT_ID_CHARS = 2048  # oauth_clients.client_id
 
 METADATA_DOCUMENT_TTL = timedelta(hours=24)
 METADATA_DOCUMENT_MAX_BYTES = 64 * 1024
-METADATA_DOCUMENT_TIMEOUT_SECONDS: float = 5  # resolving the host and downloading, together
+METADATA_DOCUMENT_TIMEOUT_SECONDS: float = 5  # waiting for a slot, resolving the host and downloading
+# The timeout above frees the request that waits, not the thread a hung DNS lookup holds (the loop's
+# resolver runs in a small shared pool): without a bound, strangers naming slow hosts could take
+# every thread and stall every lookup in the process. That pool is the loop's default executor,
+# which asyncio.to_thread shares. A fetch that gets no slot in its time is
+# "unavailable", as if the publisher were down.
+# ponytail: per process, so a deployment's ceiling is this times its API processes. Upgrade path:
+# a limiter shared by every process (a Postgres advisory lock per slot, say) if that is too many.
+METADATA_FETCHES_AT_ONCE = 2
+_fetch_slots = asyncio.Semaphore(METADATA_FETCHES_AT_ONCE)
 # A failed fetch, of either kind, is not tried again for this long.
 FETCH_FAILURE_TTL = timedelta(minutes=10)
 # ponytail: a document that can't be fetched is served from its last copy for up to 7 days past
@@ -271,9 +281,12 @@ async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
         raise ClientMetadataError("not a plain https URL")
     if port not in (None, 443) or parts.fragment or parts.path in ("", "/"):
         raise ClientMetadataError("an https URL on port 443 with a path is required")
+    got_a_slot = False
     try:
-        # One budget for both: a resolver that hangs is as slow as a server that does.
-        async with asyncio.timeout(METADATA_DOCUMENT_TIMEOUT_SECONDS):
+        # One budget for all three: a resolver that hangs is as slow as a server that does, and a
+        # queue of other fetches as slow as either.
+        async with asyncio.timeout(METADATA_DOCUMENT_TIMEOUT_SECONDS), _fetch_slots:
+            got_a_slot = True
             addresses = await _resolve(parts.hostname)
             if not addresses or not all(_public(address) for address in addresses):
                 raise ClientMetadataError("the host resolves to an address that is not public")
@@ -283,6 +296,10 @@ async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
             # only for TLS (SNI) and the Host header, through a custom httpx transport.
             body = await _download(url)
     except TimeoutError as exc:
+        if not got_a_slot:
+            raise MetadataDocumentUnavailable(
+                f"no fetch slot came free within {METADATA_DOCUMENT_TIMEOUT_SECONDS} seconds ({METADATA_FETCHES_AT_ONCE} busy)"
+            ) from exc
         raise MetadataDocumentUnavailable(f"no complete answer within {METADATA_DOCUMENT_TIMEOUT_SECONDS} seconds") from exc
     try:
         document = json.loads(body)
