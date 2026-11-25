@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApiKey, ApiKeyCreated } from '~/types'
+import type { ApiKey, ApiKeyCreated, ConnectedApp } from '~/types'
 
 definePageMeta({ middleware: ['auth', 'require-company-user'], layout: 'app', titleKey: 'admin.layout.nav.apiKeys' })
 
@@ -37,9 +37,53 @@ async function load() {
     loading.value = false
   }
 }
+// ── Apps connected by signing in (OAuth) ───────────────────────────────────────────────────
+// Only when this installation has OAuth on: the list answers 404 when it is off, and then neither
+// the section nor the sign-in way to connect is shown.
+const oauthOn = ref(false)
+const apps = ref<ConnectedApp[]>([])
+const appsLoading = ref(false)
+const appsError = ref('')
+
+async function loadApps() {
+  appsLoading.value = true
+  appsError.value = ''
+  try {
+    apps.value = await api<ConnectedApp[]>('/oauth/grants')
+    oauthOn.value = true
+  } catch (err) {
+    if ((err as { response?: Response }).response?.status === 404) {
+      oauthOn.value = false
+    } else {
+      oauthOn.value = true
+      appsError.value = t('admin.apiKeys.apps.errors.load')
+    }
+  } finally {
+    appsLoading.value = false
+  }
+}
+
+const disconnectDialog = ref(false)
+const pendingApp = ref<ConnectedApp | null>(null)
+
+async function disconnect() {
+  const app = pendingApp.value
+  if (!app) return
+  try {
+    await api(`/oauth/grants/${app.id}`, { method: 'DELETE' })
+    show(t('admin.apiKeys.apps.toast.disconnected', { name: app.client_name }), 'success')
+  } catch (err) {
+    // 403: the read-only public demo account.
+    const readOnly = (err as { response?: Response }).response?.status === 403
+    show(t(readOnly ? 'admin.apiKeys.apps.errors.readOnly' : 'admin.apiKeys.apps.errors.disconnect'), 'error')
+  }
+  await loadApps()
+}
+
 onMounted(() => {
   connectUrl.value = mcpUrl(config.public.apiBase, window.location.origin)
   load()
+  loadApps()
 })
 
 function errorText(err: unknown, fallback: string) {
@@ -144,10 +188,47 @@ async function revoke() {
       <pre v-if="connectUrl" class="m-0 whitespace-pre-wrap break-all rounded bg-paper-100 px-3 py-2 text-sm">{{ claudeCodeCommand(connectUrl, keyPlaceholder) }}</pre>
 
       <h3 class="mb-2 mt-6 font-display font-bold">{{ t('admin.apiKeys.connect.claudeApp') }}</h3>
+      <!-- With OAuth on, the app signs the person in: no key to paste. The header way stays below. -->
+      <template v-if="oauthOn">
+        <ol class="m-0 list-decimal pl-5 text-sm">
+          <li class="mb-1">{{ t('admin.apiKeys.connect.steps.open') }}</li>
+          <li class="mb-1">{{ t('admin.apiKeys.connect.steps.name') }}</li>
+          <li class="mb-1">{{ t('admin.apiKeys.connect.oauth.signIn') }}</li>
+        </ol>
+        <p class="mb-2 mt-4 text-sm font-semibold">{{ t('admin.apiKeys.connect.oauth.withKey') }}</p>
+      </template>
       <ol class="m-0 list-decimal pl-5 text-sm">
         <li v-for="step in claudeAppSteps" :key="step" class="mb-1">{{ step }}</li>
       </ol>
       <p class="mb-0 mt-3 text-sm text-ink-900/70">{{ t('admin.apiKeys.connect.note') }}</p>
+    </v-card>
+
+    <v-card v-if="oauthOn" rounded="lg" elevation="0" border class="mb-6">
+      <div class="px-6 pb-4 pt-6">
+        <h2 class="m-0 font-display text-lg font-bold">{{ isAdmin ? t('admin.apiKeys.apps.company') : t('admin.apiKeys.apps.mine') }}</h2>
+        <p class="mb-0 mt-1 text-sm text-ink-900/70">{{ isAdmin ? t('admin.apiKeys.apps.companyHelp') : t('admin.apiKeys.apps.help') }}</p>
+      </div>
+      <v-progress-linear v-if="appsLoading" indeterminate color="primary" />
+      <v-alert v-if="appsError" type="error" variant="tonal" class="mx-6 mb-6">{{ appsError }}</v-alert>
+      <p v-else-if="!appsLoading && !apps.length" class="mb-0 px-6 pb-6 text-ink-900/70">{{ t('admin.apiKeys.apps.empty') }}</p>
+      <ul v-else class="m-0 list-none p-0">
+        <li v-for="app in apps" :key="app.id">
+          <v-divider />
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
+            <div class="min-w-0 flex-1 basis-60 text-ink-900">
+              <p class="m-0 break-words font-medium">{{ app.client_name }}</p>
+              <p class="m-0 text-sm text-ink-900/70">
+                <template v-if="isAdmin">{{ t('admin.apiKeys.list.owner', { name: app.owner_name }) }} · </template>
+                {{ t('admin.apiKeys.apps.connected', { date: formatDate(app.created_at) }) }} ·
+                {{ app.last_used_at ? t('admin.apiKeys.list.lastUsed', { date: formatDateTime(app.last_used_at) }) : t('admin.apiKeys.list.neverUsed') }}
+              </p>
+            </div>
+            <v-btn size="small" variant="text" color="error" @click="pendingApp = app; disconnectDialog = true">
+              {{ t('admin.apiKeys.apps.disconnect') }}
+            </v-btn>
+          </div>
+        </li>
+      </ul>
     </v-card>
 
     <v-card rounded="lg" elevation="0" border class="mb-6 pa-6">
@@ -251,6 +332,14 @@ async function revoke() {
       :message="t('admin.apiKeys.confirmRevoke.message', { name: pending?.name })"
       :confirm-text="t('admin.apiKeys.list.revoke')"
       @confirm="revoke"
+    />
+
+    <AdminConfirmDialog
+      v-model="disconnectDialog"
+      :title="t('admin.apiKeys.apps.confirm.title')"
+      :message="t('admin.apiKeys.apps.confirm.message', { name: pendingApp?.client_name })"
+      :confirm-text="t('admin.apiKeys.apps.disconnect')"
+      @confirm="disconnect"
     />
   </div>
 </template>
