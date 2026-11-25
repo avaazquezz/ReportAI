@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import ColumnElement, ScalarResult, and_, delete, select, update
+from sqlalchemy import ColumnElement, ScalarResult, and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -18,6 +18,7 @@ from app.core.langgraph_checkpointer import get_checkpointer
 from app.models.document_template import DocumentTemplate
 from app.models.inbound_message import InboundMessage
 from app.models.job import Job
+from app.models.oauth import OAuthClient, OAuthCode, OAuthToken
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
 from app.models.tenant import Tenant
@@ -35,6 +36,10 @@ KEEP_INBOUND_IDS_FOR = timedelta(days=30)
 KEEP_INBOUND_FILES_FOR = timedelta(days=2)
 # What a visitor dictates to the landing's live demo is kept for a day, as the page promises.
 PUBLIC_DEMO_TTL = timedelta(hours=24)
+# An OAuth app that registered itself and was not used since (no code exchanged, no token
+# refreshed): anyone can register one, so the ones nobody uses don't pile up. As long as the
+# refresh token's life (30 days), so an app that is purged holds no token still good.
+KEEP_UNUSED_OAUTH_CLIENTS_FOR = timedelta(days=30)
 
 # Under the storage folder, a company's own files live in <folder>/<tenant id>, and a report's
 # (document, audio) in <report id>.
@@ -168,3 +173,23 @@ def drop_stale_inbound_files() -> None:
     for file in folder.iterdir():
         if file.stat().st_mtime < oldest:
             file.unlink(missing_ok=True)
+
+
+async def purge_unused_oauth_clients(db: AsyncSession) -> int:
+    """Deletes the self-registered OAuth apps unused for KEEP_UNUSED_OAUTH_CLIENTS_FOR (no commit);
+    their dead grants go with them by CASCADE. Apps known by a metadata document stay: there is
+    one per real app, not one per stranger who registers."""
+    unused = await db.execute(
+        delete(OAuthClient).where(
+            OAuthClient.kind == "dcr",
+            func.coalesce(OAuthClient.last_used_at, OAuthClient.created_at) < func.now() - KEEP_UNUSED_OAUTH_CLIENTS_FOR,
+        )
+    )
+    return int(unused.rowcount)  # type: ignore[attr-defined]
+
+
+async def prune_expired_oauth_secrets(db: AsyncSession) -> None:
+    """Deletes OAuth codes and tokens past their expiry (no commit): they buy nothing any more. A
+    spent refresh token stays until then, so presenting it again is still caught as reuse."""
+    await db.execute(delete(OAuthCode).where(OAuthCode.expires_at < func.now()))
+    await db.execute(delete(OAuthToken).where(OAuthToken.expires_at < func.now()))

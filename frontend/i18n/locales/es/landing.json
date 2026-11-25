@@ -565,7 +565,7 @@
       "items": {
         "isolation": {
           "title": "Aislamiento en el código, probado ruta a ruta",
-          "body": "Cada ruta toma la empresa del usuario autenticado, nunca de la petición, y carga las filas con un solo helper que filtra por ella. Un informe de otra empresa responde 404, no 403: un 403 confirmaría que el id existe. Un test recorre el OpenAPI con dos empresas, prueba las 30 rutas con id y falla si aparece una ruta nueva sin clasificar."
+          "body": "Cada ruta toma la empresa del usuario autenticado, nunca de la petición, y carga las filas con un solo helper que filtra por ella. Un informe de otra empresa responde 404, no 403: un 403 confirmaría que el id existe. Un test recorre el OpenAPI con dos empresas, prueba las 31 rutas con id y falla si aparece una ruta nueva sin clasificar."
         },
         "spend": {
           "title": "Cuotas y gasto con tope",
@@ -582,7 +582,7 @@
       },
       "codeLabel": "backend/app/core/scoping.py",
       "matrixLabel": "Matriz de aislamiento",
-      "matrixCaption": "30 rutas con id, pedidas por el administrador de otra empresa: 30 respuestas 404 y nada cambiado. Con un técnico, 403 o 404: nunca un 2xx.",
+      "matrixCaption": "31 rutas con id, pedidas por el administrador de otra empresa: 31 respuestas 404 y nada cambiado. Con un técnico, 403 o 404: nunca un 2xx.",
       "why": "Aislamiento en el código y no con RLS de Postgres, por ahora: un solo sitio que revisar y un test que lo cubre entero. RLS llegará con la primera empresa que lo pida."
     },
     "fieldApp": {

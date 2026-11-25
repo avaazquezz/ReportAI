@@ -23,6 +23,7 @@ from app.schemas.team import (
 )
 from app.services import api_keys, audit
 from app.services.notifications.invites import send_invite
+from app.services.oauth import grants as oauth_grants
 
 router = APIRouter(prefix="/team", tags=["admin:team"])
 
@@ -131,15 +132,17 @@ async def sign_out_everywhere(
     current_user: TenantUser = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Ends every session the person holds, on every device, and revokes their AI assistant keys:
-    a lost or shared phone. They can sign in again (a technician with a new link), unlike
-    deactivating them; a revoked key is gone for good, so they make a new one."""
+    """Ends every session the person holds, on every device, and revokes their AI assistant keys
+    and connected apps: a lost or shared phone. They can sign in again (a technician with a new
+    link), unlike deactivating them; a revoked key or app is gone for good, so they make a new key
+    or connect the app again."""
     tenant_id = require_tenant_id(current_user)
     member = await get_scoped_or_404(BaseRepository(TenantUser, db), member_id, tenant_id=tenant_id)
     member.token_version += 1
     revoked = await api_keys.revoke_all(db, member)
+    apps_revoked = await oauth_grants.revoke_all(db, member)
     await audit.record(
         db, "team.signed_out", actor=current_user, target=member.id, request=request, email=member.email,
-        api_keys_revoked=revoked,
+        api_keys_revoked=revoked, oauth_grants_revoked=apps_revoked,
     )
     await db.flush()

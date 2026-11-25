@@ -24,6 +24,7 @@ from app.models.document_template import DocumentTemplate
 from app.models.execution_log import ExecutionLog
 from app.models.inbound_message import InboundMessage
 from app.models.job import Job
+from app.models.oauth import OAuthClient, OAuthCode, OAuthGrant, OAuthToken
 from app.models.password_reset_token import PasswordResetToken
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
@@ -82,6 +83,8 @@ async def _full_company(db: AsyncSession, name: str, root: Path) -> dict[str, An
     await db.execute(update(ReportAttachment).where(ReportAttachment.id == ids["photo_id"]).values(path=str(files["photo"])))
     await db.execute(update(DocumentTemplate).where(DocumentTemplate.id == ids["template_id"]).values(file_path=str(files["template"])))
     tenant.logo_path = str(files["logo"])
+    grant = await db.get(OAuthGrant, ids["grant_id"])
+    assert grant is not None
     db.add_all(
         [
             Job(report_id=report_id, kind="run"),
@@ -91,10 +94,18 @@ async def _full_company(db: AsyncSession, name: str, root: Path) -> dict[str, An
             PasswordResetToken(tenant_user_id=admin.id, token_hash=uuid.uuid4().hex, expires_at=datetime.now(UTC) + timedelta(hours=1)),
             AuditEvent(tenant_id=tenant_id, actor_id=admin.id, action="auth.login_succeeded"),
             CompanySetting(tenant_id=tenant_id, key="extraction_api_key", value="sealed", encrypted=True),
+            _oauth_code(grant.oauth_client_id, tenant_id, grant.user_id, datetime.now(UTC) + timedelta(minutes=10)),
         ]
     )
     await db.commit()
     return {**company, "files": files}
+
+
+def _oauth_code(client_id: uuid.UUID, tenant_id: uuid.UUID, user_id: uuid.UUID, expires_at: datetime) -> OAuthCode:
+    return OAuthCode(
+        code_hash=uuid.uuid4().hex * 2, oauth_client_id=client_id, tenant_id=tenant_id, user_id=user_id, redirect_uri="https://x.test/cb",
+        redirect_uri_explicit=True, code_challenge="c" * 43, scope="reportai", resource="x", expires_at=expires_at,
+    )
 
 
 async def _owned_rows(db: AsyncSession, tenant_id: uuid.UUID) -> dict[str, int]:
@@ -289,3 +300,52 @@ async def test_stale_inbound_files_and_delivery_ids_are_swept(db: AsyncSession, 
 
     assert not stale.exists() and fresh.exists()
     assert list(await db.scalars(select(InboundMessage.external_id))) == ["recent"]
+
+
+async def test_self_registered_oauth_apps_nobody_used_for_30_days_are_purged(db: AsyncSession) -> None:
+    acme = await _company(db, "Acme")
+    long_ago = datetime.now(UTC) - timedelta(days=31)
+    db.add_all(
+        [
+            OAuthClient(client_id="never-used", kind="dcr", client_metadata={}, created_at=long_ago),
+            OAuthClient(client_id="used-long-ago", kind="dcr", client_metadata={}, created_at=long_ago, last_used_at=long_ago),
+            OAuthClient(client_id="used-lately", kind="dcr", client_metadata={}, created_at=long_ago, last_used_at=datetime.now(UTC)),
+            OAuthClient(client_id="just-registered", kind="dcr", client_metadata={}),
+            OAuthClient(client_id="https://app.example/client.json", kind="cimd", client_metadata={}, created_at=long_ago),
+        ]
+    )
+    # The company's own app (tests/test_tenant_isolation.py's _company), unused since long ago too.
+    grant = await db.get(OAuthGrant, acme["ids"]["grant_id"])
+    assert grant is not None
+    await db.execute(update(OAuthClient).where(OAuthClient.id == grant.oauth_client_id).values(created_at=long_ago))
+    await db.commit()
+
+    assert await data_lifecycle.purge_unused_oauth_clients(db) == 3
+    await db.commit()
+
+    assert set(await db.scalars(select(OAuthClient.client_id))) == {"used-lately", "just-registered", "https://app.example/client.json"}
+    assert await db.scalar(select(func.count()).select_from(OAuthGrant)) == 0  # its dead grant with it
+
+
+async def test_expired_oauth_codes_and_tokens_are_swept(db: AsyncSession) -> None:
+    acme = await _company(db, "Acme")
+    grant = await db.get(OAuthGrant, acme["ids"]["grant_id"])
+    assert grant is not None
+    now = datetime.now(UTC)
+    db.add_all(
+        [
+            _oauth_code(grant.oauth_client_id, acme["tenant"].id, grant.user_id, now - timedelta(seconds=1)),
+            _oauth_code(grant.oauth_client_id, acme["tenant"].id, grant.user_id, now + timedelta(minutes=5)),
+            OAuthToken(token_hash="expired".ljust(64, "0"), grant_id=grant.id, kind="access", expires_at=now - timedelta(seconds=1)),
+            OAuthToken(token_hash="spent".ljust(64, "0"), grant_id=grant.id, kind="refresh", expires_at=now + timedelta(days=1), used_at=now),
+        ]
+    )
+    await db.commit()
+
+    await data_lifecycle.prune_expired_oauth_secrets(db)
+    await db.commit()
+
+    assert await db.scalar(select(func.count()).select_from(OAuthCode)) == 1
+    # Left: the company's live refresh token, and the spent one, still there to catch its reuse.
+    left = set(await db.scalars(select(OAuthToken.token_hash)))
+    assert len(left) == 2 and "spent".ljust(64, "0") in left and "expired".ljust(64, "0") not in left
