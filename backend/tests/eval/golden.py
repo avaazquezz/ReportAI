@@ -10,6 +10,7 @@ Synthetic data only, never real client data (project-wide decision, see PROJECT_
 import json
 import random
 import re
+import subprocess
 import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -434,3 +435,8 @@ def build_cases(visits: int = 35, meetings: int = 20, incidents: int = 20, legac
     cases += [_meeting_case(rng, i) for i in range(meetings)]
     cases += [_incident_case(rng, i) for i in range(incidents)]
     return cases + (_legacy_cases() if legacy else [])
+
+
+def current_commit() -> str:
+    """The checkout a published run graded (docs/evals/), so its figures can be traced to code."""
+    return subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
