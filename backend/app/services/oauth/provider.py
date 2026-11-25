@@ -15,6 +15,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
+from urllib.parse import urlsplit
 
 from mcp.server.auth.provider import (
     AccessToken,
@@ -38,6 +39,7 @@ from app.core.exceptions import ResourceNotFoundException, ValidationException
 from app.core.scoping import require_tenant_id
 from app.models.oauth import OAuthClient, OAuthCode, OAuthGrant, OAuthToken
 from app.models.tenant_user import TenantUser
+from app.services import audit
 from app.services.credentials import acting_person
 from app.services.oauth import SCOPE, clients, is_this_resource, resource_url, token_hash
 from app.services.oauth.grants import ACCESS_PREFIX, REFRESH_PREFIX, make_room_for, revoke_grant
@@ -224,8 +226,15 @@ class ReportAIProvider(OAuthAuthorizationServerProvider[StoredCode, StoredRefres
             # Spent already: whoever comes second holds a copy, and there is no telling which one is
             # the app (RFC 9700 §4.14.2). The grant ends for both; the person approves it again.
             await revoke_grant(self.db, refresh_token.grant_id)
+            tenant_id = await self.db.scalar(select(OAuthGrant.tenant_id).where(OAuthGrant.id == refresh_token.grant_id))
+            await audit.record(
+                self.db, "oauth.revoked_reuse", tenant_id=tenant_id, target=refresh_token.grant_id, actor_label="system",
+                client_id=client.client_id,
+            )
             await self.db.commit()
-            logger.warning("A spent refresh token was presented again: revoked OAuth grant %s", refresh_token.grant_id)
+            logger.warning(
+                "A spent refresh token of %s was presented again: revoked OAuth grant %s", client.client_id[:200], refresh_token.grant_id
+            )
             raise TokenError("invalid_grant", "refresh token is no longer valid")
         grant = await self.db.get(OAuthGrant, refresh_token.grant_id)
         if grant is None or await acting_person(self.db, grant.user_id, grant.tenant_id) is None:
@@ -312,7 +321,13 @@ async def consent_client(db: AsyncSession, request: ConsentRequest, *, client_ip
     """The app asking, as it is now: 404 if it is gone, or no longer lists the redirect URI (its
     metadata document changed in the meantime). May commit (clients.get_client)."""
     client = await clients.get_client(db, request.client_id, client_ip=client_ip)
-    if client is None or request.redirect_uri not in {str(uri) for uri in client.redirect_uris or []}:
+    if client is None:
+        raise ResourceNotFoundException(_EXPIRED)
+    if request.redirect_uri not in {str(uri) for uri in client.redirect_uris or []}:
+        logger.warning(
+            "The app %s no longer lists the redirect URI on %s it asked with: consent refused",
+            request.client_id[:200], urlsplit(request.redirect_uri).netloc,
+        )
         raise ResourceNotFoundException(_EXPIRED)
     return client
 
