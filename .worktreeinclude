@@ -1,3 +1,0 @@
-# Ignored files a new git worktree needs to boot, copied in by Claude Code (gitignore syntax).
-.env
-frontend/.env

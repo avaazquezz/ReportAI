@@ -255,7 +255,7 @@
         },
         "assistant": {
           "title": "Desde tu asistente de IA",
-          "body": "Claude u otro asistente compatible con MCP busca y lee tus informes y empieza borradores. Aprobar y enviar sigue siendo cosa de una persona."
+          "body": "Claude u otro asistente compatible con MCP busca y lee tus informes, te pasa el PDF y empieza borradores. Se conecta iniciando sesión con OAuth, sin copiar claves. Aprobar y enviar sigue siendo cosa de una persona."
         }
       },
       "who": {
