@@ -9,8 +9,16 @@ over plain HTTP.
 
 The document is fetched from an address a stranger chose, by an unauthenticated request: it is the
 one place this server reaches out on someone else's say-so, so the fetch is fenced (https on 443,
-public addresses only, no redirects, 5 seconds, 64 KB of JSON). A document that fails any check is
-an unknown client, and the reason goes to the log.
+public addresses only, no redirects, 5 seconds in all, 64 KB of JSON), counted per caller's address,
+and made with no database transaction open, so slow answers can't tie up the connection pool. A
+document that fails any check is an unknown client, and the reason goes to the log.
+
+Two kinds of failure, told apart. A document refused (not public, not its own client_id, redirect
+URIs or an auth method this server won't take, not client metadata) stops being served at once,
+cached or not. A document that can't be had right now (timeout, DNS, network, the publisher's 5xx)
+leaves the copy fetched before in service, so a publisher's outage doesn't cut off everyone
+connected through it. Either is remembered for ten minutes, so a failing address isn't fetched again
+on every request.
 """
 
 import asyncio
@@ -26,12 +34,14 @@ import httpx
 from mcp.server.auth.provider import RegistrationError
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import rate_limit
 from app.core.crypto import decrypt, encrypt
-from app.models.oauth import OAuthClient
+from app.core.exceptions import RateLimitException
+from app.models.oauth import OAuthClient, OAuthMetadataFetchFailure
 from app.services.oauth import SCOPE
 
 logger = logging.getLogger(__name__)
@@ -45,13 +55,24 @@ MAX_CLIENT_ID_CHARS = 2048  # oauth_clients.client_id
 
 METADATA_DOCUMENT_TTL = timedelta(hours=24)
 METADATA_DOCUMENT_MAX_BYTES = 64 * 1024
-METADATA_DOCUMENT_TIMEOUT_SECONDS = 5
+METADATA_DOCUMENT_TIMEOUT_SECONDS: float = 5  # resolving the host and downloading, together
+# A failed fetch, of either kind, is not tried again for this long.
+FETCH_FAILURE_TTL = timedelta(minutes=10)
+# ponytail: a document that can't be fetched is served from its last copy for up to 7 days past
+# that fetch; after that the app is unknown until its publisher answers again. Upgrade path: a
+# longer ceiling, or an alert to the operator, if a publisher's outage ever lasts that long.
+STALE_DOCUMENT_CEILING = timedelta(days=7)
 # Tests swap these for an httpx.MockTransport and a fake resolver: the HTTP boundary, nothing else.
 _transport: httpx.AsyncBaseTransport | None = None
 
 
 class ClientMetadataError(Exception):
     """A client metadata document this server won't use: why, for the log (never shown to anyone)."""
+
+
+class MetadataDocumentUnavailable(ClientMetadataError):
+    """A document that could not be had right now (timeout, DNS, network, the publisher's 5xx or
+    429): its last copy, if any, stays in service. Any other ClientMetadataError is a refusal."""
 
 
 def redirect_uri_allowed(uri: str) -> bool:
@@ -119,25 +140,60 @@ async def register(db: AsyncSession, client: OAuthClientInformationFull) -> None
     await db.commit()
 
 
-async def get_client(db: AsyncSession, client_id: str) -> OAuthClientInformationFull | None:
+async def get_client(db: AsyncSession, client_id: str, *, client_ip: str) -> OAuthClientInformationFull | None:
     """The client `client_id` names, or None: an id nobody registered, or a metadata document that
-    can't be fetched or fails a check. May commit (a document fetched is cached)."""
+    can't be fetched or fails a check. `client_ip` is who asked: fetches are counted against it.
+    May commit whatever `db` holds, before a fetch and after it (the document cached)."""
     if len(client_id) > MAX_CLIENT_ID_CHARS:
         return None
     if client_id.startswith("https://"):
-        return await _metadata_document_client(db, client_id)
+        return await _metadata_document_client(db, client_id, client_ip)
     row = await db.scalar(select(OAuthClient).where(OAuthClient.client_id == client_id, OAuthClient.kind == "dcr"))
     return None if row is None else _as_client(row)
 
 
-async def _metadata_document_client(db: AsyncSession, url: str) -> OAuthClientInformationFull | None:
+def _fetched_within(row: OAuthClient | None, age: timedelta, now: datetime) -> bool:
+    return row is not None and row.fetched_at is not None and row.fetched_at > now - age
+
+
+async def _metadata_document_client(db: AsyncSession, url: str, client_ip: str) -> OAuthClientInformationFull | None:
+    now = datetime.now(UTC)
     row = await db.scalar(select(OAuthClient).where(OAuthClient.client_id == url, OAuthClient.kind == "cimd"))
-    if row is not None and row.fetched_at is not None and row.fetched_at > datetime.now(UTC) - METADATA_DOCUMENT_TTL:
+    if row is not None and _fetched_within(row, METADATA_DOCUMENT_TTL, now):
         return _as_client(row)
+    # What is served when the document can't be fetched now: its last copy, if recent enough.
+    fallback = _as_client(row) if row is not None and _fetched_within(row, STALE_DOCUMENT_CEILING, now) else None
+    failed_at = await db.scalar(select(OAuthMetadataFetchFailure.failed_at).where(OAuthMetadataFetchFailure.url == url))
+    if failed_at is not None and failed_at > now - FETCH_FAILURE_TTL:
+        return fallback
+    try:
+        await rate_limit.oauth_metadata_fetch_by_ip.check(db, client_ip)
+    except RateLimitException:
+        logger.warning("Did not fetch the client metadata document at %s: %s has fetched too many lately", url[:200], client_ip)
+        return fallback
+    # Counting the fetch commits: no transaction, and no pooled connection, is held while a
+    # stranger's server takes its time to answer.
+    await rate_limit.oauth_metadata_fetch_by_ip.record(db, client_ip)
     try:
         client = await fetch_metadata_document(url)
+    except MetadataDocumentUnavailable as exc:
+        await _remember_failure(db, url)
+        await db.commit()
+        if row is None or fallback is None:
+            logger.warning("Could not fetch the client metadata document at %s: %s", url[:200], exc)
+        else:
+            logger.error(
+                "Could not fetch the client metadata document at %s: %s. Serving its copy fetched at %s",
+                url[:200], exc, row.fetched_at,
+            )
+        return fallback
     except ClientMetadataError as exc:
         logger.warning("Refused the client metadata document at %s: %s", url[:200], exc)
+        await _remember_failure(db, url)
+        # Its copy is no longer the app's word: never served again, fresh or stale. The row, and
+        # the grants hanging off it, stay in case the publisher fixes the document.
+        await db.execute(update(OAuthClient).where(OAuthClient.client_id == url, OAuthClient.kind == "cimd").values(fetched_at=None))
+        await db.commit()
         return None
     statement = insert(OAuthClient).values(
         client_id=url, kind="cimd", client_metadata=_stored_metadata(client), fetched_at=datetime.now(UTC)
@@ -148,8 +204,16 @@ async def _metadata_document_client(db: AsyncSession, url: str) -> OAuthClientIn
             set_={"metadata": statement.excluded["metadata"], "fetched_at": statement.excluded.fetched_at},
         )
     )
+    await db.execute(delete(OAuthMetadataFetchFailure).where(OAuthMetadataFetchFailure.url == url))
     await db.commit()
     return client.model_copy(update={"scope": SCOPE})
+
+
+async def _remember_failure(db: AsyncSession, url: str) -> None:
+    statement = insert(OAuthMetadataFetchFailure).values(url=url, failed_at=datetime.now(UTC))
+    await db.execute(
+        statement.on_conflict_do_update(index_elements=[OAuthMetadataFetchFailure.url], set_={"failed_at": statement.excluded.failed_at})
+    )
 
 
 def _public(address: str) -> bool:
@@ -164,34 +228,42 @@ def _public(address: str) -> bool:
 async def _resolve(host: str) -> set[str]:
     try:
         infos = await asyncio.get_running_loop().getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+    except UnicodeError as exc:  # IDNA: an empty label ("a..com"), or one longer than 63 characters
+        raise ClientMetadataError(f"the host name is not valid ({exc})") from exc
     except OSError as exc:
-        raise ClientMetadataError(f"the host does not resolve ({exc})") from exc
+        raise MetadataDocumentUnavailable(f"the host does not resolve ({exc})") from exc
     return {str(info[4][0]) for info in infos}
 
 
 async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
     """The client a Client ID Metadata Document describes, fetched from `url`. Raises
-    ClientMetadataError for an address it must not fetch or a document it must not trust."""
-    parts = urlsplit(url)
+    MetadataDocumentUnavailable when it can't be had right now, and ClientMetadataError for an
+    address it must not fetch or a document it must not trust."""
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError as exc:  # a malformed IPv6 host, or a port that is not a number
+        raise ClientMetadataError(f"not a valid URL ({exc})") from exc
     if parts.scheme != "https" or not parts.hostname or parts.username is not None or parts.password is not None:
         raise ClientMetadataError("not a plain https URL")
-    if parts.port not in (None, 443) or parts.fragment or parts.path in ("", "/"):
+    if port not in (None, 443) or parts.fragment or parts.path in ("", "/"):
         raise ClientMetadataError("an https URL on port 443 with a path is required")
-    addresses = await _resolve(parts.hostname)
-    if not addresses or not all(_public(address) for address in addresses):
-        raise ClientMetadataError("the host resolves to an address that is not public")
-    # ponytail: the host is resolved here and again by httpx when it connects, so a DNS answer
-    # that changes in between (DNS rebinding) could still point the request at a private address.
-    # Upgrade path: connect to the vetted address itself, with the host only for TLS (SNI) and
-    # the Host header, through a custom httpx transport.
     try:
+        # One budget for both: a resolver that hangs is as slow as a server that does.
         async with asyncio.timeout(METADATA_DOCUMENT_TIMEOUT_SECONDS):
+            addresses = await _resolve(parts.hostname)
+            if not addresses or not all(_public(address) for address in addresses):
+                raise ClientMetadataError("the host resolves to an address that is not public")
+            # ponytail: the host is resolved here and again by httpx when it connects, so a DNS
+            # answer that changes in between (DNS rebinding) could still point the request at a
+            # private address. Upgrade path: connect to the vetted address itself, with the host
+            # only for TLS (SNI) and the Host header, through a custom httpx transport.
             body = await _download(url)
     except TimeoutError as exc:
-        raise ClientMetadataError("no complete answer within the time allowed") from exc
+        raise MetadataDocumentUnavailable(f"no complete answer within {METADATA_DOCUMENT_TIMEOUT_SECONDS} seconds") from exc
     try:
         document = json.loads(body)
-    except ValueError as exc:
+    except (ValueError, RecursionError) as exc:  # RecursionError: "[[[[…" nested past the parser's depth
         raise ClientMetadataError("the document is not JSON") from exc
     if not isinstance(document, dict):
         raise ClientMetadataError("the document is not a JSON object")
@@ -220,6 +292,8 @@ async def _download(url: str) -> bytes:
     ) as http:
         try:
             async with http.stream("GET", url, headers={"Accept": "application/json"}) as response:
+                if response.status_code >= 500 or response.status_code == 429:
+                    raise MetadataDocumentUnavailable(f"the server answered {response.status_code}")
                 if response.status_code != 200:
                     raise ClientMetadataError(f"the server answered {response.status_code}, not 200")
                 content_type = response.headers.get("content-type", "").split(";")[0].strip().lower()
@@ -231,5 +305,5 @@ async def _download(url: str) -> bytes:
                     if len(body) > METADATA_DOCUMENT_MAX_BYTES:
                         raise ClientMetadataError(f"the document is larger than {METADATA_DOCUMENT_MAX_BYTES} bytes")
         except httpx.HTTPError as exc:
-            raise ClientMetadataError(f"the request failed ({type(exc).__name__})") from exc
+            raise MetadataDocumentUnavailable(f"the request failed ({type(exc).__name__})") from exc
     return bytes(body)

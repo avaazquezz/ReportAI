@@ -88,13 +88,15 @@ def _secret() -> str:
 
 
 class ReportAIProvider(OAuthAuthorizationServerProvider[StoredCode, StoredRefreshToken, StoredAccessToken]):
-    """What the SDK's handlers call, for one request: everything goes through its database session."""
+    """What the SDK's handlers call, for one request: everything goes through its database session.
+    `client_ip` is who sent the request, which a metadata document fetch is counted against."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, *, client_ip: str) -> None:
         self.db = db
+        self.client_ip = client_ip
 
     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:
-        return await clients.get_client(self.db, client_id)
+        return await clients.get_client(self.db, client_id, client_ip=self.client_ip)
 
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         await clients.register(self.db, client_info)
@@ -306,10 +308,10 @@ def read_consent_request(token: str) -> ConsentRequest:
     )
 
 
-async def consent_client(db: AsyncSession, request: ConsentRequest) -> OAuthClientInformationFull:
+async def consent_client(db: AsyncSession, request: ConsentRequest, *, client_ip: str) -> OAuthClientInformationFull:
     """The app asking, as it is now: 404 if it is gone, or no longer lists the redirect URI (its
-    metadata document changed in the meantime)."""
-    client = await clients.get_client(db, request.client_id)
+    metadata document changed in the meantime). May commit (clients.get_client)."""
+    client = await clients.get_client(db, request.client_id, client_ip=client_ip)
     if client is None or request.redirect_uri not in {str(uri) for uri in client.redirect_uris or []}:
         raise ResourceNotFoundException(_EXPIRED)
     return client

@@ -61,6 +61,10 @@ router = APIRouter(prefix="/oauth", tags=["oauth"], dependencies=[Depends(_enabl
 _NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
 
 
+def _provider(request: Request, db: AsyncSession) -> ReportAIProvider:
+    return ReportAIProvider(db, client_ip=audit.client_ip(request))
+
+
 @router.get("/metadata")
 async def authorization_server(request: Request) -> Response:
     """RFC 8414, served by the panel at /.well-known/oauth-authorization-server."""
@@ -76,13 +80,13 @@ async def protected_resource(request: Request) -> Response:
 @router.get("/authorize")
 async def authorize(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
     """Sends the browser to the panel's consent page, or back to the app with an error."""
-    return await AuthorizationHandler(ReportAIProvider(db)).handle(request)
+    return await AuthorizationHandler(_provider(request, db)).handle(request)
 
 
 @router.post("/authorize")
 async def authorize_by_form(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
     """The same, with the parameters in a form (RFC 6749 §3.1 allows either)."""
-    return await AuthorizationHandler(ReportAIProvider(db)).handle(request)
+    return await AuthorizationHandler(_provider(request, db)).handle(request)
 
 
 @router.post("/token")
@@ -96,7 +100,7 @@ async def token(request: Request, db: AsyncSession = Depends(get_db)) -> Respons
             status_code=400,
             headers=_NO_STORE,
         )
-    provider = ReportAIProvider(db)
+    provider = _provider(request, db)
     response: Response = await TokenHandler(provider, ClientAuthenticator(provider)).handle(request)  # untyped in the SDK
     return response
 
@@ -108,14 +112,14 @@ async def register(request: Request, db: AsyncSession = Depends(get_db)) -> Resp
     await rate_limit.oauth_register_by_ip.check(db, ip)
     await rate_limit.oauth_register_by_ip.record(db, ip)
     options = ClientRegistrationOptions(enabled=True, valid_scopes=[SCOPE], default_scopes=[SCOPE])
-    return await RegistrationHandler(ReportAIProvider(db), options).handle(request)
+    return await RegistrationHandler(_provider(request, db), options).handle(request)
 
 
 @router.post("/revoke")
 async def revoke(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
     """RFC 7009: an app signing out. Not the SDK's RevocationHandler: it requires a client_secret
     field even from a public client, which has none, so every such app would get a 400."""
-    provider = ReportAIProvider(db)
+    provider = _provider(request, db)
     try:
         client = await ClientAuthenticator(provider).authenticate_request(request)
     except AuthenticationError as exc:
@@ -134,12 +138,13 @@ async def revoke(request: Request, db: AsyncSession = Depends(get_db)) -> Respon
 
 @router.get("/consent")
 async def consent_details(
+    request: Request,
     sealed: str = Query(alias="request", min_length=1, max_length=MAX_CONSENT_REQUEST_CHARS),
     current_user: TenantUser = Depends(require_company_user),
     db: AsyncSession = Depends(get_db),
 ) -> ConsentDetails:
     consent = read_consent_request(sealed)
-    client = await consent_client(db, consent)
+    client = await consent_client(db, consent, client_ip=audit.client_ip(request))
     # A metadata document's address names who publishes the app; a registered app named itself.
     published = urlsplit(client.client_id).hostname if client.client_id.startswith("https://") else None
     return ConsentDetails(
@@ -159,7 +164,7 @@ async def answer_consent(
     db: AsyncSession = Depends(get_db),
 ) -> ConsentRedirect:
     consent = read_consent_request(body.request)
-    client = await consent_client(db, consent)
+    client = await consent_client(db, consent, client_ip=audit.client_ip(request))
     if body.approve:
         redirect_to = await approve(db, current_user, consent, client)
     else:
