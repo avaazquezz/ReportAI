@@ -46,7 +46,8 @@ async def download_by_link(token: str, db: AsyncSession = Depends(get_db)) -> Fi
         claims = unseal(token, PDF_LINK_TTL)
     except ValueError as exc:
         raise ResourceNotFoundException(_GONE) from exc
-    # A link sealed before links named the kind of credential ("key") is one of these too.
+    # A link sealed before links named the kind of credential (it carried "key", not "by") is
+    # refused too: links last ten minutes, so none of those is still in anyone's hands.
     if claims.get("purpose") != _PURPOSE or claims.get("by") not in ("api_key", "oauth"):
         raise ResourceNotFoundException(_GONE)
     user = await person_of(db, Credential(claims["by"], uuid.UUID(claims["id"])))

@@ -157,6 +157,9 @@ class ReportAIProvider(OAuthAuthorizationServerProvider[StoredCode, StoredRefres
     async def exchange_authorization_code(self, client: OAuthClientInformationFull, authorization_code: StoredCode) -> TokenResponse:
         # Deleted as it is read, in the transaction that makes the grant: of two exchanges at once,
         # the second waits on the row and then finds nothing.
+        # ponytail: a code presented again is just unknown, not a reason to revoke the tokens it
+        # bought (OAuth 2.1 §4.1.3 SHOULD); PKCE and the client binding leave a replay little to
+        # gain. Upgrade path: keep a spent code's hash and grant id, and revoke that grant on reuse.
         spent = await self.db.execute(
             delete(OAuthCode)
             .where(OAuthCode.code_hash == authorization_code.code_hash, OAuthCode.expires_at > func.now())
@@ -338,7 +341,8 @@ async def approve(db: AsyncSession, user: TenantUser, request: ConsentRequest, c
     any; ConflictException (409) if they are connected to too many other apps."""
     tenant_id = require_tenant_id(user)
     oauth_client_id = await db.scalar(select(OAuthClient.id).where(OAuthClient.client_id == client.client_id))
-    assert oauth_client_id is not None  # consent_client found it, and get_client stores what it fetches
+    if oauth_client_id is None:  # gone since consent_client found it (purged, say)
+        raise ResourceNotFoundException(_EXPIRED)
     await make_room_for(db, user, oauth_client_id)
     code = _secret()
     db.add(

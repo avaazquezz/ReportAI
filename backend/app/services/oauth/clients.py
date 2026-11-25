@@ -4,8 +4,8 @@ Two ways to be known. An app registers itself (Dynamic Client Registration, RFC 
 client_id from us. Or its client_id is the https URL of a metadata document it publishes (Client ID
 Metadata Documents, what claude.ai uses), which this server fetches and caches for a day. Either way
 the same rule holds for where the answer goes: an https address, or the person's own computer
-(http on a loopback address, any port), so an approval can't be sent to a page someone else runs
-over plain HTTP.
+(http on a loopback address, on the very port it registered: the SDK compares redirect URIs
+exactly), so an approval can't be sent to a page someone else runs over plain HTTP.
 
 The document is fetched from an address a stranger chose, by an unauthenticated request: it is the
 one place this server reaches out on someone else's say-so, so the fetch is fenced (https on 443,
