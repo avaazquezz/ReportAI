@@ -40,7 +40,7 @@ from app.models.oauth import OAuthClient, OAuthCode, OAuthGrant, OAuthToken
 from app.models.tenant_user import TenantUser
 from app.services.credentials import acting_person
 from app.services.oauth import SCOPE, clients, is_this_resource, resource_url, token_hash
-from app.services.oauth.grants import ACCESS_PREFIX, REFRESH_PREFIX, revoke_grant
+from app.services.oauth.grants import ACCESS_PREFIX, REFRESH_PREFIX, make_room_for, revoke_grant
 
 logger = logging.getLogger(__name__)
 
@@ -319,10 +319,12 @@ async def consent_client(db: AsyncSession, request: ConsentRequest, *, client_ip
 
 async def approve(db: AsyncSession, user: TenantUser, request: ConsentRequest, client: OAuthClientInformationFull) -> str:
     """Makes the code for `user`'s approval of `client`, as consent_client returned it (not
-    committed), and returns where to send the browser."""
+    committed), and returns where to send the browser. Ends the connection `user` had to it, if
+    any; ConflictException (409) if they are connected to too many other apps."""
     tenant_id = require_tenant_id(user)
     oauth_client_id = await db.scalar(select(OAuthClient.id).where(OAuthClient.client_id == client.client_id))
     assert oauth_client_id is not None  # consent_client found it, and get_client stores what it fetches
+    await make_room_for(db, user, oauth_client_id)
     code = _secret()
     db.add(
         OAuthCode(

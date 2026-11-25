@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import httpx2
 import pytest
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -641,6 +641,52 @@ async def test_the_panel_lists_and_revokes_connected_apps_like_keys(
     assert (await http.get("/oauth/grants", headers=_auth(acme["tenant_admin"]))).json() == []
     events = (await db.scalars(select(AuditEvent.target).where(AuditEvent.action == "oauth.revoked"))).all()
     assert sorted(events) == sorted([str(own_grant.id), str(colleague_grant.id)])
+
+
+async def test_approving_an_app_again_replaces_its_connection(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]
+) -> None:
+    acme, _ = companies
+    first = await _connected(http, acme["approver"])
+    colleague = await _exchange(
+        http, first["client_id"], await _code(http, acme["technician"], first["client_id"], (pkce := _pkce())[1]), pkce[0]
+    )
+    verifier, challenge = _pkce()
+
+    again = await _exchange(http, first["client_id"], await _code(http, acme["approver"], first["client_id"], challenge), verifier)
+
+    assert again.status_code == 200
+    assert (await _grant(db, first["access_token"])).revoked_at is not None
+    assert (await _mcp(http, first["access_token"])).status_code == 401
+    assert (await _mcp(http, again.json()["access_token"])).status_code == 200
+    # Someone else's connection to the same app is theirs, and stays.
+    assert (await _mcp(http, colleague.json()["access_token"])).status_code == 200
+
+
+async def test_a_person_connects_at_most_ten_apps(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]
+) -> None:
+    from app.services.oauth.grants import MAX_CONNECTED_APPS_PER_USER
+
+    acme, _ = companies
+    connected = [await _connected(http, acme["approver"]) for _ in range(MAX_CONNECTED_APPS_PER_USER)]
+    one_more = await _client_id(http)
+    sealed = _consent_request(await _authorize(http, one_more, _pkce()[1]))
+
+    refused = await http.post("/oauth/consent", json={"request": sealed, "approve": True}, headers=_auth(acme["approver"]))
+
+    assert refused.status_code == 409 and "10 connected apps" in refused.json()["detail"]
+    assert await db.scalar(select(func.count()).select_from(OAuthCode)) == 0
+    assert (await _mcp(http, connected[0]["access_token"])).status_code == 200  # refusing ended nothing
+    # A colleague has ten of their own.
+    assert await _code(http, acme["technician"], one_more, _pkce()[1])
+    # A connection that ended makes room...
+    grant = await _grant(db, connected[1]["access_token"])
+    assert (await http.delete(f"/oauth/grants/{grant.id}", headers=_auth(acme["approver"]))).status_code == 204
+    verifier, challenge = _pkce()
+    assert (await _exchange(http, one_more, await _code(http, acme["approver"], one_more, challenge), verifier)).status_code == 200
+    # ...and, back at ten, approving one of them again replaces its connection: no more room needed.
+    assert await _code(http, acme["approver"], connected[0]["client_id"], _pkce()[1])
 
 
 async def test_signing_someone_out_everywhere_disconnects_their_apps(
