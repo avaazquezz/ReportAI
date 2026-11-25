@@ -33,8 +33,10 @@ _HASH = hash_password("x")  # bcrypt is slow on purpose: hash once, not per user
 
 # Routes whose ids are not one company's rows: the super admin's (every company is theirs),
 # webhooks (authenticated by the channel's own secret, tested with each channel), and the
-# starter-template catalog (shared by everyone; installing one creates it in the caller's company).
-NOT_TENANT_ROWS = ("/admin/tenants/", "/webhooks/", "/starter-templates/")
+# starter-template catalog (shared by everyone; installing one creates it in the caller's company),
+# and the MCP server's PDF links (a sealed token, not an id: it names a report its API key could see,
+# and is checked against that key again when opened; tests/test_mcp_server.py covers it).
+NOT_TENANT_ROWS = ("/admin/tenants/", "/webhooks/", "/starter-templates/", "/pdf-links/")
 
 DOCX = ("x.docx", b"PK\x03\x04 not really a docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 

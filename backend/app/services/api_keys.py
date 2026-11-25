@@ -114,10 +114,8 @@ async def authenticate(db: AsyncSession, secret: str) -> Principal | None:
     if not secret.startswith(PREFIX) or len(secret) > 100:
         return None
     key = await db.scalar(select(ApiKey).where(ApiKey.key_hash == _hash(secret), _LIVE))
-    if key is None:
-        return None
-    user = await db.get(TenantUser, key.user_id)
-    if user is None or user.tenant_id != key.tenant_id or not await can_sign_in(db, user) or is_demo_user(user):
+    user = await _acting(db, key)
+    if key is None or user is None:
         return None
     principal = Principal(key_id=key.id, user_id=user.id, tenant_id=key.tenant_id)
     # A conditional UPDATE, so two simultaneous requests don't both write it.
@@ -132,3 +130,18 @@ async def authenticate(db: AsyncSession, secret: str) -> Principal | None:
     if touched.rowcount:  # type: ignore[attr-defined]
         await db.commit()
     return principal
+
+
+async def person_of(db: AsyncSession, key_id: uuid.UUID) -> TenantUser | None:
+    """Who the key acts as right now, or None once it is revoked or expired or its person may not
+    act: what a link an assistant got through the key is worth when someone opens it."""
+    return await _acting(db, await db.scalar(select(ApiKey).where(ApiKey.id == key_id, _LIVE)))
+
+
+async def _acting(db: AsyncSession, key: ApiKey | None) -> TenantUser | None:
+    if key is None:
+        return None
+    user = await db.get(TenantUser, key.user_id)
+    if user is None or user.tenant_id != key.tenant_id or not await can_sign_in(db, user) or is_demo_user(user):
+        return None
+    return user
