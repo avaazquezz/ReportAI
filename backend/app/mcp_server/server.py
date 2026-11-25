@@ -51,7 +51,7 @@ from app.services.agent.tools.extraction_schema import (
     missing_required_fields,
 )
 from app.services.channels.web import WEB, web_connection
-from app.services.delivery.deliveries import attachment_name, local_day
+from app.services.delivery.deliveries import report_pdf_name
 from app.services.i18n import t
 
 INSTRUCTIONS = (
@@ -267,10 +267,7 @@ async def get_report_pdf(
                 f"This report has no PDF yet (status: {report.status}). ReportAI makes it when a person "
                 "approves the report; it is there once the status is delivered or delivery_failed."
             )
-        tenant = await db.get(Tenant, report.tenant_id)
-        assert tenant is not None
-        document_type = await db.get(DocumentType, report.document_type_id) if report.document_type_id else None
-    name = attachment_name(document_type.name if document_type else t(tenant.language, "report"), local_day(report, tenant.timezone))
+        name = await report_pdf_name(db, report)
     path = Path(report.file_path)
     # A recorded PDF missing from disk is a bug, not an answer: stat() raises and the SDK logs it.
     if path.stat().st_size > MAX_PDF_BYTES:

@@ -53,6 +53,17 @@ def attachment_name(document_type_name: str, day: date) -> str:
     return f"{safe} {day.isoformat()}.pdf"
 
 
+async def report_pdf_name(session: AsyncSession, report: Report) -> str:
+    """The name a report's PDF goes by everywhere: the email attachment, the panel's download and
+    the MCP server's copy."""
+    tenant = await session.get(Tenant, report.tenant_id)
+    if tenant is None:
+        raise RuntimeError(f"Report {report.id} belongs to no company")
+    document_type = await session.get(DocumentType, report.document_type_id) if report.document_type_id else None
+    name = document_type.name if document_type else t(tenant.language, "report")
+    return attachment_name(name, local_day(report, tenant.timezone))
+
+
 async def outcome_status(session: AsyncSession, report_id: uuid.UUID) -> str:
     """What a finished report reads as: 'delivered' once any copy arrived, 'delivery_failed' while
     every copy that was tried failed — so a report nobody received doesn't look done."""
@@ -133,7 +144,7 @@ async def send_pending(report_id: uuid.UUID) -> list[str]:
         language = tenant.language
         name = document_type.name if document_type else t(language, "report")
         day = local_day(report, tenant.timezone)
-        filename = attachment_name(name, day)
+        filename = await report_pdf_name(session, report)
 
         failures = []
         for delivery in pending:
