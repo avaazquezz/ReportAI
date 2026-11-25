@@ -10,7 +10,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-async def health(db: AsyncSession = Depends(get_db)) -> JSONResponse:
+async def health(db: AsyncSession = Depends(get_db, scope="function")) -> JSONResponse:
     try:
         await db.execute(text("SELECT 1"))
     except Exception:  # noqa: BLE001 — a health probe reports status, it never propagates

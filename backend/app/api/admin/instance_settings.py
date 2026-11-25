@@ -80,7 +80,7 @@ async def _ai_response(db: AsyncSession) -> AISettingsResponse:
 
 @router.get("/ai")
 async def get_ai_settings(
-    _: TenantUser = Depends(require_instance_admin), db: AsyncSession = Depends(get_db)
+    _: TenantUser = Depends(require_instance_admin), db: AsyncSession = Depends(get_db, scope="function")
 ) -> AISettingsResponse:
     return await _ai_response(db)
 
@@ -90,7 +90,7 @@ async def update_ai_settings(
     payload: AISettingsUpdate,
     request: Request,
     current_user: TenantUser = Depends(require_instance_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> AISettingsResponse:
     stored = await instance_settings.load(db)
     extraction = merged_extraction(stored, payload.extraction)
@@ -110,7 +110,7 @@ async def update_ai_settings(
 async def check_ai_settings(
     payload: AICheckRequest,
     current_user: TenantUser = Depends(require_instance_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CheckResponse:
     """Tries the extraction model, the transcription service, or both, as typed."""
     stored = await instance_settings.load(db)
@@ -128,7 +128,7 @@ async def check_ai_settings(
 
 @router.get("/email")
 async def get_email_settings(
-    _: TenantUser = Depends(require_instance_admin), db: AsyncSession = Depends(get_db)
+    _: TenantUser = Depends(require_instance_admin), db: AsyncSession = Depends(get_db, scope="function")
 ) -> EmailSettingsResponse:
     return EmailSettingsResponse.of(await instance_settings.smtp_config(db))
 
@@ -138,7 +138,7 @@ async def update_email_settings(
     payload: EmailSettings,
     request: Request,
     current_user: TenantUser = Depends(require_instance_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> EmailSettingsResponse:
     stored = await instance_settings.load(db)
     await instance_settings.save(db, payload.as_values())
@@ -151,7 +151,7 @@ async def update_email_settings(
 async def check_email_settings(
     payload: EmailCheckRequest,
     _: TenantUser = Depends(require_instance_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CheckResponse:
     """Sends a test email with the settings as typed (or as saved) to `to`."""
     stored = await instance_settings.load(db)

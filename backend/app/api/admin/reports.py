@@ -244,7 +244,7 @@ async def list_reports(
     limit: int = Query(default=100, le=500),
     filters: ReportFilters = Depends(_filters),
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> PaginatedResponse[ReportResponse]:
     tenant_id = require_tenant_id(current_user)
     filters = own_reports_only(filters, current_user)
@@ -269,7 +269,7 @@ def _cell(value: object) -> str:
 async def export_reports(
     filters: ReportFilters = Depends(_filters),
     current_user: TenantUser = Depends(require_tenant_member),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> Response:
     """The filtered history as a spreadsheet. Filtered to one document type, each field gets its
     own column; otherwise the fields go in one JSON column, since every type has different ones."""
@@ -325,7 +325,7 @@ async def export_reports(
 async def get_report(
     report_id: uuid.UUID,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ReportDetailResponse:
     return await _detail(db, await visible_report(db, report_id, current_user))
 
@@ -335,7 +335,7 @@ async def approve_report(
     report_id: uuid.UUID,
     payload: ApproveRequest | None = None,
     current_user: TenantUser = Depends(require_capturer),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ReportDetailResponse:
     """Approve a paused report, with the reviewer's corrections if any — the same as the requester
     confirming on the channel, and the recovery path when the approval prompt never reached them.
@@ -363,7 +363,7 @@ async def reply_to_report(
     text: Annotated[str | None, Form(max_length=20_000)] = None,
     audio: Annotated[UploadFile | None, File()] = None,
     current_user: TenantUser = Depends(require_capturer),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ReportDetailResponse:
     """What to change in a draft made in the app, said or typed: like answering the bot in a chat,
     the report is extracted again with it. Confirming is /approve."""
@@ -389,7 +389,7 @@ async def reject_report(
     report_id: uuid.UUID,
     payload: RejectRequest | None = None,
     current_user: TenantUser = Depends(require_approver),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ReportDetailResponse:
     """End a paused report without generating it, and tell the requester why. Unblocks the sender:
     their next message would otherwise be captured as a reply to this report."""
@@ -423,7 +423,7 @@ async def reject_report(
 async def retry_report(
     report_id: uuid.UUID,
     current_user: TenantUser = Depends(require_approver),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ReportDetailResponse:
     """Run a failed report again from the message that started it, once whatever made it fail is
     fixed (an AI key, a provider that was down). A report an admin rejected stays rejected."""
@@ -458,7 +458,7 @@ async def edit_report_fields(
     report_id: uuid.UUID,
     payload: EditFieldsRequest,
     current_user: TenantUser = Depends(require_approver),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ReportDetailResponse:
     """Correct a delivered report and regenerate its PDF (with no changes, it only regenerates:
     after a template update, say). Nothing is sent: resending is a separate decision."""
@@ -499,7 +499,7 @@ async def preview_report(
     report_id: uuid.UUID,
     payload: EditFieldsRequest | None = None,
     current_user: TenantUser = Depends(require_capturer),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> Response:
     """The PDF as it would come out with these edits, without saving or sending anything."""
     report = await visible_report(db, report_id, current_user)
@@ -528,7 +528,7 @@ async def resend_report(
     report_id: uuid.UUID,
     payload: ResendRequest | None = None,
     current_user: TenantUser = Depends(require_approver),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> ReportDetailResponse:
     report = await visible_report(db, report_id, current_user)
     if report.status not in FINISHED_STATUSES or not report.file_path:
@@ -545,7 +545,7 @@ async def resend_report(
 async def download_report(
     report_id: uuid.UUID,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> FileResponse:
     report = await visible_report(db, report_id, current_user)
     if not report.file_path:
@@ -557,7 +557,7 @@ async def download_report(
 async def report_audio(
     report_id: uuid.UUID,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> FileResponse:
     report = await visible_report(db, report_id, current_user)
     if not report.audio_path:
@@ -571,7 +571,7 @@ async def report_photo(
     report_id: uuid.UUID,
     photo_id: uuid.UUID,
     current_user: TenantUser = Depends(require_company_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> FileResponse:
     report = await visible_report(db, report_id, current_user)
     photo = await db.get(ReportAttachment, photo_id)

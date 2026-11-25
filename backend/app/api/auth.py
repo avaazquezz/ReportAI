@@ -94,7 +94,7 @@ async def _use_refresh_token(db: AsyncSession, token: str) -> dict[str, Any] | N
 
 @router.post("/auth/login")
 async def login(
-    payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: LoginRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> TokenResponse:
     email_key, ip_key = payload.email.lower(), audit.client_ip(request)
     await rate_limit.login_by_email.check(db, email_key)
@@ -125,7 +125,7 @@ async def login(
 
 
 @router.post("/auth/demo-login")
-async def demo_login(db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def demo_login(db: AsyncSession = Depends(get_db, scope="function")) -> TokenResponse:
     """One-click access to the public demo tenant. 404 unless DEMO_USER_EMAIL is
     configured — keeps the endpoint inert outside the demo deployment."""
     if not settings.DEMO_USER_EMAIL:
@@ -140,7 +140,7 @@ async def demo_login(db: AsyncSession = Depends(get_db)) -> TokenResponse:
 
 
 @router.post("/auth/refresh")
-async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db, scope="function")) -> TokenResponse:
     """A new pair for an unspent refresh token: the session outlives the one-hour access token
     without asking for the password again, and the old refresh token stops working."""
     claims = await _use_refresh_token(db, payload.refresh_token)
@@ -152,7 +152,7 @@ async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -
 
 
 @router.post("/auth/logout")
-async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) -> MessageResponse:
+async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db, scope="function")) -> MessageResponse:
     """Spends the refresh token, so signing out also ends the session on the server side."""
     await _use_refresh_token(db, payload.refresh_token)
     return MessageResponse(message="Signed out.")
@@ -170,7 +170,7 @@ async def update_profile(
     payload: ProfileUpdateRequest,
     request: Request,
     current_user: TenantUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> UserResponse:
     if payload.full_name != current_user.full_name:
         await audit.record(
@@ -187,7 +187,7 @@ async def change_password(
     payload: ChangePasswordRequest,
     request: Request,
     current_user: TenantUser = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> TokenResponse:
     """A new password signs the account out everywhere else; this session gets fresh tokens."""
     if not verify_password(payload.current_password, current_user.hashed_password):
@@ -201,7 +201,7 @@ async def change_password(
 
 @router.post("/auth/forgot-password")
 async def forgot_password(
-    payload: ForgotPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: ForgotPasswordRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> MessageResponse:
     """Always returns the same message regardless of whether the email exists — the
     response, and any email-delivery failure, must never let a caller distinguish a
@@ -242,7 +242,7 @@ async def forgot_password(
 
 @router.post("/auth/reset-password")
 async def reset_password(
-    payload: ResetPasswordRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: ResetPasswordRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> MessageResponse:
     try:
         user = await consume_reset_token(db, payload.token)
@@ -263,7 +263,7 @@ _MAGIC_LINK_MESSAGE = "If that email belongs to a technician, we've sent them a 
 
 @router.post("/auth/magic-link")
 async def request_magic_link(
-    payload: MagicLinkRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: MagicLinkRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> MessageResponse:
     """A technician asks for a sign-in link. The same answer whoever asks, so the endpoint never
     says whether an address has an account (or a technician's)."""
@@ -282,7 +282,7 @@ async def request_magic_link(
 
 @router.post("/auth/magic")
 async def magic_sign_in(
-    payload: MagicSignInRequest, request: Request, db: AsyncSession = Depends(get_db)
+    payload: MagicSignInRequest, request: Request, db: AsyncSession = Depends(get_db, scope="function")
 ) -> TokenResponse:
     """Spends an emailed sign-in (the link's token, or its code typed in the installed app) for a
     session. Every refusal reads the same."""

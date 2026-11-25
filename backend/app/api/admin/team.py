@@ -30,7 +30,7 @@ router = APIRouter(prefix="/team", tags=["admin:team"])
 
 @router.get("")
 async def list_team(
-    current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_tenant_admin), db: AsyncSession = Depends(get_db, scope="function")
 ) -> list[TeamMemberResponse]:
     tenant_id = require_tenant_id(current_user)
     members = await db.scalars(
@@ -44,7 +44,7 @@ async def invite_member(
     payload: TeamInviteRequest,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> TeamInviteResponse:
     tenant_id = require_tenant_id(current_user)
     try:
@@ -75,7 +75,7 @@ async def update_member(
     payload: TeamMemberUpdateRequest,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> TeamMemberResponse:
     tenant_id = require_tenant_id(current_user)
     member = await get_scoped_or_404(BaseRepository(TenantUser, db), member_id, tenant_id=tenant_id)
@@ -109,7 +109,7 @@ async def resend_invite(
     member_id: uuid.UUID,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> TeamInviteResponse:
     tenant_id = require_tenant_id(current_user)
     member = await get_scoped_or_404(BaseRepository(TenantUser, db), member_id, tenant_id=tenant_id)
@@ -130,7 +130,7 @@ async def sign_out_everywhere(
     member_id: uuid.UUID,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> None:
     """Ends every session the person holds, on every device, and revokes their AI assistant keys
     and connected apps: a lost or shared phone. They can sign in again (a technician with a new

@@ -18,7 +18,7 @@ router = APIRouter(tags=["webhooks"])
 async def telegram_webhook(
     connection_id: uuid.UUID,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> dict[str, str]:
     repo = BaseRepository(ChannelConnection, db)
     connection = await repo.get_by_id(connection_id)

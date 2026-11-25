@@ -20,6 +20,10 @@ class Base(DeclarativeBase):
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """The request's session, committed when the route returns. Declared everywhere as
+    `Depends(get_db, scope="function")`: with FastAPI's default ("request") the commit would run
+    after the response is sent, so a client could get a 201 for a row it can't read yet, or for one
+    whose commit then fails (tests/test_database_session.py)."""
     async with AsyncSessionLocal() as session:
         try:
             yield session

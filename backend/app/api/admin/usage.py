@@ -44,7 +44,7 @@ async def build_usage_summary(
 async def get_usage_summary(
     days: int = 30,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> UsageSummaryResponse:
     tenant_id = require_tenant_id(current_user)
     return await build_usage_summary(db, tenant_id=tenant_id, days=days)

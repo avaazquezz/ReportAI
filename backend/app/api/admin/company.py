@@ -66,14 +66,14 @@ def _forget(path: str | None) -> None:
 
 @router.get("")
 async def get_company(
-    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db, scope="function")
 ) -> CompanyResponse:
     return _response(await _tenant(db, current_user))
 
 
 @router.get("/plan")
 async def get_plan(
-    current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_tenant_member), db: AsyncSession = Depends(get_db, scope="function")
 ) -> PlanUsageResponse:
     tenant = await _tenant(db, current_user)
     return PlanUsageResponse(
@@ -91,7 +91,7 @@ async def delete_company(
     payload: CompanyDeletionRequest,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CompanyDeletionResponse:
     """Blocks the company at once (nobody in it can sign in or send anything) and purges all its
     data when the grace period ends; until then, reactivating it (support) cancels the deletion.
@@ -120,7 +120,7 @@ async def update_company(
     payload: CompanyUpdateRequest,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CompanyResponse:
     tenant = await _tenant(db, current_user)
     before = _settings(tenant)
@@ -138,7 +138,7 @@ async def upload_logo(
     file: UploadFile,
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CompanyResponse:
     raw = await file.read(_MAX_LOGO_BYTES + 1)
     if len(raw) > _MAX_LOGO_BYTES:
@@ -159,7 +159,7 @@ async def upload_logo(
 async def delete_logo(
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CompanyResponse:
     tenant = await _tenant(db, current_user)
     previous, tenant.logo_path = tenant.logo_path, None
@@ -172,7 +172,7 @@ async def delete_logo(
 
 @router.get("/logo")
 async def get_logo(
-    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_company_user), db: AsyncSession = Depends(get_db, scope="function")
 ) -> FileResponse:
     tenant = await _tenant(db, current_user)
     if not tenant.logo_path or not Path(tenant.logo_path).exists():
@@ -184,7 +184,7 @@ async def get_logo(
 async def export_company(
     request: Request,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> FileResponse:
     """Everything ReportAI holds for the company, as one zip (data portability)."""
     tenant = await _tenant(db, current_user)

@@ -67,7 +67,7 @@ def capturable_types(tenant_id: uuid.UUID) -> Select[DocumentType]:
 
 @router.get("/capture/document-types")
 async def capture_document_types(
-    current_user: TenantUser = Depends(require_capturer), db: AsyncSession = Depends(get_db)
+    current_user: TenantUser = Depends(require_capturer), db: AsyncSession = Depends(get_db, scope="function")
 ) -> list[CaptureDocumentType]:
     """What the app offers to record (capturable_types). Just the picker's fields: a technician
     has no business with the prompts or the recipients."""
@@ -83,7 +83,7 @@ async def capture_report(
     audio: Annotated[UploadFile | None, File()] = None,
     photos: Annotated[list[UploadFile] | None, File()] = None,
     current_user: TenantUser = Depends(require_capturer),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> CaptureResponse:
     """Starts a report from a voice note and/or a typed note, with its photos. The Idempotency-Key
     (a UUID the app makes before the first try) becomes the report's id, so a retry after a lost

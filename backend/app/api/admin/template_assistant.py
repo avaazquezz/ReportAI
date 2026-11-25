@@ -62,7 +62,7 @@ async def analyze_example(
     document_type_id: uuid.UUID,
     file: UploadFile,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> Draft:
     """Reads a filled-in example and proposes the fields and where each one goes."""
     tenant_id, doc_type, tenant = await _context(db, current_user, document_type_id)
@@ -94,7 +94,7 @@ async def preview_template(
     draft_id: uuid.UUID,
     payload: PreviewRequest,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> Response:
     """A test render as PDF, with the proposal as it stands — nothing is saved."""
     tenant_id, _, tenant = await _context(db, current_user, document_type_id)
@@ -117,7 +117,7 @@ async def apply_template(
     draft_id: uuid.UUID,
     payload: ApplyRequest,
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> DocumentTypeResponse:
     """Builds the template from the example, adds its fields to the document type and makes it
     the template reports render with."""

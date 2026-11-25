@@ -22,7 +22,7 @@ async def list_audit_events(
     limit: int = Query(default=100, ge=1, le=500),
     action: str | None = Query(default=None, max_length=64, description="Only actions starting with this, e.g. auth."),
     current_user: TenantUser = Depends(require_tenant_admin),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> PaginatedResponse[AuditEventResponse]:
     tenant_id = require_tenant_id(current_user)
     where = [AuditEvent.tenant_id == tenant_id]
