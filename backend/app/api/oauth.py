@@ -66,7 +66,7 @@ MAX_REGISTRATION_BYTES = 16 * 1024
 
 
 def _provider(request: Request, db: AsyncSession) -> ReportAIProvider:
-    return ReportAIProvider(db, client_ip=audit.client_ip(request))
+    return ReportAIProvider(db, client_ip=audit.requester(request))
 
 
 @router.get("/metadata")
@@ -112,7 +112,7 @@ async def token(request: Request, db: AsyncSession = Depends(get_db)) -> Respons
 @router.post("/register")
 async def register(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
     """Dynamic Client Registration (RFC 7591), for clients without a metadata document."""
-    ip = audit.client_ip(request)
+    ip = audit.requester(request)
     await rate_limit.oauth_register_by_ip.check(db, ip)
     await rate_limit.oauth_register_by_ip.record(db, ip)
     body = await _body_within(request, MAX_REGISTRATION_BYTES)
@@ -169,7 +169,7 @@ async def consent_details(
     db: AsyncSession = Depends(get_db),
 ) -> ConsentDetails:
     consent = read_consent_request(sealed)
-    client = await consent_client(db, consent, client_ip=audit.client_ip(request))
+    client = await consent_client(db, consent, client_ip=audit.requester(request))
     # A metadata document's address names who publishes the app; a registered app named itself.
     published = urlsplit(client.client_id).hostname if client.client_id.startswith("https://") else None
     return ConsentDetails(
@@ -189,7 +189,7 @@ async def answer_consent(
     db: AsyncSession = Depends(get_db),
 ) -> ConsentRedirect:
     consent = read_consent_request(body.request)
-    client = await consent_client(db, consent, client_ip=audit.client_ip(request))
+    client = await consent_client(db, consent, client_ip=audit.requester(request))
     if body.approve:
         redirect_to = await approve(db, current_user, consent, client)
     else:

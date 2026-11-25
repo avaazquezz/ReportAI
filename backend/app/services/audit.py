@@ -3,6 +3,7 @@ plan), to what, when and from where — so a company's admin, support or an inci
 answer "who changed this?". Each event is added to the caller's session and commits with the
 change it describes. Secrets never go in: for a settings change, only which fields changed."""
 
+import ipaddress
 import uuid
 from collections.abc import Mapping
 from datetime import timedelta
@@ -21,6 +22,21 @@ KEEP_EVENTS_FOR = timedelta(days=365)
 
 def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
+
+
+def requester(request: Request) -> str:
+    """Whom a per-requester limit counts: the address, or an IPv6 address's /64, which one home or
+    one server gets whole (otherwise changing its last bits would buy more tries)."""
+    ip = client_ip(request)
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:  # no address to read ("unknown"): those all share one count
+        return ip
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped is not None:
+            return str(address.ipv4_mapped)
+        return str(ipaddress.IPv6Network((address, 64), strict=False))
+    return ip
 
 
 def changed_fields(before: Mapping[str, Any], after: Mapping[str, Any]) -> list[str]:
