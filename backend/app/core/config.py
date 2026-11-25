@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     # ── Frontend / CORS ──────────────────────────────────────────────────
     FRONTEND_ORIGIN: str = "http://localhost:3000"
 
+    # ── OAuth sign-in for AI assistants (services/oauth/): claude.ai, ChatGPT or Cursor connect
+    #    to the MCP server by having the person sign in here and approve them, instead of pasting
+    #    an API key. FRONTEND_ORIGIN is the authorization server, so it must be the public HTTPS
+    #    address. Off = none of its routes exist and /mcp takes API keys only, as always. ──────
+    MCP_OAUTH_ENABLED: bool = False
+
     # ── Reverse proxy (prod serves the API under this stripped prefix;
     #    empty in dev, where the API is reached directly) ─────────────────
     API_ROOT_PATH: str = ""

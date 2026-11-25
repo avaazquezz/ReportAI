@@ -6,7 +6,7 @@ const { t } = useI18n()
 
 const ITEMS = ['isolation', 'spend', 'data', 'access'] as const
 // backend/tests/test_tenant_isolation.py: ID_ROUTES, the routes with an id in the OpenAPI schema.
-const ROUTES_WITH_AN_ID = 30
+const ROUTES_WITH_AN_ID = 31
 
 // An excerpt of backend/app/core/scoping.py (type parameters left out for the page).
 const CODE = `async def get_scoped_or_404(repo, id_, *, tenant_id):

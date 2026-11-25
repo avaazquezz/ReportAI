@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.routing import Route
 
-from app.api import auth, capture, health, pdf_links, public_demo, setup, signup
+from app.api import auth, capture, health, oauth, pdf_links, public_demo, setup, signup
 from app.api.admin import api_keys as admin_api_keys
 from app.api.admin import audit as admin_audit
 from app.api.admin import channel_connections as admin_channel_connections
@@ -92,6 +92,7 @@ app.include_router(admin_dashboard.router)
 app.include_router(admin_audit.router)
 app.include_router(admin_api_keys.router)
 app.include_router(pdf_links.router)
+app.include_router(oauth.router)
 app.include_router(telegram_webhook.router)
 app.include_router(whatsapp_webhook.router)
 app.include_router(email_webhook.router)

@@ -4,8 +4,9 @@ Stateless and JSON: each POST is a whole exchange and nothing is kept between re
 of the API's workers can answer any request (a session kept in one worker's memory would be missing
 in the other) and there is nothing to clean up.
 
-Every tool acts as the API key's person through the same functions the panel uses
-(`visible_report`, `own_reports_only`): whatever the panel would hide from them, the tools hide too,
+Every tool acts as the person behind the caller's API key or connected app, through the same
+functions the panel uses (`visible_report`, `own_reports_only`): whatever the panel would hide from
+them, the tools hide too,
 and another company's report is "not found", never "forbidden". The one write is a draft, and a
 draft is never sent: a person reviews and approves it in ReportAI.
 """
@@ -37,7 +38,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.deps import CAPTURER_ROLES
 from app.core.exceptions import ReportAIException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
-from app.mcp_server.auth import ApiKeyAuth, current_principal
+from app.mcp_server.auth import McpAuth, current_principal
 from app.models.document_type import DocumentType
 from app.models.report import Report
 from app.models.tenant import Tenant
@@ -199,7 +200,7 @@ async def search_reports(
     async with AsyncSessionLocal() as db:
         user = await _caller(db)
         tenant = await db.get(Tenant, require_tenant_id(user))
-        assert tenant is not None  # a key's person is in an active company (api_keys.authenticate)
+        assert tenant is not None  # the caller's person is in an active company (credentials.acting_person)
         zone = ZoneInfo(tenant.timezone)
         filters = own_reports_only(
             ReportFilters(
@@ -384,7 +385,7 @@ class McpEndpoint:
             transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
         )
         async with server.session_manager.run():
-            self._app = ApiKeyAuth(app)
+            self._app = McpAuth(app)
             try:
                 yield
             finally:

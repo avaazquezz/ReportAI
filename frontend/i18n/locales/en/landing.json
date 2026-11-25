@@ -565,7 +565,7 @@
       "items": {
         "isolation": {
           "title": "Isolation in code, tested route by route",
-          "body": "Every route takes the company from the signed-in user, never from the request, and loads rows through one helper that filters by it. Another company's report answers 404, not 403: a 403 would confirm the id exists. A test walks the OpenAPI with two companies, tries all 30 routes with an id, and fails if a new route shows up unclassified."
+          "body": "Every route takes the company from the signed-in user, never from the request, and loads rows through one helper that filters by it. Another company's report answers 404, not 403: a 403 would confirm the id exists. A test walks the OpenAPI with two companies, tries all 31 routes with an id, and fails if a new route shows up unclassified."
         },
         "spend": {
           "title": "Quotas and capped spend",
@@ -582,7 +582,7 @@
       },
       "codeLabel": "backend/app/core/scoping.py",
       "matrixLabel": "Isolation matrix",
-      "matrixCaption": "30 routes with an id, requested by another company's admin: 30 answers of 404 and nothing changed. As a technician, 403 or 404: never a 2xx.",
+      "matrixCaption": "31 routes with an id, requested by another company's admin: 31 answers of 404 and nothing changed. As a technician, 403 or 404: never a 2xx.",
       "why": "Isolation in code rather than Postgres RLS, for now: one place to review and one test that covers it all. RLS comes with the first company that asks for it."
     },
     "fieldApp": {

@@ -16,6 +16,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.models.api_key import ApiKey
@@ -23,6 +24,7 @@ from app.models.channel_connection import ChannelConnection
 from app.models.delivery import Delivery
 from app.models.document_template import DocumentTemplate
 from app.models.document_type import DocumentType
+from app.models.oauth import OAuthClient, OAuthGrant, OAuthToken
 from app.models.report import Report
 from app.models.report_attachment import ReportAttachment
 from app.models.sender_invite import SenderInvite
@@ -73,7 +75,14 @@ ID_ROUTES: dict[tuple[str, str], dict[str, Any]] = {
     ("POST", "/team/{member_id}/invite"): {},
     ("POST", "/team/{member_id}/sign-out"): {},
     ("DELETE", "/api-keys/{key_id}"): {},
+    ("DELETE", "/oauth/grants/{grant_id}"): {},
 }
+
+
+@pytest.fixture(autouse=True)
+def _oauth_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Off, its routes are a 404 for everyone, which would prove nothing about the scoping."""
+    monkeypatch.setattr(settings, "MCP_OAUTH_ENABLED", True)
 
 
 def _id_routes_in_the_app() -> set[tuple[str, str]]:
@@ -148,7 +157,13 @@ async def _company(db: AsyncSession, name: str) -> dict[str, Any]:
     photo = ReportAttachment(tenant_id=tenant.id, report_id=report.id, sender_identifier="42", path="/nonexistent.jpg")
     delivery = Delivery(report_id=report.id, kind="email", destination=f"boss@{name.lower()}.test")
     key = ApiKey(tenant_id=tenant.id, user_id=member.id, name=f"{name} Claude", key_hash=uuid.uuid4().hex * 2, prefix="rpt_isolated")
-    db.add_all([photo, delivery, key])
+    app_client = OAuthClient(client_id=str(uuid.uuid4()), kind="dcr", client_metadata={"client_name": f"{name} app"})
+    db.add_all([photo, delivery, key, app_client])
+    await db.flush()
+    grant = OAuthGrant(tenant_id=tenant.id, user_id=member.id, oauth_client_id=app_client.id, scope="reportai", resource="x")
+    db.add(grant)
+    await db.flush()
+    db.add(OAuthToken(token_hash=uuid.uuid4().hex * 2, grant_id=grant.id, kind="refresh", expires_at=datetime.now(UTC) + timedelta(days=1)))
     await db.commit()
     return {
         "tenant": tenant,
@@ -164,6 +179,7 @@ async def _company(db: AsyncSession, name: str) -> dict[str, Any]:
             "photo_id": photo.id,
             "member_id": member.id,
             "key_id": key.id,
+            "grant_id": grant.id,
         },
     }
 
@@ -177,7 +193,7 @@ async def _snapshot(db: AsyncSession, tenant: Tenant) -> str:
     """Everything of the company's that a route could change, to compare before and after."""
     rows: list[Any] = []
     fresh = {"populate_existing": True}  # read the database, not the session's copies
-    for model in (DocumentType, DocumentTemplate, ChannelConnection, SenderInvite, Report, TenantUser, ApiKey):
+    for model in (DocumentType, DocumentTemplate, ChannelConnection, SenderInvite, Report, TenantUser, ApiKey, OAuthGrant):
         query = select(model).where(model.tenant_id == tenant.id).order_by(model.id).execution_options(**fresh)
         for row in (await db.scalars(query)).all():
             rows.append({c.name: getattr(row, c.key) for c in model.__mapper__.columns if c.name != "updated_at"})
@@ -211,7 +227,10 @@ async def test_another_company_gets_404_and_changes_nothing(
     assert await _snapshot(db, acme["tenant"]) == before
 
 
-LISTS = ["/reports", "/reports/export.csv", "/channels", "/team", "/document-types", "/dashboard", "/usage/summary", "/audit", "/api-keys"]
+LISTS = [
+    "/reports", "/reports/export.csv", "/channels", "/team", "/document-types", "/dashboard", "/usage/summary", "/audit", "/api-keys",
+    "/oauth/grants",
+]
 
 
 @pytest.mark.parametrize("path", LISTS)
