@@ -30,6 +30,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.api.admin.reports import own_reports_only, requester_names, visible_report
 from app.api.capture import capturable_types
+from app.api.pdf_links import pdf_link
 from app.core import rate_limit
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -63,8 +64,9 @@ INSTRUCTIONS = (
 )
 
 MAX_DRAFT_CHARS = 20_000
-# Base64 makes it a third bigger again in the tool result, all of it in the assistant's context.
-MAX_PDF_BYTES = 5 * 1024 * 1024
+# Embedded only up to this: base64 makes it a third bigger, and claude.ai takes ~150,000 characters
+# of tool result (claude.com/docs/connectors/building). Bigger ones go by their download link alone.
+MAX_EMBEDDED_PDF_BYTES = 100 * 1024
 _STATUS_HELP = (
     "One of: " + ", ".join(ALL_STATUSES) + ". awaiting_approval = waiting for a person to review; delivered = sent"
 )
@@ -254,8 +256,9 @@ async def get_report(report_id: Annotated[uuid.UUID, Field(description="From rep
 async def get_report_pdf(
     report_id: Annotated[uuid.UUID, Field(description="From reportai_search_reports")],
 ) -> list[TextContent | EmbeddedResource]:
-    """The finished report document as a PDF file, the same one the panel downloads and ReportAI
-    sent. Use it when the user wants the document itself (to read, keep, forward or attach), not
+    """The finished report document as a PDF, the same one the panel downloads and ReportAI sent:
+    a download link valid for 10 minutes (always; give it to the user), and the file itself when it
+    is small enough. Use it when the user wants the document (to read, keep, forward or attach), not
     just its contents: reportai_get_report answers questions about the fields. Only an approved
     report has a PDF (status delivered or delivery_failed)."""
     async with AsyncSessionLocal() as db:
@@ -269,12 +272,13 @@ async def get_report_pdf(
             )
         name = await report_pdf_name(db, report)
     path = Path(report.file_path)
+    link = pdf_link(report.id, current_principal().key_id)
     # A recorded PDF missing from disk is a bug, not an answer: stat() raises and the SDK logs it.
-    if path.stat().st_size > MAX_PDF_BYTES:
-        raise ToolError(f"This PDF is over {MAX_PDF_BYTES // (1024 * 1024)} MB, too big to hand over here; download it from {_url(report.id)}")
+    if path.stat().st_size > MAX_EMBEDDED_PDF_BYTES:
+        return [TextContent(text=f"{name}: download it (link valid 10 minutes) from {link} — too big to attach here. In ReportAI: {_url(report.id)}")]
     pdf = await asyncio.to_thread(path.read_bytes)
     return [
-        TextContent(text=f"{name} — {_url(report.id)}"),
+        TextContent(text=f"{name}: download it (link valid 10 minutes) from {link} — attached below too. In ReportAI: {_url(report.id)}"),
         EmbeddedResource(
             # Not the panel URL: an https URI tells the client it can fetch the file itself, and
             # the panel needs a login (MCP spec, resources: common URI schemes).
