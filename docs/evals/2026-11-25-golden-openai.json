@@ -1,0 +1,280 @@
+{
+  "eval": "golden_set",
+  "run_at": "2026-11-25T12:30:00+00:00",
+  "commit": "8fcc1f3",
+  "provider": "openai",
+  "models": [
+    "gpt-6.1-terra"
+  ],
+  "gate": {
+    "min_accuracy": 0.9,
+    "max_invented": 0
+  },
+  "cases": 83,
+  "fields": 646,
+  "accuracy": 0.9752,
+  "verdicts": {
+    "correct": 630,
+    "wrong": 12,
+    "missed": 4,
+    "invented": 0
+  },
+  "failed_cases": {},
+  "retried_cases": 0,
+  "spend": {
+    "model_calls": 83,
+    "input_tokens": 73389,
+    "output_tokens": 13401,
+    "cost_usd": 0.1404
+  },
+  "by_type": {
+    "str": {
+      "correct": 86,
+      "wrong": 1,
+      "missed": 0,
+      "invented": 0
+    },
+    "date": {
+      "correct": 138,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "enum": {
+      "correct": 55,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "time": {
+      "correct": 55,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "list[object]": {
+      "correct": 44,
+      "wrong": 11,
+      "missed": 0,
+      "invented": 0
+    },
+    "list[str]": {
+      "correct": 108,
+      "wrong": 0,
+      "missed": 3,
+      "invented": 0
+    },
+    "bool": {
+      "correct": 54,
+      "wrong": 0,
+      "missed": 1,
+      "invented": 0
+    },
+    "phone": {
+      "correct": 55,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "email": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    }
+  },
+  "by_field": {
+    "cliente": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "fecha_visita": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "tipo_visita": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "hora_inicio": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "trabajos": {
+      "correct": 34,
+      "wrong": 1,
+      "missed": 0,
+      "invented": 0
+    },
+    "materiales": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "urgente": {
+      "correct": 34,
+      "wrong": 0,
+      "missed": 1,
+      "invented": 0
+    },
+    "telefono_contacto": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "email_contacto": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "proxima_visita": {
+      "correct": 35,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "fecha": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "asistentes": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "temas": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "acuerdos": {
+      "correct": 10,
+      "wrong": 10,
+      "missed": 0,
+      "invented": 0
+    },
+    "proxima_reunion": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "lugar": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "date": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "time": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "location": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "severity": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "injured": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "witnesses": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "reporter_phone": {
+      "correct": 20,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "visit_date": {
+      "correct": 4,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "client_name": {
+      "correct": 4,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "contacts": {
+      "correct": 4,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "products_discussed": {
+      "correct": 4,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "next_steps": {
+      "correct": 3,
+      "wrong": 1,
+      "missed": 0,
+      "invented": 0
+    },
+    "meeting_date": {
+      "correct": 4,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "attendees": {
+      "correct": 1,
+      "wrong": 0,
+      "missed": 3,
+      "invented": 0
+    },
+    "summary": {
+      "correct": 4,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    },
+    "action_items": {
+      "correct": 4,
+      "wrong": 0,
+      "missed": 0,
+      "invented": 0
+    }
+  }
+}
