@@ -201,27 +201,52 @@ async def give_up(report_id: uuid.UUID, error: str, reason_key: str = "failure")
         await get_checkpointer().adelete_thread(str(report_id))
 
 
-async def _heartbeat(job_id: uuid.UUID, worker_id: str) -> None:
+async def _heartbeat(job_id: uuid.UUID, worker_id: str, work: asyncio.Task[None]) -> None:
+    """Renews the lease while `work` runs. Returns only when the lease was lost, after cancelling
+    `work`: the job is another worker's now, and two runs of one report would race each other."""
     while True:
         await asyncio.sleep(LEASE_SECONDS / 3)
         if not await extend_lease(job_id, worker_id):
             logger.error("Lost the lease on job %s; another worker may have taken it", job_id)
+            work.cancel()
             return
 
 
+def _lease_lost(heartbeat: asyncio.Task[None]) -> bool:
+    return heartbeat.done() and not heartbeat.cancelled() and heartbeat.exception() is None
+
+
+def _shutting_down() -> bool:
+    """This task itself is being cancelled (the worker stopping), not just the work it awaits."""
+    task = asyncio.current_task()
+    return task is not None and task.cancelling() > 0
+
+
 async def process(job: ClaimedJob, worker_id: str) -> None:
-    """Runs a job to completion, retry or surrender — never raises."""
-    heartbeat = asyncio.create_task(_heartbeat(job.id, worker_id))
+    """Runs a job to completion, retry or surrender — never raises, except to let the worker's own
+    cancellation through. Once the lease is lost it records nothing: the job and its report are
+    the new owner's to finish or fail."""
+    work = asyncio.create_task(execute(job))
+    heartbeat = asyncio.create_task(_heartbeat(job.id, worker_id, work))
     try:
         async with asyncio.timeout(settings.JOB_TIMEOUT_SECONDS):
-            await execute(job)
-        await complete(job.id, worker_id)
+            await work
+        if not _lease_lost(heartbeat):
+            await complete(job.id, worker_id)
+    except asyncio.CancelledError:
+        if _shutting_down() or not _lease_lost(heartbeat):
+            raise
     except Exception as exc:
+        if _lease_lost(heartbeat):
+            return  # e.g. a library that turned our cancellation into an error of its own
         error = describe_exception(exc)
         permanent = isinstance(exc, PermanentJobError)
         logger.exception("Job %s (%s) failed on attempt %s", job.id, job.kind, job.attempts)
-        retrying = await fail_or_retry(job, worker_id, error, retryable=not permanent)
-        if not retrying:
+        outcome = await fail_or_retry(job, worker_id, error, retryable=not permanent)
+        if outcome == "not_ours":
+            # The lease ran out before the heartbeat noticed: the report is the new owner's.
+            logger.error("Job %s was taken by another worker before this one could record its failure", job.id)
+        elif outcome == "failed":
             await give_up(job.report_id, error, exc.reason_key if isinstance(exc, PermanentJobError) else "failure")
     finally:
         heartbeat.cancel()

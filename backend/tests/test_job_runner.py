@@ -1,6 +1,8 @@
 """The worker's job execution: start or continue a report's run, resume a pause (by text or by
 voice), and on failure either try again or give up and tell the person."""
 
+import asyncio
+import logging
 import uuid
 from types import SimpleNamespace
 from typing import Any
@@ -8,7 +10,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from langgraph.types import Command
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.channel_connection import ChannelConnection
@@ -317,3 +319,155 @@ async def test_a_job_for_a_deleted_report_is_dropped_quietly(
     await db.commit()  # the FK cascades the job away too: nothing left to run
 
     assert await claim_next("test-worker") is None
+
+
+# A graph step that runs long enough for the lease to be renewed (or lost) meanwhile, and
+# records whether it was cancelled.
+class SlowStep:
+    def __init__(self, seconds: float, *, on_cancel: type[BaseException] = asyncio.CancelledError) -> None:
+        self.seconds, self.on_cancel = seconds, on_cancel
+        self.started, self.cancelled = asyncio.Event(), asyncio.Event()
+
+    async def run(self, *_args: Any) -> dict[str, Any]:
+        self.started.set()
+        try:
+            await asyncio.sleep(self.seconds)
+        except asyncio.CancelledError as exc:
+            self.cancelled.set()
+            # Some libraries turn a cancellation into an error of their own: that is no reason
+            # to fail a job this worker no longer owns.
+            raise self.on_cancel() from exc
+        raise RuntimeError("the old worker finished after all")
+
+
+@pytest.fixture
+def quick_lease(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Renew the lease every 10 ms instead of every 40 s."""
+    monkeypatch.setattr(runner, "LEASE_SECONDS", 0.03)
+
+
+async def _taken_by_another_worker(db: AsyncSession, job: ClaimedJob) -> None:
+    """What the claim does once this worker's lease has run out: the job is someone else's now."""
+    await db.execute(update(Job).where(Job.id == job.id).values(locked_by="other-worker"))
+    await db.commit()
+
+
+@pytest.mark.parametrize("on_cancel", [asyncio.CancelledError, RuntimeError], ids=["cancelled", "cancel-as-error"])
+async def test_a_lost_lease_stops_the_work_and_leaves_the_job_and_report_to_their_new_owner(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock, quick_lease: None, caplog: pytest.LogCaptureFixture, on_cancel: type[BaseException],
+) -> None:
+    report = await _report(db)
+    step = SlowStep(1, on_cancel=on_cancel)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
+    # The last attempt: if this worker still did its bookkeeping, it would fail the report.
+    job = await _queued(db, report, max_attempts=1)
+
+    with caplog.at_level(logging.ERROR, logger="app.services.jobs.runner"):
+        running = asyncio.create_task(process(job, "test-worker"))
+        await asyncio.wait_for(step.started.wait(), timeout=5)
+        await _taken_by_another_worker(db, job)
+        await asyncio.wait_for(running, timeout=5)
+
+    assert step.cancelled.is_set(), "the work in hand should be cancelled as soon as the lease is lost"
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.locked_by, stored.last_error) == ("running", "other-worker", None)
+    await db.refresh(report)
+    assert (report.status, report.error_detail) == ("pending", None)
+    adapter.send_message.assert_not_awaited()
+    checkpoints.assert_not_awaited()
+    assert [r.getMessage() for r in caplog.records] == [f"Lost the lease on job {job.id}; another worker may have taken it"]
+
+
+async def test_a_failure_after_an_unnoticed_takeover_leaves_the_job_and_report_to_their_new_owner(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock, caplog: pytest.LogCaptureFixture,
+) -> None:
+    # The worker stalled past its lease and another took the job; the step fails before the next
+    # heartbeat (every 40 s here) could notice. Last attempt: giving up would fail the report.
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = RuntimeError("the provider is down")
+    job = await _queued(db, report, max_attempts=1)
+    await _taken_by_another_worker(db, job)
+
+    with caplog.at_level(logging.ERROR, logger="app.services.jobs.runner"):
+        await asyncio.wait_for(process(job, "test-worker"), timeout=5)
+
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.locked_by, stored.last_error) == ("running", "other-worker", None)
+    await db.refresh(report)
+    assert (report.status, report.error_detail) == ("pending", None)
+    adapter.send_message.assert_not_awaited()
+    checkpoints.assert_not_awaited()
+    taken = f"Job {job.id} was taken by another worker before this one could record its failure"
+    assert [r.getMessage() for r in caplog.records].count(taken) == 1
+
+
+async def test_a_job_that_keeps_its_lease_is_marked_done_and_leaves_no_task_behind(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, quick_lease: None
+) -> None:
+    report = await _report(db)
+
+    async def a_few_renewals(*_args: Any) -> dict[str, Any]:
+        await asyncio.sleep(0.05)
+        return {}
+
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = a_few_renewals
+    job = await _queued(db, report)
+    tasks_before = asyncio.all_tasks()
+
+    await process(job, "test-worker")
+
+    assert asyncio.all_tasks() == tasks_before  # the lease keeper and the work both ended
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.locked_by) == ("done", None)
+
+
+async def test_a_job_past_its_time_limit_is_stopped_and_retried(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    step = SlowStep(10)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
+    monkeypatch.setattr(runner.settings, "JOB_TIMEOUT_SECONDS", 0.5)
+    job = await _queued(db, report)
+
+    await asyncio.wait_for(process(job, "test-worker"), timeout=5)
+
+    assert step.cancelled.is_set()
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.last_error) == ("queued", "TimeoutError")
+
+
+async def test_the_worker_shutting_down_cancels_the_job_and_leaves_it_for_the_next_worker(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock, quick_lease: None,
+) -> None:
+    report = await _report(db)
+    step = SlowStep(10)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
+    job = await _queued(db, report, max_attempts=1)
+    tasks_before = asyncio.all_tasks()
+    running = asyncio.create_task(process(job, "test-worker"))
+    await asyncio.wait_for(step.started.wait(), timeout=5)
+
+    running.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await running
+
+    assert step.cancelled.is_set()
+    assert asyncio.all_tasks() == tasks_before
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.locked_by) == ("running", "test-worker")  # its lease will run out
+    await db.refresh(report)
+    assert report.status == "pending"
