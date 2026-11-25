@@ -1,0 +1,187 @@
+# The end-to-end test's stack (frontend/e2e): a one-company installation laid out as
+# infra/install sets it up (Caddy in front, the production images, built from this checkout), plus
+# Mailpit to catch the email and a stand-in for the AI provider (e2e/ai_stub.py). No .env, no real
+# key, nothing sent off the machine. A project of its own, on ports of its own, so it never touches
+# the dev stack's containers or volumes. From the repo root:
+#
+#   docker compose -f infra/docker-compose.e2e.yml up -d --build --wait
+#   docker compose -f infra/docker-compose.e2e.yml run --rm seed
+#   (cd frontend && npm run test:e2e)
+#   docker compose -f infra/docker-compose.e2e.yml down -v
+name: reportai-e2e
+
+x-backend: &backend
+  image: reportai-e2e-backend:local
+  build:
+    context: ../backend
+    target: runtime
+  # Throwaway values for a throwaway stack: never reuse them anywhere else.
+  environment: &backend-env
+    POSTGRES_HOST: postgres
+    POSTGRES_USER: reportai
+    POSTGRES_PASSWORD: e2e-only-password
+    POSTGRES_DB: reportai
+    SECRET_KEY: e2e-only-secret-key-not-used-anywhere-real
+    ENCRYPTION_KEY: e2e-only-encryption-key-not-used-anywhere-real
+    ENVIRONMENT: production
+    SINGLE_TENANT: "true"
+    API_ROOT_PATH: /api
+    FRONTEND_ORIGIN: http://localhost:${E2E_HTTP_PORT:-18080}
+    GOTENBERG_URL: http://gotenberg:3000
+    DOCUMENT_STORAGE_PATH: /app/storage
+    # Nothing leaves the machine: no update check against GitHub.
+    UPDATE_CHECK_ENABLED: "false"
+  volumes:
+    - storage:/app/storage
+  networks: [internal]
+
+services:
+  caddy:
+    image: caddy:2.10
+    environment:
+      SITE_ADDRESS: ":80"
+    volumes:
+      - ./install/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:${E2E_HTTP_PORT:-18080}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/login"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks: [internal]
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: reportai
+      POSTGRES_PASSWORD: e2e-only-password
+      POSTGRES_DB: reportai
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reportai -d reportai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    environment:
+      MP_DISABLE_VERSION_CHECK: "true"
+    # The test reads what arrived through Mailpit's API.
+    ports:
+      - "127.0.0.1:${E2E_MAILPIT_PORT:-18025}:8025"
+    networks: [internal]
+
+  ai-stub:
+    # The base image the backend is built on (same digest as backend/Dockerfile): already pulled.
+    image: python:3.11-slim@sha256:e41613d42d4891e4930f79523f93f81bbc7632584ec65e36ab055f41a800b41e
+    command: ["python", "/e2e/ai_stub.py"]
+    volumes:
+      - ./e2e:/e2e:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  migrate:
+    <<: *backend
+    command: sh -c "alembic upgrade head && python scripts/setup_checkpointer.py"
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    <<: *backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      ai-stub:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *backend
+    command: python -m app.worker
+    # The image's check calls the API on :8000, which the worker doesn't serve.
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotenberg:
+        condition: service_healthy
+      ai-stub:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    image: reportai-e2e-frontend:local
+    build:
+      context: ../frontend
+    environment:
+      NUXT_PUBLIC_API_BASE: /api
+      NUXT_API_BASE_SERVER: http://backend:8000
+      # Plain HTTP on localhost, like an installation reached by IP (install.sh does the same).
+      NUXT_PUBLIC_SECURE_COOKIES: "false"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [internal]
+
+  # One-shot, run after `up`: creates the company, its administrator and a document type through
+  # the setup wizard's API (e2e/seed.py). It refuses to run without REPORTAI_E2E=1.
+  seed:
+    <<: *backend
+    profiles: [seed]
+    command: ["python", "/e2e/seed.py"]
+    environment:
+      <<: *backend-env
+      REPORTAI_E2E: "1"
+    volumes:
+      - ./e2e:/e2e:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  internal:
+
+volumes:
+  database:
+  storage:
