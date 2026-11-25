@@ -14,3 +14,10 @@ export function safeNext(next: unknown): string | null {
   const base = 'https://panel.invalid'
   return new URL(next, base).origin === base ? next : null
 }
+
+/** `path` carrying `next` on, if it is one of this site's: from the login page to the technicians'
+ * sign-in (/magic), so a code typed there still brings them back (to the OAuth consent page, say). */
+export function withNext(path: string, next: unknown): string {
+  const safe = safeNext(next)
+  return safe === null ? path : `${path}?next=${encodeURIComponent(safe)}`
+}

@@ -1,7 +1,7 @@
 // Run from frontend/ with: npm test
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { safeNext } from '../app/utils/safeNext.ts'
+import { safeNext, withNext } from '../app/utils/safeNext.ts'
 
 test('a path of this site is where the login page goes next', () => {
   assert.equal(safeNext('/dashboard'), '/dashboard')
@@ -30,4 +30,12 @@ test('a missing or repeated parameter is no destination', () => {
   assert.equal(safeNext(undefined), null)
   assert.equal(safeNext(null), null)
   assert.equal(safeNext(['/dashboard', '/admin']), null)
+})
+
+test("the technicians' sign-in carries a destination of this site on, and nothing else", () => {
+  const consent = '/oauth/consent?request=gAAAAAB-x_y%3D&b=1'
+  assert.equal(withNext('/magic', consent), `/magic?next=${encodeURIComponent(consent)}`)
+  assert.equal(new URLSearchParams(withNext('/magic', consent).split('?')[1]).get('next'), consent) // read back intact
+  assert.equal(withNext('/magic', '//evil.example/path'), '/magic')
+  assert.equal(withNext('/magic', undefined), '/magic')
 })
