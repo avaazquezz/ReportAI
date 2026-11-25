@@ -10,17 +10,20 @@ and another company's report is "not found", never "forbidden". The one write is
 draft is never sent: a person reviews and approves it in ReportAI.
 """
 
+import asyncio
+import base64
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager, contextmanager
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
-from mcp.types import ToolAnnotations
+from mcp.types import BlobResourceContents, EmbeddedResource, TextContent, ToolAnnotations
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -48,6 +51,7 @@ from app.services.agent.tools.extraction_schema import (
     missing_required_fields,
 )
 from app.services.channels.web import WEB, web_connection
+from app.services.delivery.deliveries import attachment_name, local_day
 from app.services.i18n import t
 
 INSTRUCTIONS = (
@@ -59,6 +63,8 @@ INSTRUCTIONS = (
 )
 
 MAX_DRAFT_CHARS = 20_000
+# Base64 makes it a third bigger again in the tool result, all of it in the assistant's context.
+MAX_PDF_BYTES = 5 * 1024 * 1024
 _STATUS_HELP = (
     "One of: " + ", ".join(ALL_STATUSES) + ". awaiting_approval = waiting for a person to review; delivered = sent"
 )
@@ -220,7 +226,8 @@ def _summary(report: Report, document_type: str | None, sender: str | None) -> R
 
 
 async def get_report(report_id: Annotated[uuid.UUID, Field(description="From reportai_search_reports")]) -> ReportDetail:
-    """One report in full: its fields, the required ones still missing, and what was dictated."""
+    """One report in full: its fields, the required ones still missing, and what was dictated. For
+    the finished document itself, use reportai_get_report_pdf."""
     async with AsyncSessionLocal() as db:
         user = await _caller(db)
         with _as_tool_errors():
@@ -242,6 +249,43 @@ async def get_report(report_id: Annotated[uuid.UUID, Field(description="From rep
             transcript=report.source_text,
             reject_reason=report.reject_reason,
         )
+
+
+async def get_report_pdf(
+    report_id: Annotated[uuid.UUID, Field(description="From reportai_search_reports")],
+) -> list[TextContent | EmbeddedResource]:
+    """The finished report document as a PDF file, the same one the panel downloads and ReportAI
+    sent. Use it when the user wants the document itself (to read, keep, forward or attach), not
+    just its contents: reportai_get_report answers questions about the fields. Only an approved
+    report has a PDF (status delivered or delivery_failed)."""
+    async with AsyncSessionLocal() as db:
+        user = await _caller(db)
+        with _as_tool_errors():
+            report = await visible_report(db, report_id, user)
+        if not report.file_path:
+            raise ToolError(
+                f"This report has no PDF yet (status: {report.status}). ReportAI makes it when a person "
+                "approves the report; it is there once the status is delivered or delivery_failed."
+            )
+        tenant = await db.get(Tenant, report.tenant_id)
+        assert tenant is not None
+        document_type = await db.get(DocumentType, report.document_type_id) if report.document_type_id else None
+    name = attachment_name(document_type.name if document_type else t(tenant.language, "report"), local_day(report, tenant.timezone))
+    path = Path(report.file_path)
+    # A recorded PDF missing from disk is a bug, not an answer: stat() raises and the SDK logs it.
+    if path.stat().st_size > MAX_PDF_BYTES:
+        raise ToolError(f"This PDF is over {MAX_PDF_BYTES // (1024 * 1024)} MB, too big to hand over here; download it from {_url(report.id)}")
+    pdf = await asyncio.to_thread(path.read_bytes)
+    return [
+        TextContent(text=f"{name} — {_url(report.id)}"),
+        EmbeddedResource(
+            # Not the panel URL: an https URI tells the client it can fetch the file itself, and
+            # the panel needs a login (MCP spec, resources: common URI schemes).
+            resource=BlobResourceContents(
+                uri=f"reportai://reports/{report.id}/pdf", mime_type="application/pdf", blob=base64.b64encode(pdf).decode()
+            ),
+        ),
+    ]
 
 
 async def create_report_draft(
@@ -302,6 +346,7 @@ def build_server() -> MCPServer:
     server.tool(name="reportai_list_document_types", title="List document types", annotations=_READ)(list_document_types)
     server.tool(name="reportai_search_reports", title="Search reports", annotations=_READ)(search_reports)
     server.tool(name="reportai_get_report", title="Get a report", annotations=_READ)(get_report)
+    server.tool(name="reportai_get_report_pdf", title="Get a report's PDF", annotations=_READ)(get_report_pdf)
     server.tool(
         name="reportai_create_report_draft",
         title="Start a report draft",

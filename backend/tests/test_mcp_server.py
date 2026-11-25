@@ -3,18 +3,20 @@ its person and nothing more (their company, their role, a technician's own repor
 one write is a draft that waits for a person."""
 
 import asyncio
+import base64
 import hashlib
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx2
 import pytest
 from mcp.client import Client
 from mcp.client.streamable_http import streamable_http_client
-from mcp.types import CallToolResult
+from mcp.types import BlobResourceContents, CallToolResult, EmbeddedResource, TextContent
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +24,7 @@ from app.core import rate_limit
 from app.core.config import settings
 from app.core.security import hash_password
 from app.main import app
+from app.mcp_server import server as mcp_server
 from app.mcp_server.server import endpoint
 from app.models.api_key import ApiKey
 from app.models.document_template import DocumentTemplate
@@ -170,16 +173,19 @@ async def test_there_is_no_stream_to_open(db: AsyncSession, companies: tuple[dic
     assert [r.status_code for r in responses] == [405, 405]
 
 
-async def test_the_server_offers_four_tools_and_only_one_writes(db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]) -> None:
+async def test_the_server_offers_five_tools_and_only_one_writes(db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]) -> None:
     acme, _ = companies
 
     async with _connect(await _key(db, acme["viewer"])) as client:
         tools = {tool.name: tool for tool in (await client.list_tools()).tools}
 
-    assert set(tools) == {"reportai_list_document_types", "reportai_search_reports", "reportai_get_report", "reportai_create_report_draft"}
+    assert set(tools) == {
+        "reportai_list_document_types", "reportai_search_reports", "reportai_get_report", "reportai_get_report_pdf", "reportai_create_report_draft"
+    }
     writers = {name for name, tool in tools.items() if not (tool.annotations and tool.annotations.read_only_hint)}
     assert writers == {"reportai_create_report_draft"}
-    assert all(tool.output_schema for tool in tools.values())
+    # The PDF is content for the client to show, not data: it has no schema to promise.
+    assert {name for name, tool in tools.items() if not tool.output_schema} == {"reportai_get_report_pdf"}
 
 
 async def test_document_types_are_the_company_s_that_can_make_a_report(db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]) -> None:
@@ -253,6 +259,85 @@ async def test_someone_else_s_report_does_not_exist(
 
     assert "not found" in message.lower()
     assert "Rival" not in message and "Sur" not in message
+
+
+PDF = b"%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\ntrailer << /Root 1 0 R >>\n%%EOF\n"
+
+
+async def _delivered(db: AsyncSession, report: Report, folder: Path) -> Report:
+    pdf = folder / f"{report.id}.pdf"
+    pdf.write_bytes(PDF)
+    report.status, report.file_path = "delivered", str(pdf)
+    await db.commit()
+    return report
+
+
+@pytest.mark.parametrize("mode", MODES)
+async def test_a_delivered_report_hands_over_its_pdf(
+    db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], tmp_path: Path, mode: str
+) -> None:
+    acme, _ = companies
+    report = await _delivered(db, acme["own"], tmp_path)
+
+    result = await _call(await _key(db, acme["technician"]), "reportai_get_report_pdf", mode, report_id=str(report.id))
+
+    assert not result.is_error, result.content
+    text, attachment = result.content
+    assert isinstance(text, TextContent) and isinstance(attachment, EmbeddedResource)
+    url = f"{settings.FRONTEND_ORIGIN}/admin/reports/{report.id}"
+    assert text.text.startswith("Acme visita ") and ".pdf" in text.text and url in text.text
+    assert isinstance(attachment.resource, BlobResourceContents)
+    assert attachment.resource.mime_type == "application/pdf"
+    assert attachment.resource.uri == f"reportai://reports/{report.id}/pdf"
+    assert base64.b64decode(attachment.resource.blob) == PDF
+    assert result.structured_content is None
+
+
+@pytest.mark.parametrize("whose", ["colleague", "rival"])
+async def test_someone_else_s_pdf_does_not_exist(
+    db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], tmp_path: Path, whose: str
+) -> None:
+    acme, rival = companies
+    target = await _delivered(db, acme["colleagues"] if whose == "colleague" else rival["own"], tmp_path)
+
+    message = _error(await _call(await _key(db, acme["technician"]), "reportai_get_report_pdf", report_id=str(target.id)))
+
+    assert "not found" in message.lower()
+    assert "Rival" not in message and "Sur" not in message
+
+
+async def test_a_report_without_a_pdf_says_why(db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]]) -> None:
+    acme, _ = companies
+
+    message = _error(await _call(await _key(db, acme["approver"]), "reportai_get_report_pdf", report_id=str(acme["own"].id)))
+
+    assert "no pdf yet" in message.lower() and "awaiting_approval" in message and "delivered" in message
+
+
+async def test_a_pdf_over_the_cap_points_to_the_panel(
+    db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    acme, _ = companies
+    report = await _delivered(db, acme["own"], tmp_path)
+    monkeypatch.setattr(mcp_server, "MAX_PDF_BYTES", len(PDF) - 1)
+
+    message = _error(await _call(await _key(db, acme["approver"]), "reportai_get_report_pdf", report_id=str(report.id)))
+
+    assert "too big" in message and message.endswith(f"/admin/reports/{report.id}")
+
+
+async def test_a_recorded_pdf_missing_from_disk_is_a_bug(
+    db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    acme, _ = companies
+    report = await _delivered(db, acme["own"], tmp_path)
+    Path(str(report.file_path)).unlink()
+
+    result = await _call(await _key(db, acme["approver"]), "reportai_get_report_pdf", report_id=str(report.id))
+
+    # Logged as a crash, and the model gets an error without the server's paths.
+    assert result.is_error and str(tmp_path) not in _error(result)
+    assert any(record.exc_info and isinstance(record.exc_info[1].__cause__, FileNotFoundError) for record in caplog.records)
 
 
 @pytest.mark.parametrize("mode", MODES)
