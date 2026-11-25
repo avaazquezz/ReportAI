@@ -70,6 +70,12 @@ const creating = ref(false)
 const createError = ref('')
 // The secret exists only here, until the dialog that shows it closes: the API keeps just its hash.
 const created = ref<ApiKeyCreated | null>(null)
+// The days the API accepts (ApiKeyCreate.expires_in_days), as strings: a null item value would
+// read as "nothing selected" in v-select. 90 days by default: it ends on its own without nagging.
+const EXPIRY_CHOICES = ['30', '90', '365', 'never'] as const
+type ExpiryChoice = (typeof EXPIRY_CHOICES)[number]
+const expiry = ref<ExpiryChoice>('90')
+const expiryItems = computed(() => EXPIRY_CHOICES.map((value) => ({ value, title: t(`admin.apiKeys.create.expiryOptions.${value}`) })))
 const required = (v: string) => Boolean(v?.trim()) || t('admin.common.validation.required')
 const short = (v: string) => (v ?? '').trim().length <= NAME_MAX || t('admin.apiKeys.create.maxLength', { max: NAME_MAX })
 
@@ -78,7 +84,10 @@ async function createKey() {
   creating.value = true
   createError.value = ''
   try {
-    created.value = await api<ApiKeyCreated>('/api-keys', { method: 'POST', body: { name: name.value.trim() } })
+    created.value = await api<ApiKeyCreated>('/api-keys', {
+      method: 'POST',
+      body: { name: name.value.trim(), expires_in_days: expiry.value === 'never' ? null : Number(expiry.value) }
+    })
     name.value = ''
     createForm.value?.resetValidation()
     await load()
@@ -87,6 +96,17 @@ async function createKey() {
   } finally {
     creating.value = false
   }
+}
+
+function expiryText(key: ApiKey) {
+  if (!key.expires_at) return t('admin.apiKeys.list.neverExpires')
+  const expired = apiKeyStatus(key) === 'expired'
+  return t(expired ? 'admin.apiKeys.list.expiredOn' : 'admin.apiKeys.list.expires', { date: formatDate(key.expires_at) })
+}
+
+function statusText(key: ApiKey) {
+  if (key.revoked_at) return t('admin.apiKeys.list.revoked', { date: formatDate(key.revoked_at) })
+  return apiKeyStatus(key) === 'expired' ? t('admin.apiKeys.list.expired') : t('admin.apiKeys.list.active')
 }
 
 // ── Revoking ───────────────────────────────────────────────────────────────────────────
@@ -141,6 +161,14 @@ async function revoke() {
           :rules="[required, short]"
           :counter="NAME_MAX"
         />
+        <v-select
+          v-model="expiry"
+          :items="expiryItems"
+          :label="t('admin.apiKeys.create.expiry')"
+          :hint="t('admin.apiKeys.create.expiryHint')"
+          persistent-hint
+          class="mb-4"
+        />
         <v-alert v-if="createError" type="error" variant="tonal" density="compact" class="mb-4">{{ createError }}</v-alert>
         <div class="flex justify-end">
           <v-btn type="submit" color="primary" prepend-icon="mdi-key-plus" :loading="creating">{{ t('admin.apiKeys.create.submit') }}</v-btn>
@@ -160,22 +188,24 @@ async function revoke() {
         <li v-for="key in keys" :key="key.id">
           <v-divider />
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
-            <!-- A revoked key stays listed, greyed out: at 60% the text still reads at 4.5:1. -->
-            <div class="min-w-0 flex-1 basis-60" :class="key.revoked_at ? 'text-ink-900/60' : 'text-ink-900'">
+            <!-- A revoked or expired key stays listed, greyed out: at 60% the text still reads at 4.5:1. -->
+            <div class="min-w-0 flex-1 basis-60" :class="apiKeyStatus(key) === 'active' ? 'text-ink-900' : 'text-ink-900/60'">
               <p class="m-0 break-words font-medium">{{ key.name }}</p>
-              <p class="m-0 text-sm" :class="{ 'text-ink-900/70': !key.revoked_at }">
+              <p class="m-0 text-sm" :class="{ 'text-ink-900/70': apiKeyStatus(key) === 'active' }">
                 <span class="font-mono">{{ key.prefix }}…</span>
                 <template v-if="isAdmin"> · {{ t('admin.apiKeys.list.owner', { name: key.owner_name }) }}</template>
               </p>
-              <p class="m-0 text-sm" :class="{ 'text-ink-900/70': !key.revoked_at }">
+              <p class="m-0 text-sm" :class="{ 'text-ink-900/70': apiKeyStatus(key) === 'active' }">
                 {{ t('admin.apiKeys.list.created', { date: formatDate(key.created_at) }) }} ·
-                {{ key.last_used_at ? t('admin.apiKeys.list.lastUsed', { date: formatDateTime(key.last_used_at) }) : t('admin.apiKeys.list.neverUsed') }}
+                {{ key.last_used_at ? t('admin.apiKeys.list.lastUsed', { date: formatDateTime(key.last_used_at) }) : t('admin.apiKeys.list.neverUsed') }} ·
+                {{ expiryText(key) }}
               </p>
             </div>
-            <v-chip size="small" variant="tonal" :color="key.revoked_at ? undefined : 'approved'">
-              {{ key.revoked_at ? t('admin.apiKeys.list.revoked', { date: formatDate(key.revoked_at) }) : t('admin.apiKeys.list.active') }}
+            <v-chip size="small" variant="tonal" :color="apiKeyStatus(key) === 'active' ? 'approved' : undefined">
+              {{ statusText(key) }}
             </v-chip>
-            <v-btn v-if="!key.revoked_at" size="small" variant="text" color="error" @click="pending = key; confirmDialog = true">
+            <!-- An expired key can't come back, so there is nothing left to revoke. -->
+            <v-btn v-if="apiKeyStatus(key) === 'active'" size="small" variant="text" color="error" @click="pending = key; confirmDialog = true">
               {{ t('admin.apiKeys.list.revoke') }}
             </v-btn>
           </div>
