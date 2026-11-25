@@ -4,9 +4,8 @@ their role, through the same checks the panel uses, so it never sees or does mor
 
 What a key is worth follows its person: it stops working the moment they may not sign in (deactivated,
 company suspended or deleted) and works again if they are let back in. Revoking a key ends it for
-good. Only a hash of the secret is kept; the secret is shown once, when it is made.
-
-# ponytail: keys do not expire on their own; an `expires_at` column if a company ever asks for it.
+good, and so does its expiry date, if it was made with one (30, 90 or 365 days; none never expires).
+Only a hash of the secret is kept; the secret is shown once, when it is made.
 """
 
 import hashlib
@@ -15,7 +14,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import can_sign_in, is_demo_user
@@ -33,6 +32,11 @@ MAX_ACTIVE_KEYS_PER_USER = 10
 # every request would turn each read into a write.
 _TOUCH_AFTER = timedelta(minutes=5)
 _SHOWN_CHARS = 12  # "rpt_" and 8 characters of the secret: enough to tell keys apart, useless alone
+
+
+# Neither revoked nor past its expiry, on the database's clock: what authenticates and what counts
+# towards the cap, so a dead key never blocks its person from making a new one.
+_LIVE: ColumnElement[bool] = ApiKey.revoked_at.is_(None) & (ApiKey.expires_at.is_(None) | (ApiKey.expires_at > func.now()))
 
 
 @dataclass(frozen=True)
@@ -54,16 +58,18 @@ def _hash(secret: str) -> str:
     return hashlib.sha256(secret.encode()).hexdigest()
 
 
-async def create(db: AsyncSession, user: TenantUser, name: str) -> NewKey:
-    """Makes a key for `user` (added to `db`, not committed)."""
+async def create(db: AsyncSession, user: TenantUser, name: str, expires_in_days: int | None) -> NewKey:
+    """Makes a key for `user` (added to `db`, not committed) that expires `expires_in_days` from now,
+    on the database's clock, or never with None. The API allows only 30, 90 or 365 days."""
     tenant_id = require_tenant_id(user)
-    active = await db.scalar(
-        select(func.count()).select_from(ApiKey).where(ApiKey.user_id == user.id, ApiKey.revoked_at.is_(None))
-    )
+    active = await db.scalar(select(func.count()).select_from(ApiKey).where(ApiKey.user_id == user.id, _LIVE))
     if (active or 0) >= MAX_ACTIVE_KEYS_PER_USER:
         raise ValidationException(f"You already have {MAX_ACTIVE_KEYS_PER_USER} keys: revoke one you no longer use")
     secret = PREFIX + secrets.token_urlsafe(32)  # 256 random bits
-    key = ApiKey(tenant_id=tenant_id, user_id=user.id, name=name, key_hash=_hash(secret), prefix=secret[:_SHOWN_CHARS])
+    key = ApiKey(
+        tenant_id=tenant_id, user_id=user.id, name=name, key_hash=_hash(secret), prefix=secret[:_SHOWN_CHARS],
+        expires_at=None if expires_in_days is None else func.now() + timedelta(days=expires_in_days),
+    )
     db.add(key)
     await db.flush()
     return NewKey(key=key, secret=secret)
@@ -93,7 +99,8 @@ async def revocable_key(db: AsyncSession, user: TenantUser, key_id: uuid.UUID) -
 
 
 async def revoke_all(db: AsyncSession, user: TenantUser) -> int:
-    """Revokes every live key of `user` (not committed) and says how many: signing someone out
+    """Revokes every key of `user` not yet revoked, expired ones too (not committed), and says how
+    many: signing someone out
     everywhere also ends any key a stolen session may have made."""
     result = await db.execute(
         update(ApiKey).where(ApiKey.user_id == user.id, ApiKey.revoked_at.is_(None)).values(revoked_at=func.now())
@@ -102,12 +109,12 @@ async def revoke_all(db: AsyncSession, user: TenantUser) -> int:
 
 
 async def authenticate(db: AsyncSession, secret: str) -> Principal | None:
-    """The person a key acts as, or None: an unknown or revoked key, or a person who may not act
+    """The person a key acts as, or None: an unknown, revoked or expired key, or a person who may not act
     (inactive, company suspended, the read-only public demo account). Commits when it records the
     key's use."""
     if not secret.startswith(PREFIX) or len(secret) > 100:
         return None
-    key = await db.scalar(select(ApiKey).where(ApiKey.key_hash == _hash(secret), ApiKey.revoked_at.is_(None)))
+    key = await db.scalar(select(ApiKey).where(ApiKey.key_hash == _hash(secret), _LIVE))
     if key is None:
         return None
     user = await db.get(TenantUser, key.user_id)
