@@ -438,6 +438,28 @@ export interface ApiKeyCreated extends ApiKey {
   secret: string // returned by the create call only, never again
 }
 
+// backend/app/schemas/oauth.py
+export interface OAuthConsent {
+  client_name: string
+  client_id: string
+  redirect_host: string // where the answer goes back to
+  scopes: string[]
+}
+
+export interface OAuthConsentRedirect {
+  redirect_to: string
+}
+
+/** An app connected by signing in (OAuth), as the AI assistants page lists it. */
+export interface ConnectedApp {
+  id: string
+  client_name: string
+  owner_id: string
+  owner_name: string
+  created_at: string
+  last_used_at: string | null
+}
+
 export interface StarterTemplate {
   key: string
   name: string
