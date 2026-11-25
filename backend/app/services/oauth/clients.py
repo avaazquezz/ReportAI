@@ -130,8 +130,8 @@ def _check(client: OAuthClientInformationFull, *, metadata_document: bool) -> No
         raise RegistrationError(
             "invalid_redirect_uri", "redirect_uris must be https, or http on a loopback address (127.0.0.1, [::1], localhost)"
         )
-    if not set(client.grant_types) <= _GRANT_TYPES or "authorization_code" not in client.grant_types:
-        raise RegistrationError("invalid_client_metadata", "grant_types may only be authorization_code and refresh_token")
+    if "authorization_code" not in client.grant_types:
+        raise RegistrationError("invalid_client_metadata", "grant_types must include authorization_code")
     if set(client.response_types) != {"code"}:
         raise RegistrationError("invalid_client_metadata", "response_types must be ['code']")
     # A metadata document can't carry a secret (it is public), so its client authenticates with
@@ -141,6 +141,15 @@ def _check(client: OAuthClientInformationFull, *, metadata_document: bool) -> No
         raise RegistrationError("invalid_client_metadata", f"token_endpoint_auth_method must be one of {sorted(allowed_methods)}")
     if client.client_name is not None and len(client.client_name) > _MAX_NAME_CHARS:
         raise RegistrationError("invalid_client_metadata", f"client_name has more than {_MAX_NAME_CHARS} characters")
+
+
+def _supported(client: OAuthClientInformationFull) -> OAuthClientInformationFull:
+    """The client with only the grants this server gives. An app may list others it uses elsewhere
+    (Claude's own document lists the jwt-bearer grant for enterprise sign-in); refusing it for that
+    would turn it away, and keeping them would let the token endpoint, which allows a client the
+    grants it lists, take one this server never meant to offer (RFC 7591 §2 lets a server replace
+    values it doesn't support)."""
+    return client.model_copy(update={"grant_types": [grant for grant in client.grant_types if grant in _GRANT_TYPES]})
 
 
 def _as_client(row: OAuthClient) -> OAuthClientInformationFull:
@@ -163,6 +172,7 @@ async def register(db: AsyncSession, client: OAuthClientInformationFull) -> None
     """Stores a client that registered itself (RFC 7591), and commits. Raises RegistrationError for
     one this server won't serve."""
     _check(client, metadata_document=False)
+    client = _supported(client)
     db.add(
         OAuthClient(
             client_id=client.client_id,
@@ -340,7 +350,7 @@ async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
         raise ClientMetadataError(f"the document is not valid client metadata (at {fields})") from exc
     except RegistrationError as exc:
         raise ClientMetadataError(exc.error_description or exc.error) from exc
-    return client.model_copy(update={"token_endpoint_auth_method": "none"})
+    return _supported(client).model_copy(update={"token_endpoint_auth_method": "none"})
 
 
 async def _download(url: str) -> bytes:
