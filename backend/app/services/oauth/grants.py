@@ -7,6 +7,7 @@ them back in and the apps work again. Revoking a grant, from the panel, by the a
 by "sign out everywhere", ends it for good.
 """
 
+import logging
 import uuid
 from datetime import timedelta
 
@@ -19,8 +20,9 @@ from app.models.oauth import OAuthClient, OAuthGrant, OAuthToken
 from app.models.tenant_user import TenantUser
 from app.repositories.base import BaseRepository
 from app.services.credentials import Credential, Principal, acting_person
-from app.services.oauth import is_this_resource, token_hash
+from app.services.oauth import is_this_resource, resource_url, token_hash
 
+logger = logging.getLogger(__name__)
 # Not "rpt_", the API keys' prefix: /mcp tells the two kinds apart by it.
 ACCESS_PREFIX = "rpo_"
 REFRESH_PREFIX = "rpr_"
@@ -55,7 +57,10 @@ async def authenticate(db: AsyncSession, token: str) -> Principal | None:
             OAuthGrant.revoked_at.is_(None),
         )
     )
-    if grant is None or not is_this_resource(grant.resource):
+    if grant is None:
+        return None
+    if not is_this_resource(grant.resource):
+        logger.warning("OAuth grant %s is for %s, not this server's %s: its token refused", grant.id, grant.resource[:200], resource_url())
         return None
     user = await acting_person(db, grant.user_id, grant.tenant_id)
     if user is None:

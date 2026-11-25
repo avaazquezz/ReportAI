@@ -579,6 +579,68 @@ async def test_the_documents_describe_this_server(http: httpx2.AsyncClient) -> N
     }
 
 
+async def test_a_reused_refresh_token_is_logged_and_audited_with_its_app(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], caplog: pytest.LogCaptureFixture
+) -> None:
+    acme, _ = companies
+    tokens = await _connected(http, acme["approver"])
+    assert (await _refresh(http, tokens["client_id"], tokens["refresh_token"])).status_code == 200
+
+    assert (await _refresh(http, tokens["client_id"], tokens["refresh_token"])).status_code == 400
+
+    grant = await _grant(db, tokens["access_token"])
+    event = await db.scalar(select(AuditEvent).where(AuditEvent.action == "oauth.revoked_reuse"))
+    assert event is not None and event.actor_id is None and event.tenant_id == acme["tenant"].id
+    assert event.target == str(grant.id) and event.details == {"client_id": tokens["client_id"]}
+    assert any(tokens["client_id"] in r.getMessage() and str(grant.id) in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)
+
+
+async def test_a_token_for_another_resource_is_logged_apart_from_an_unknown_one(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], caplog: pytest.LogCaptureFixture
+) -> None:
+    acme, _ = companies
+    tokens = await _connected(http, acme["approver"])
+    grant = await _grant(db, tokens["access_token"])
+    grant.resource = "https://other.example/mcp"
+    await db.commit()
+
+    with caplog.at_level(logging.WARNING, logger="app.services.oauth.grants"):
+        assert (await _mcp(http, tokens["access_token"])).status_code == 401
+        assert (await _mcp(http, "rpo_unknown")).status_code == 401
+
+    warnings = [r.getMessage() for r in caplog.records if r.name == "app.services.oauth.grants"]
+    assert len(warnings) == 1  # the unknown token is not worth a warning
+    assert str(grant.id) in warnings[0] and "https://other.example/mcp" in warnings[0] and resource_url() in warnings[0]
+
+
+@pytest.mark.parametrize(("client_id", "says"), [("x" * 3000, "3000 characters"), ("http://app.example/client.json", "https address")])
+async def test_a_client_id_refused_on_sight_is_logged(
+    http: httpx2.AsyncClient, caplog: pytest.LogCaptureFixture, client_id: str, says: str
+) -> None:
+    with caplog.at_level(logging.INFO, logger="app.services.oauth.clients"):
+        refused = await _authorize(http, client_id, _pkce()[1])
+
+    assert refused.status_code == 400
+    assert any(says in r.getMessage() for r in caplog.records if r.name == "app.services.oauth.clients")
+
+
+async def test_consent_for_a_redirect_the_document_no_longer_lists_is_logged(
+    http: httpx2.AsyncClient, db: AsyncSession, companies: tuple[dict[str, Any], dict[str, Any]], fetches: "Fetches",
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    acme, _ = companies
+    sealed = _consent_request(await _authorize(http, DOCUMENT_URL, _pkce()[1]))
+    await db.execute(update(OAuthClient).values(fetched_at=datetime.now(UTC) - timedelta(hours=25)))
+    await db.commit()
+    fetches.response = httpx.Response(200, json=_document(redirect_uris=["https://elsewhere.example/cb"]))
+
+    with caplog.at_level(logging.WARNING, logger="app.services.oauth.provider"):
+        shown = await http.get("/oauth/consent", params={"request": sealed}, headers=_auth(acme["approver"]))
+
+    assert shown.status_code == 404
+    assert any(DOCUMENT_URL in r.getMessage() and "claude.ai" in r.getMessage() for r in caplog.records if r.name == "app.services.oauth.provider")
+
+
 async def test_a_401_from_mcp_says_where_to_sign_in(http: httpx2.AsyncClient) -> None:
     response = await _mcp(http, "rpo_made-up")
 
@@ -796,11 +858,14 @@ async def test_a_metadata_document_a_day_old_is_fetched_again(
         (httpx.Response(200, content=b"{not json", headers={"content-type": "application/json"}), "not JSON"),
         # Nested past the parser's depth: a RecursionError, not a ValueError.
         (httpx.Response(200, content=b"[" * 60_000, headers={"content-type": "application/json"}), "not JSON"),
+        # The log says which field, and what the network said.
+        (httpx.Response(200, json=_document(redirect_uris=["not a url"])), "at redirect_uris.0"),
+        (httpx.ConnectError("connection refused by peer"), "ConnectError: connection refused by peer"),
     ],
 )
 async def test_a_metadata_document_that_fails_a_check_is_an_unknown_client(
     http: httpx2.AsyncClient, db: AsyncSession, fetches: Fetches, caplog: pytest.LogCaptureFixture,
-    response: httpx.Response, reason: str,
+    response: httpx.Response | httpx.HTTPError, reason: str,
 ) -> None:
     fetches.response = response
 

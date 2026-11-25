@@ -158,9 +158,13 @@ async def get_client(db: AsyncSession, client_id: str, *, client_ip: str) -> OAu
     can't be fetched or fails a check. `client_ip` is who asked: fetches are counted against it.
     May commit whatever `db` holds, before a fetch and after it (the document cached)."""
     if len(client_id) > MAX_CLIENT_ID_CHARS:
+        logger.info("Refused a client_id of %s characters, more than %s", len(client_id), MAX_CLIENT_ID_CHARS)
         return None
     if client_id.startswith("https://"):
         return await _metadata_document_client(db, client_id, client_ip)
+    if "://" in client_id:  # this server's own ids are UUIDs: this one is an address, not https
+        logger.info("Refused the client_id %s: a metadata document must be at an https address", client_id[:200])
+        return None
     row = await db.scalar(select(OAuthClient).where(OAuthClient.client_id == client_id, OAuthClient.kind == "dcr"))
     return None if row is None else _as_client(row)
 
@@ -292,7 +296,8 @@ async def fetch_metadata_document(url: str) -> OAuthClientInformationFull:
         client = OAuthClientInformationFull.model_validate(document)
         _check(client, metadata_document=True)
     except ValidationError as exc:
-        raise ClientMetadataError(f"the document is not valid client metadata ({exc.error_count()} errors)") from exc
+        fields = ", ".join(".".join(str(part) for part in error["loc"]) or "(the document)" for error in exc.errors())
+        raise ClientMetadataError(f"the document is not valid client metadata (at {fields})") from exc
     except RegistrationError as exc:
         raise ClientMetadataError(exc.error_description or exc.error) from exc
     return client.model_copy(update={"token_endpoint_auth_method": "none"})
@@ -318,5 +323,5 @@ async def _download(url: str) -> bytes:
                     if len(body) > METADATA_DOCUMENT_MAX_BYTES:
                         raise ClientMetadataError(f"the document is larger than {METADATA_DOCUMENT_MAX_BYTES} bytes")
         except httpx.HTTPError as exc:
-            raise MetadataDocumentUnavailable(f"the request failed ({type(exc).__name__})") from exc
+            raise MetadataDocumentUnavailable(f"the request failed ({type(exc).__name__}: {exc})") from exc
     return bytes(body)
