@@ -160,6 +160,7 @@ async function revoke() {
           :placeholder="t('admin.apiKeys.create.placeholder')"
           :rules="[required, short]"
           :counter="NAME_MAX"
+          validate-on="blur"
         />
         <v-select
           v-model="expiry"
