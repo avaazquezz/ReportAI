@@ -12,6 +12,7 @@ document would try to sign in through a server that doesn't exist instead of rep
 
 from contextvars import ContextVar
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -19,8 +20,9 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from app.core import rate_limit
 from app.core.database import AsyncSessionLocal
 from app.core.exceptions import RateLimitException
+from app.models.tenant_user import TenantUser
 from app.services import api_keys
-from app.services.api_keys import Principal
+from app.services.credentials import Credential, Principal
 
 _principal: ContextVar[Principal | None] = ContextVar("mcp_principal", default=None)
 
@@ -31,6 +33,14 @@ def current_principal() -> Principal:
     if principal is None:
         raise RuntimeError("An MCP tool ran outside an authenticated request")
     return principal
+
+
+async def person_of(db: AsyncSession, credential: Credential) -> TenantUser | None:
+    """Who the credential acts as right now, or None once it is revoked or expired or its person
+    may not act: what something an assistant got through it (a PDF link) is worth when used."""
+    if credential.kind != "api_key":
+        return None
+    return await api_keys.person_of(db, credential.id)
 
 
 def _bearer(scope: Scope) -> str | None:
@@ -56,11 +66,11 @@ class ApiKeyAuth:
             principal = await api_keys.authenticate(db, secret) if secret else None
             if principal is not None:
                 try:
-                    await rate_limit.mcp_by_key.check(db, str(principal.key_id))
+                    await rate_limit.mcp_by_key.check(db, str(principal.credential.id))
                 except RateLimitException as exc:
                     await JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers)(scope, receive, send)
                     return
-                await rate_limit.mcp_by_key.record(db, str(principal.key_id))
+                await rate_limit.mcp_by_key.record(db, str(principal.credential.id))
         if principal is None:
             response = JSONResponse(
                 {"detail": "Missing, unknown, revoked or expired ReportAI API key. Make one in ReportAI under API keys."},

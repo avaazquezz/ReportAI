@@ -52,6 +52,7 @@ from app.services.agent.tools.extraction_schema import (
     missing_required_fields,
 )
 from app.services.channels.web import WEB, web_connection
+from app.services.credentials import Credential
 from app.services.delivery.deliveries import report_pdf_name
 from app.services.i18n import t
 
@@ -126,6 +127,12 @@ class DraftCreated(BaseModel):
     status: str
     url: str
     next_step: str
+
+
+def _credential_meta(credential: Credential) -> dict[str, str]:
+    """What a draft records about the credential that started it, for whoever reviews it later."""
+    name = "api_key_id" if credential.kind == "api_key" else "oauth_grant_id"
+    return {name: str(credential.id)}
 
 
 def _url(report_id: uuid.UUID) -> str:
@@ -272,7 +279,7 @@ async def get_report_pdf(
             )
         name = await report_pdf_name(db, report)
     path = Path(report.file_path)
-    link = pdf_link(report.id, current_principal().key_id)
+    link = pdf_link(report.id, current_principal().credential)
     # A recorded PDF missing from disk is a bug, not an answer: stat() raises and the SDK logs it.
     if path.stat().st_size > MAX_EMBEDDED_PDF_BYTES:
         return [TextContent(text=f"{name}: download it (link valid 10 minutes) from {link} — too big to attach here. In ReportAI: {_url(report.id)}")]
@@ -325,7 +332,7 @@ async def create_report_draft(
             text=text,
             media_reference=None,
             sender_label=user.full_name,
-            meta={"via": "mcp", "api_key_id": str(current_principal().key_id)},
+            meta={"via": "mcp", **_credential_meta(current_principal().credential)},
             requester_user_id=user.id,
             document_type_id=document_type.id,
         )

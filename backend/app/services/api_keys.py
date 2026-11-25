@@ -17,12 +17,12 @@ from datetime import timedelta
 from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import can_sign_in, is_demo_user
 from app.core.exceptions import ResourceNotFoundException, ValidationException
 from app.core.scoping import get_scoped_or_404, require_tenant_id
 from app.models.api_key import ApiKey
 from app.models.tenant_user import TenantUser
 from app.repositories.base import BaseRepository
+from app.services.credentials import Credential, Principal, acting_person
 
 PREFIX = "rpt_"
 # A person rarely needs more than one per assistant; the cap keeps a leaked session from minting
@@ -43,15 +43,6 @@ _LIVE: ColumnElement[bool] = ApiKey.revoked_at.is_(None) & (ApiKey.expires_at.is
 class NewKey:
     key: ApiKey
     secret: str  # shown once to whoever made it, never stored
-
-
-@dataclass(frozen=True)
-class Principal:
-    """Who is calling with a key: plain values, so it outlives the session that checked the key."""
-
-    key_id: uuid.UUID
-    user_id: uuid.UUID
-    tenant_id: uuid.UUID
 
 
 def _hash(secret: str) -> str:
@@ -117,7 +108,7 @@ async def authenticate(db: AsyncSession, secret: str) -> Principal | None:
     user = await _acting(db, key)
     if key is None or user is None:
         return None
-    principal = Principal(key_id=key.id, user_id=user.id, tenant_id=key.tenant_id)
+    principal = Principal(credential=Credential("api_key", key.id), user_id=user.id, tenant_id=key.tenant_id)
     # A conditional UPDATE, so two simultaneous requests don't both write it.
     touched = await db.execute(
         update(ApiKey)
@@ -139,9 +130,4 @@ async def person_of(db: AsyncSession, key_id: uuid.UUID) -> TenantUser | None:
 
 
 async def _acting(db: AsyncSession, key: ApiKey | None) -> TenantUser | None:
-    if key is None:
-        return None
-    user = await db.get(TenantUser, key.user_id)
-    if user is None or user.tenant_id != key.tenant_id or not await can_sign_in(db, user) or is_demo_user(user):
-        return None
-    return user
+    return None if key is None else await acting_person(db, key.user_id, key.tenant_id)
