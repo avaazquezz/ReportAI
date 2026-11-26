@@ -39,9 +39,10 @@ heartbeat, retries with backoff, and resumes a retried run from its last LangGra
   gone, and the old worker then records nothing about the job or its report; a failure it reaches
   before noticing is dropped (`fail_or_retry` returns `"not_ours"`). The overlap lasts until its
   next heartbeat, and the checkpointer and the delivery rows keep it from producing a second
-  document or email. A renewal that fails (the database unreachable) also cancels the work and
-  records nothing, since whether the lease is still held is unknown; it stops the worker, whose
-  container restarts, and the job is claimed again once the lease runs out (see
+  document or email. A renewal that fails (the database unreachable) is retried at the next beat
+  while the last good one still holds; once two thirds of the lease have gone, the heartbeat
+  cancels the work and records nothing, since whether the lease is still held is unknown, and it
+  stops the worker, whose container restarts, and the job is claimed again once the lease runs out (see
   [lease and heartbeat](../how-it-works/job-queue-and-checkpoints.md#lease-and-heartbeat)).
 
 ## Revisit when
