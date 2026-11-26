@@ -93,7 +93,7 @@ records nothing about either**. The following paths enforce it:
 |---|---|---|
 | …finds the lease gone at its next heartbeat (`extend_lease` returns false) while the work runs | Logs an error, sets the `lease_lost` event `process` passed it, and cancels the work in hand. `process` checks that event, so it returns without calling `complete`, `fail_or_retry` or `give_up`, also when a library turns the cancellation into an error of its own. | `_heartbeat` and `process` (`runner.py`) |
 | …sees the work fail before its heartbeat noticed the takeover | Calls `fail_or_retry`, which updates only a row still `locked_by` this worker and, finding none, returns `"not_ours"`. `process` logs an error and skips `give_up`, so the report is not failed under its new owner. | `fail_or_retry` and `FailOutcome` (`queue.py`); `process` (`runner.py`) |
-| …sees the work succeed before its heartbeat noticed the takeover | Calls `complete`, which also filters on `locked_by` and so changes nothing. | `complete` (`queue.py`) |
+| …sees the work succeed before its heartbeat noticed the takeover | Calls `complete`, which also filters on `locked_by`, so it changes nothing and returns false; `process` logs an error, so two runs of one report don't pass unseen. | `complete` (`queue.py`); `process` (`runner.py`) |
 
 A renewal that finds the lease gone after the work has ended returns quietly, without the error
 and without setting `lease_lost`. By then `process` is recording the outcome (the row may already
