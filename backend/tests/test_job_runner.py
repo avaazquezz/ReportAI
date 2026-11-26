@@ -345,8 +345,9 @@ class SlowStep:
 
 @pytest.fixture
 def quick_lease(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Renew the lease every 10 ms instead of every 40 s."""
-    monkeypatch.setattr(runner, "LEASE_SECONDS", 0.03)
+    """Renew the lease every 200 ms instead of every 40 s: still time for a real renewal, which
+    must end before two thirds of the lease are gone."""
+    monkeypatch.setattr(runner, "LEASE_SECONDS", 0.6)
 
 
 async def _taken_by_another_worker(db: AsyncSession, job: ClaimedJob) -> None:
@@ -444,12 +445,46 @@ async def test_a_lease_that_cannot_be_renewed_stops_the_work_and_the_worker(
     checkpoints.assert_not_awaited()
 
 
+@pytest.mark.parametrize("failure", ["refused", "hangs"])
+async def test_renewals_that_keep_failing_stop_the_work_with_a_third_of_the_lease_left(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock, failure: str,
+) -> None:
+    lease = 0.6
+    monkeypatch.setattr(runner, "LEASE_SECONDS", lease)
+    report = await _report(db)
+    step = SlowStep(5)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
+    job = await _queued(db, report, max_attempts=1)
+    loop = asyncio.get_running_loop()
+    renew, renewed_at = runner.extend_lease, loop.time()
+
+    async def unreachable_once_the_step_runs(job_id: uuid.UUID, worker_id: str) -> bool:
+        nonlocal renewed_at
+        if not step.started.is_set():
+            attempted_at = loop.time()
+            held = await renew(job_id, worker_id)
+            renewed_at = attempted_at
+            return held
+        if failure == "hangs":
+            await asyncio.Event().wait()  # an unanswered socket: only a time limit ends it
+        raise ConnectionRefusedError("database unreachable")
+
+    monkeypatch.setattr(runner, "extend_lease", unreachable_once_the_step_runs)
+    running = asyncio.create_task(process(job, "test-worker"))
+    await asyncio.wait_for(step.cancelled.wait(), timeout=5)
+    cancelled_after = loop.time() - renewed_at
+    with pytest.raises(TimeoutError if failure == "hangs" else ConnectionRefusedError):
+        await asyncio.wait_for(running, timeout=5)
+
+    # Retried after the first failure, and given up at two thirds of the lease, not at its end.
+    assert lease / 2 < cancelled_after < lease * 2 / 3 + 0.05
+
+
 async def test_a_database_blip_while_the_lease_still_holds_does_not_stop_the_work(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
-    adapter: AsyncMock, caplog: pytest.LogCaptureFixture,
+    adapter: AsyncMock, quick_lease: None, caplog: pytest.LogCaptureFixture,
 ) -> None:
-    # Renewing every 100 ms: quick_lease's 10 ms is shorter than a real renewal takes here.
-    monkeypatch.setattr(runner, "LEASE_SECONDS", 0.3)
     report = await _report(db)
     started = asyncio.Event()
 
