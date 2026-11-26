@@ -9,7 +9,7 @@ import uuid
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
-from langgraph.types import Command
+from langgraph.types import Command, StateSnapshot
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -36,9 +36,11 @@ from app.services.jobs.queue import (
     RESUME,
     RUN,
     ClaimedJob,
+    another_job_queued,
     complete,
     extend_lease,
     fail_or_retry,
+    note_in_payload,
 )
 from app.services.observability.execution_log import write_execution_log
 
@@ -92,6 +94,10 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
     graph = get_compiled_graph()
     config: RunnableConfig = {"configurable": {"thread_id": str(report.id)}}
 
+    if job.attempts > 1 and report.status in TERMINAL_STATUSES:
+        # An earlier attempt finished the report (and forgot its checkpoints) but couldn't record
+        # it: starting over would transcribe, extract and deliver it again.
+        return
     snapshot = await graph.aget_state(config)
     if job.attempts > 1 and snapshot.values:
         # An earlier attempt got somewhere: carry on from its last checkpoint instead of starting
@@ -125,11 +131,24 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
     await _mark_paused_if_interrupted(result, report.id)
 
 
+# Where a resume took up its paused graph, noted in the job's payload: a retry compares it with
+# where the graph stands now to tell whether the answer was delivered. The checkpoint moves on
+# once the answered node completes, and stays put if that node itself fails.
+_RESUMED_FROM = "resumed_from_checkpoint"
+
+
+def _answer_got_in(job: ClaimedJob, snapshot: StateSnapshot) -> bool:
+    """Whether an earlier attempt of this resume handed its answer to the graph: it noted where it
+    took the graph up, and the graph has moved on from there."""
+    resumed_from = job.payload.get(_RESUMED_FROM)
+    return resumed_from is not None and resumed_from != snapshot.config["configurable"].get("checkpoint_id")
+
+
 async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant) -> str | dict[str, Any]:
     """A pressed button or the panel answers with a structured reply, handed on as it is. A typed
     reply is text, and a voice note is turned into text before the graph sees it."""
     if job.payload.get("action"):
-        return job.payload
+        return {key: value for key, value in job.payload.items() if key != _RESUMED_FROM}
     text = (job.payload.get("text") or "").strip()
     media_reference = job.payload.get("media_reference")
     if not media_reference:
@@ -153,25 +172,43 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant)
     return "\n\n".join(part for part in (transcript.text.strip(), text) if part)
 
 
-async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection, tenant: Tenant) -> None:
+async def _resume(
+    job: ClaimedJob, worker_id: str, report: Report, connection: ChannelConnection, tenant: Tenant
+) -> None:
     graph = get_compiled_graph()
     config: RunnableConfig = {"configurable": {"thread_id": str(report.id)}}
 
     snapshot = await graph.aget_state(config)
-    if not any(task.interrupts for task in snapshot.tasks):
-        return  # an earlier attempt already delivered this answer
-
-    result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant)), config)
+    here = snapshot.config["configurable"].get("checkpoint_id")
+    resumed_from = job.payload.get(_RESUMED_FROM)
+    if _answer_got_in(job, snapshot):
+        # An earlier attempt delivered the answer and the graph moved on: finish what it left.
+        if snapshot.interrupts:
+            # Paused again: never hand it this answer. Nor record the pause over a later answer
+            # to it already queued (the report was claimed for that one): its job records its own.
+            if await another_job_queued(report.id, job.id, RESUME):
+                return
+            result: dict[str, Any] = {"__interrupt__": snapshot.interrupts}
+        elif snapshot.next:
+            result = await graph.ainvoke(None, config)  # failed on the way: carry on
+        else:
+            return
+    elif not any(task.interrupts for task in snapshot.tasks):
+        return  # nothing awaits this answer (the report is no longer paused)
+    else:
+        if resumed_from is None and not await note_in_payload(job.id, worker_id, {_RESUMED_FROM: here}):
+            return  # another worker took the job over and answers in its stead (process() logs it)
+        result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant)), config)
     await _mark_paused_if_interrupted(result, report.id)
 
 
-async def execute(job: ClaimedJob) -> None:
+async def execute(job: ClaimedJob, worker_id: str) -> None:
     report, connection, tenant = await _load(job.report_id)
     with log_context(report_id=report.id, tenant_id=report.tenant_id, job=job.kind):
         if job.kind == RUN:
             await _run(job, report, connection, tenant)
         elif job.kind == RESUME:
-            await _resume(job, report, connection, tenant)
+            await _resume(job, worker_id, report, connection, tenant)
         elif job.kind == DELIVER:
             failures = await send_pending(report.id)
             if failures:
@@ -199,6 +236,59 @@ async def give_up(report_id: uuid.UUID, error: str, reason_key: str = "failure")
         logger.error("A job for report %s gave up after the report had ended: %s", report_id, error)
     with contextlib.suppress(Exception):
         await get_checkpointer().adelete_thread(str(report_id))
+
+
+async def _pause_reached(job: ClaimedJob) -> tuple[Any, ...]:
+    """The interrupts the report now waits on, if the job's work took it there: a run that got to
+    its first pause, or a resume whose answer got in and led to the next one. Empty otherwise."""
+    if job.kind not in (RUN, RESUME):
+        return ()
+    async with AsyncSessionLocal() as session:
+        report = await ReportRepository(session).get_by_id(job.report_id)
+    if report is None or report.status in TERMINAL_STATUSES:
+        return ()  # nothing to keep: give_up leaves an ended report as it is
+    config: RunnableConfig = {"configurable": {"thread_id": str(job.report_id)}}
+    snapshot = await get_compiled_graph().aget_state(config)
+    if not snapshot.interrupts:
+        return ()
+    if job.kind == RESUME and not _answer_got_in(job, snapshot):
+        return ()  # the pause is the one this job was to answer
+    return tuple(snapshot.interrupts)
+
+
+# Maintenance rounds that tried to tell how far an abandoned job got, noted in its payload. A job
+# whose state can't be read (a checkpoint that no longer loads, say) is failed after these, as any
+# abandoned job was before, rather than tried again every round for good.
+_SETTLE_ROUNDS = "settle_rounds"
+_MAX_SETTLE_ROUNDS = 3
+
+
+async def settle_abandoned(job: ClaimedJob, worker_id: str) -> None:
+    """A job whose worker died on its last attempt (claimed by `claim_abandoned`). If the work got
+    to its pause and only recording it failed, the report waits on the person, as it should: the
+    pause is recorded and the job done. Otherwise the report fails and the person is told."""
+    with log_context(report_id=job.report_id, job=job.kind):
+        rounds = job.payload.get(_SETTLE_ROUNDS, 0)
+        interrupts: tuple[Any, ...] = ()
+        if rounds < _MAX_SETTLE_ROUNDS:
+            if not await note_in_payload(job.id, worker_id, {_SETTLE_ROUNDS: rounds + 1}):
+                logger.error("Job %s was taken by another worker while being settled", job.id)
+                return
+            interrupts = await _pause_reached(job)
+        if interrupts:
+            logger.warning("Job %s was abandoned on its last attempt after its work was done", job.id)
+            # As in _resume: a later answer already queued records its own pause.
+            if not await another_job_queued(job.report_id, job.id, RESUME):
+                await _mark_paused_if_interrupted({"__interrupt__": interrupts}, job.report_id)
+            if not await complete(job.id, worker_id):
+                logger.error("Job %s was taken by another worker while being settled", job.id)
+            return
+        logger.error("Job %s was abandoned by a dead worker with no attempts left", job.id)
+        error = "The worker stopped before finishing and no attempts were left"
+        if await fail_or_retry(job, worker_id, error, retryable=False) == "failed":
+            await give_up(job.report_id, "The worker stopped before finishing the report", "interrupted")
+        else:
+            logger.error("Job %s was taken by another worker while being settled", job.id)
 
 
 async def _heartbeat(job_id: uuid.UUID, worker_id: str, work: asyncio.Task[None], lost: asyncio.Event) -> None:
@@ -257,7 +347,7 @@ async def process(job: ClaimedJob, worker_id: str) -> None:
     died). Once the lease is lost it records nothing: the job and its report are the new owner's
     to finish or fail."""
     lease_lost = asyncio.Event()
-    work = asyncio.create_task(execute(job))
+    work = asyncio.create_task(execute(job, worker_id))
     heartbeat = asyncio.create_task(_heartbeat(job.id, worker_id, work, lease_lost))
     try:
         async with asyncio.timeout(settings.JOB_TIMEOUT_SECONDS):

@@ -31,8 +31,8 @@ from app.services.channels.telegram_updates import (
     register_all_webhooks,
     run_pollers,
 )
-from app.services.jobs.queue import claim_next, fail_abandoned
-from app.services.jobs.runner import give_up, process
+from app.services.jobs.queue import claim_abandoned, claim_next
+from app.services.jobs.runner import process, settle_abandoned
 from app.services.observability.heartbeat import LoopProgress, run_heartbeat
 from app.services.templates.assistant import drop_expired_drafts
 
@@ -150,10 +150,14 @@ async def prune_oauth() -> None:
         logger.info("Deleted %s cached OAuth app metadata documents nobody is connected through", unconnected)
 
 
-async def maintenance() -> None:
-    for job_id, report_id in await fail_abandoned():
-        logger.error("Job %s was abandoned by a dead worker with no attempts left", job_id)
-        await give_up(report_id, "The worker stopped before finishing the report", "interrupted")
+async def maintenance(worker_id: str) -> None:
+    for job in await claim_abandoned(worker_id):
+        try:
+            await settle_abandoned(job, worker_id)
+        except Exception:
+            # One job must not hold back the rest of maintenance. Its lease runs out and a later
+            # round settles it (settle_abandoned caps how many try to read its state).
+            logger.exception("Couldn't settle abandoned job %s", job.id)
     cancelled = await cancel_abandoned_reports()
     if cancelled:
         logger.info("Cancelled %s reports that waited too long for an answer", cancelled)
@@ -206,7 +210,7 @@ async def main() -> None:
             progress.mark()
             if datetime.now(UTC) - last_maintenance > _MAINTENANCE_EVERY:
                 try:
-                    await maintenance()
+                    await maintenance(worker_id)
                 except Exception:
                     logger.exception("Maintenance failed")
                 last_maintenance = datetime.now(UTC)

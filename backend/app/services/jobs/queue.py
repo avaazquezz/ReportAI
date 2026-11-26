@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from sqlalchemy import text, update
+from sqlalchemy import literal, select, text, update
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
@@ -93,6 +94,33 @@ async def claim_next(worker_id: str) -> ClaimedJob | None:
     return ClaimedJob(row.id, row.report_id, row.kind, row.payload, row.attempts, row.max_attempts)
 
 
+async def note_in_payload(job_id: uuid.UUID, worker_id: str, notes: dict[str, Any]) -> bool:
+    """Merges `notes` into the job's payload, for a retry of it to read, while this worker still
+    holds it. Committed at once: the retry may come after this worker dies. False: another worker
+    took the job over."""
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            update(Job)
+            .where(Job.id == job_id, Job.locked_by == worker_id)
+            .values(payload=Job.payload.op("||")(literal(notes, JSONB)))
+            .returning(Job.id)
+        )
+        held = result.scalar_one_or_none() is not None
+        await session.commit()
+    return held
+
+
+async def another_job_queued(report_id: uuid.UUID, job_id: uuid.UUID, kind: str) -> bool:
+    """Whether the report has a job of `kind` waiting besides `job_id`."""
+    async with AsyncSessionLocal() as session:
+        found = await session.scalar(
+            select(Job.id)
+            .where(Job.report_id == report_id, Job.kind == kind, Job.id != job_id, Job.status == "queued")
+            .limit(1)
+        )
+    return found is not None
+
+
 async def extend_lease(job_id: uuid.UUID, worker_id: str) -> bool:
     """False when the lease was lost (this worker was presumed dead and the job re-claimed)."""
     async with AsyncSessionLocal() as session:
@@ -141,22 +169,23 @@ async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryabl
     return "retrying" if retry else "failed"
 
 
-async def fail_abandoned() -> list[tuple[uuid.UUID, uuid.UUID]]:
-    """Jobs whose worker died on their last allowed attempt: nobody will run them again.
-    Returns (job_id, report_id) of each, so the caller can tell the person."""
+async def claim_abandoned(worker_id: str) -> list[ClaimedJob]:
+    """Jobs whose worker died on their last allowed attempt: nobody will run them again. Leased to
+    `worker_id` to settle (not run: `attempts` stays), which it records with `complete` or
+    `fail_or_retry`; if it dies first, the lease runs out and the next round settles them."""
     async with AsyncSessionLocal() as session:
         rows = (
             await session.execute(
                 text(
                     """
-                    UPDATE jobs SET status = 'failed', locked_by = NULL, locked_until = NULL,
-                        last_error = 'The worker stopped before finishing and no attempts were left',
-                        updated_at = now()
+                    UPDATE jobs SET locked_by = :worker,
+                        locked_until = now() + make_interval(secs => :lease), updated_at = now()
                     WHERE status = 'running' AND locked_until < now() AND attempts >= max_attempts
-                    RETURNING id, report_id
+                    RETURNING id, report_id, kind, payload, attempts, max_attempts
                     """
-                )
+                ),
+                {"worker": worker_id, "lease": LEASE_SECONDS},
             )
         ).all()
         await session.commit()
-    return [(row.id, row.report_id) for row in rows]
+    return [ClaimedJob(row.id, row.report_id, row.kind, row.payload, row.attempts, row.max_attempts) for row in rows]
