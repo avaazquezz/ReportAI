@@ -228,11 +228,16 @@ async def _heartbeat(job_id: uuid.UUID, worker_id: str, work: asyncio.Task[None]
             delay = retry_every
             continue
         if not held:
+            if work.done():
+                return  # process() has recorded the outcome; what it records checks the owner
             logger.error("Lost the lease on job %s; another worker may have taken it", job_id)
             lost.set()
             work.cancel()
             return
-        renewed_at, delay = attempted_at, LEASE_SECONDS / 3
+        # The next beat keeps its place a third of the lease after this renewal began, however
+        # long it took, so a slow one doesn't eat into the retries of a failure after it.
+        renewed_at = attempted_at
+        delay = max(0.0, renewed_at + LEASE_SECONDS / 3 - loop.time())
 
 
 def _renewal_error(heartbeat: asyncio.Task[None]) -> BaseException | None:
@@ -248,16 +253,15 @@ def _shutting_down() -> bool:
 async def process(job: ClaimedJob, worker_id: str) -> None:
     """Runs a job to completion, retry or surrender. It raises only to stop the worker: on its own
     cancellation, or when the lease can't be renewed, so that it runs out and another worker
-    claims the job. Once the lease is lost it records nothing: the job and its report are the new
-    owner's to finish or fail."""
+    claims the job, or when recording success fails (the job is claimed again and finds its work
+    done). Once the lease is lost it records nothing: the job and its report are the new owner's
+    to finish or fail."""
     lease_lost = asyncio.Event()
     work = asyncio.create_task(execute(job))
     heartbeat = asyncio.create_task(_heartbeat(job.id, worker_id, work, lease_lost))
     try:
         async with asyncio.timeout(settings.JOB_TIMEOUT_SECONDS):
             await work
-        if not lease_lost.is_set():
-            await complete(job.id, worker_id)
     except asyncio.CancelledError:
         if _shutting_down():
             raise
@@ -266,6 +270,8 @@ async def process(job: ClaimedJob, worker_id: str) -> None:
         if not lease_lost.is_set():
             raise
     except Exception as exc:
+        if _shutting_down():
+            raise asyncio.CancelledError from exc  # the work turned the worker's own cancellation into an error
         if (renewal_error := _renewal_error(heartbeat)) is not None:
             raise renewal_error from exc
         if lease_lost.is_set():
@@ -279,8 +285,14 @@ async def process(job: ClaimedJob, worker_id: str) -> None:
             logger.error("Job %s was taken by another worker before this one could record its failure", job.id)
         elif outcome == "failed":
             await give_up(job.report_id, error, exc.reason_key if isinstance(exc, PermanentJobError) else "failure")
+    else:
+        # Outside the handlers above: a failure to record success is not a failure of the job.
+        if not lease_lost.is_set():
+            await complete(job.id, worker_id)
     finally:
         heartbeat.cancel()
+        # Unlike awaiting the heartbeat, this lets the worker's own cancellation through.
+        await asyncio.wait([heartbeat])
         # Re-raises a renewal error, also one that came after the job had already ended.
-        with contextlib.suppress(asyncio.CancelledError):
-            await heartbeat
+        if (renewal_error := _renewal_error(heartbeat)) is not None:
+            raise renewal_error
