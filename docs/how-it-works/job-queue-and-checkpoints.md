@@ -193,18 +193,24 @@ A job whose worker died on its **last** attempt is never claimed again (the clai
 (`queue.py`): one `UPDATE` leases every `running` job with an expired lease and no attempts left to
 this worker for `LEASE_SECONDS`, without counting an attempt, since the job is settled, not run.
 While the round holds the lease, the claim's `NOT EXISTS` clause holds back the report's other jobs,
-as for any running job. `settle_abandoned` (`runner.py`) then looks at where the report stands
-(`_pause_reached`):
+as for any running job. `settle_abandoned` (`runner.py`) first counts the round in the job's
+payload (`settle_rounds`, through `note_in_payload`; if another worker holds the job, it logs an
+error and returns), then looks at where the report stands (`_pause_reached`):
 
 | The work had… | Which means | The round… |
 |---|---|---|
-| Reached its pause: a `run` whose graph waits on an interrupt, or a `resume` whose noted checkpoint differs from the current one and whose graph waits on an interrupt; the report not terminal | The work was done; only recording it failed | Logs a warning, records the pause status unless another `resume` for the report is already queued (that job records its own), and marks the job `done` with `complete`. The report keeps waiting on the person instead of being failed. |
+| Reached its pause: a `run` whose graph waits on an interrupt, or a `resume` whose noted checkpoint differs from the current one (`_answer_got_in`, the rule `_resume` uses too) and whose graph waits on an interrupt; the report not terminal | The work was done; only recording it failed | Logs a warning, records the pause status unless another `resume` for the report is already queued (that job records its own), and marks the job `done` with `complete`. The report keeps waiting on the person instead of being failed. |
 | Anything else: no pause, a `resume` with no note or still at its noted checkpoint, a `deliver` job, a report already terminal or gone | The work didn't get there | Logs an error, marks the job `failed` with `fail_or_retry` (not retryable), and calls `give_up` with the `interrupted` message; `give_up` leaves a report that already ended as it is |
 
-If the settling worker dies before recording the outcome, its lease runs out and the next round
-claims and settles the job. If `complete` or `fail_or_retry` finds the row held by another worker,
-the round logs an error and records nothing more. A late `complete` or `fail_or_retry` from the
-original worker finds the row not locked by it and changes nothing.
+`maintenance` settles each job on its own: an exception is logged ("Couldn't settle abandoned job
+…") and the round moves on to the next job and the rest of maintenance. That job's lease runs out
+and a later round settles it, as when the settling worker dies before recording the outcome. Once
+`_MAX_SETTLE_ROUNDS` (3) rounds have counted themselves, the next one doesn't read the graph: it
+fails the job and the report as in the second row, so a job whose state can't be read (a
+checkpoint that no longer loads, for example) doesn't leave its report unfinished for good. If
+`complete` or `fail_or_retry` finds the row held by another worker, the round logs an error and
+records nothing more. A late `complete` or `fail_or_retry` from the original worker finds the row
+not locked by it and changes nothing.
 
 ## The checkpointer
 
@@ -343,8 +349,9 @@ revoked grants. A failure in maintenance is logged and the loop carries on.
   handing over the press alone, a resume whose job was taken over handing over nothing; a retried
   run of a finished report not starting over; abandoned jobs settled: a run or resume that reached
   its pause left waiting on the person, one that didn't failing the report, a report that ended
-  left as it is, and a last attempt that paused but couldn't record success ending waiting, not
-  failed.
+  left as it is, a last attempt that paused but couldn't record success ending waiting, not
+  failed, a later answer queued keeping the status, a job taken over before or while being
+  settled left to its new owner, and a job whose state can't be read failed after a few rounds.
 - `backend/tests/test_interrupt_resume.py`: a pause and resume against the real checkpointer, and
   the checkpoint moving on only once the answered step completes.
 - `backend/tests/test_langgraph_checkpointer.py`, `backend/tests/test_pause_status.py`.
