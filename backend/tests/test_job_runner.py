@@ -549,8 +549,9 @@ async def test_a_failure_to_record_success_stops_the_worker_instead_of_failing_t
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
     adapter: AsyncMock,
 ) -> None:
-    # The work is done and checkpointed: the job, claimed again once the lease runs out, has
-    # nothing left to do. Failing it would fail a finished report.
+    # The work ended well; only its bookkeeping failed. That is no failure of the job to record
+    # (nor to retry with backoff): the worker stops, and the job is claimed again once the lease
+    # runs out, like any job of a worker that died.
     report = await _report(db)
     _use_graph(monkeypatch, FakeGraph())
     job = await _queued(db, report, max_attempts=1)
