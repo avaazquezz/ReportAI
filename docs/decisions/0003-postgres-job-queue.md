@@ -32,7 +32,10 @@ heartbeat, retries with backoff, and resumes a retried run from its last LangGra
 - A report and its job exist together or not at all; a resume is claimed and enqueued atomically.
 - The worker polls every 2 seconds when idle, so a new report starts within about 2 seconds.
 - A worker that dies delays its job by at most the lease; a job that dies on its last attempt is
-  failed by the maintenance round and the person is told.
+  settled by the maintenance round. (Revised 2026-11-26.) If its work had brought the report to a
+  pause, the report keeps waiting on the person and the job is done; otherwise the report is
+  failed and the person is told (see
+  [settle a job abandoned on its last attempt](../how-it-works/job-queue-and-checkpoints.md#settle-a-job-abandoned-on-its-last-attempt)).
 - Two jobs of one report never run at once (a clause of the claim query).
 - A lapsed lease can leave two workers on one job: the one that stalled and the one that took over.
   (Revised 2026-11-26.) The old worker's heartbeat cancels its work when a renewal finds the lease

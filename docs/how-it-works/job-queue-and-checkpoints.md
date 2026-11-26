@@ -101,8 +101,9 @@ be `done`, `queued` or `failed`, which `extend_lease` doesn't renew), and what i
 the owner anyway.
 
 On a last attempt nobody claims the job again (the claim requires `attempts < max_attempts`); the
-maintenance round fails it with `fail_abandoned`, which clears `locked_by`, so a late
-`fail_or_retry` returns `"not_ours"` there too (see [Retry or give up](#retry-or-give-up)).
+maintenance round leases it to itself with `claim_abandoned` to settle it, so a late `complete` or
+`fail_or_retry` from the old worker finds the row locked by another worker there too (see
+[Settle a job abandoned on its last attempt](#settle-a-job-abandoned-on-its-last-attempt)).
 
 > **Note:** the old worker stops at its next heartbeat, not the moment its lease lapses, and the
 > cancellation lands at the work's next `await`. Until then both workers may run graph nodes for
@@ -133,7 +134,7 @@ status. The error leaves the worker's loop and ends the process (`main`, `backen
 and Docker restarts the container (`restart: always` in `infra/docker-compose.prod.yml`,
 `unless-stopped` in `infra/install/docker-compose.yml` and `infra/docker-compose.yml`). Once the
 lease runs out, a worker claims the job again and a retried run carries on from its last
-checkpoint; on a last attempt the maintenance round fails it instead. A heartbeat that gives up
+checkpoint; on a last attempt the maintenance round settles it instead. A heartbeat that gives up
 after the work has ended, while `process` records the outcome, still stops the worker: in its
 `finally` block `process` waits for the heartbeat with `asyncio.wait`, which, unlike awaiting it,
 lets the worker's own cancellation through, and then re-raises the heartbeat's error. This is
@@ -167,7 +168,8 @@ purpose only to stop the worker, in three cases:
   failure of the job: no `fail_or_retry`, no `give_up`. The job stays `running` and `locked_by`
   this worker, and once its lease runs out it is claimed again like any other retry, which picks
   up where the attempt left the report (see [Run, resume, retry](#run-resume-retry)); on a last
-  attempt the maintenance round fails it instead.
+  attempt the maintenance round settles it instead, and a report the attempt had brought to a
+  pause keeps waiting on the person.
 
 A database error while `process` records a failure also escapes.
 When `execute` fails, or runs past `JOB_TIMEOUT_SECONDS`, and the worker still holds the lease:
@@ -184,9 +186,25 @@ When `execute` fails, or runs past `JOB_TIMEOUT_SECONDS`, and the worker still h
    `mark_report_failed` in `backend/app/services/agent/nodes/deliver.py`), tells the sender in
    their company's language, and deletes the report's checkpoints.
 
+#### Settle a job abandoned on its last attempt
+
 A job whose worker died on its **last** attempt is never claimed again (the claim requires
-`attempts < max_attempts`). The worker's maintenance round finds it with `fail_abandoned`, marks it
-`failed`, and calls `give_up` with the `interrupted` message.
+`attempts < max_attempts`). The worker's maintenance round takes it with `claim_abandoned`
+(`queue.py`): one `UPDATE` leases every `running` job with an expired lease and no attempts left to
+this worker for `LEASE_SECONDS`, without counting an attempt, since the job is settled, not run.
+While the round holds the lease, the claim's `NOT EXISTS` clause holds back the report's other jobs,
+as for any running job. `settle_abandoned` (`runner.py`) then looks at where the report stands
+(`_pause_reached`):
+
+| The work had… | Which means | The round… |
+|---|---|---|
+| Reached its pause: a `run` whose graph waits on an interrupt, or a `resume` whose noted checkpoint differs from the current one and whose graph waits on an interrupt; the report not terminal | The work was done; only recording it failed | Logs a warning, records the pause status unless another `resume` for the report is already queued (that job records its own), and marks the job `done` with `complete`. The report keeps waiting on the person instead of being failed. |
+| Anything else: no pause, a `resume` with no note or still at its noted checkpoint, a `deliver` job, a report already terminal or gone | The work didn't get there | Logs an error, marks the job `failed` with `fail_or_retry` (not retryable), and calls `give_up` with the `interrupted` message; `give_up` leaves a report that already ended as it is |
+
+If the settling worker dies before recording the outcome, its lease runs out and the next round
+claims and settles the job. If `complete` or `fail_or_retry` finds the row held by another worker,
+the round logs an error and records nothing more. A late `complete` or `fail_or_retry` from the
+original worker finds the row not locked by it and changes nothing.
 
 ## The checkpointer
 
@@ -224,9 +242,13 @@ A job whose worker died on its **last** attempt is never claimed again (the clai
   runs it) and calls `ainvoke(Command(resume=reply), config)`. Before it first hands the answer
   over, it notes the checkpoint it takes the graph up from in the job's payload
   (`resumed_from_checkpoint`, through `note_in_payload` in `queue.py`, committed at once and only
-  while this worker holds the job), so a retry can tell where the answer got to. If no task of the
-  snapshot is waiting on an interrupt and the graph hasn't moved on from that checkpoint, the
-  report is no longer paused and the job does nothing.
+  while this worker holds the job), so a retry can tell where the answer got to. If
+  `note_in_payload` returns false, another worker took the job over: `_resume` hands no answer to
+  the graph and returns, and `process` logs the takeover when `complete` changes nothing. The note
+  never reaches the graph: `_reply` strips it from a structured reply (a pressed button or the
+  panel), which is otherwise handed on as it is. If no task of the snapshot is waiting on an
+  interrupt and the graph hasn't moved on from that checkpoint, the report is no longer paused and
+  the job does nothing.
 
 A retried `resume` relies on a property of the checkpointer: the checkpoint moves on once the
 answered node completes, and stays put if that node itself fails
@@ -236,7 +258,7 @@ answered node completes, and stays put if that node itself fails
 | The graph stands at… | Which means | The retry… |
 |---|---|---|
 | The noted checkpoint | The answered node itself failed | Hands the answer over again (a voice reply is transcribed again) |
-| Another checkpoint, with a question pending | The graph paused again | Only records the pause status; the old answer never reaches the new question |
+| Another checkpoint, with a question pending | The graph paused again | Only records the pause status, and not even that when another `resume` for the report is already queued (`another_job_queued` in `queue.py`): a later answer is waiting, and its job records its own. The old answer never reaches the new question |
 | Another checkpoint, with steps left | A later node failed | Carries on with `ainvoke(None, config)` |
 | Another checkpoint, with nothing left | The graph finished | Does nothing |
 
@@ -283,12 +305,13 @@ On SIGTERM it stops taking jobs and finishes the one in hand. The compose files 
 `stop_grace_period` of 5 minutes, shorter than `JOB_TIMEOUT_SECONDS`; a job still running when
 Docker kills the container is recovered by the next worker once its lease expires.
 
-`maintenance` runs, in order: fail abandoned jobs; cancel reports waiting on a person for more than
-`PAUSED_REPORT_TTL_DAYS` (14) and drop their checkpoints; drop finished checkpoints; prune spent
-refresh-token ids, rate-limit hits and audit events; roll plan periods; drop template-assistant
-drafts; purge companies past their deletion grace; purge live-demo reports; apply audio retention
-and sweep temporary files; prune OAuth clients, codes and revoked grants. A failure in maintenance
-is logged and the loop carries on.
+`maintenance` runs, in order: settle jobs abandoned on their last attempt (see
+[Settle a job abandoned on its last attempt](#settle-a-job-abandoned-on-its-last-attempt)); cancel
+reports waiting on a person for more than `PAUSED_REPORT_TTL_DAYS` (14) and drop their checkpoints;
+drop finished checkpoints; prune spent refresh-token ids, rate-limit hits and audit events; roll
+plan periods; drop template-assistant drafts; purge companies past their deletion grace; purge
+live-demo reports; apply audio retention and sweep temporary files; prune OAuth clients, codes and
+revoked grants. A failure in maintenance is logged and the loop carries on.
 
 ## Limits and when to revisit
 
@@ -302,7 +325,9 @@ is logged and the loop carries on.
 ## Tests
 
 - `backend/tests/test_job_queue.py`: claiming, leases, the one-job-per-report rule, backoff, a
-  worker whose job was taken over unable to fail it.
+  worker whose job was taken over unable to fail it or note in its payload; a job abandoned on its
+  last attempt leased to be settled once, and settled by the next round when its settling worker
+  died.
 - `backend/tests/test_job_runner.py`: retry, permanent errors, giving up, resuming from a
   checkpoint; a lost lease cancelling the work and recording nothing, renewals that keep
   failing stopping the work and the worker (also when the work turns the cancellation into an
@@ -313,8 +338,13 @@ is logged and the loop carries on.
   timeout, and the worker's own cancellation (also after a lost lease, while the heartbeat winds
   down, and when the work turns it into an error); a resume noting where it took up the graph,
   and its retries: an answer that never got in handed over again, a graph that paused again
-  keeping the answer from the new question, a graph that failed on the way carrying on, a
-  finished graph left alone; a retried run of a finished report not starting over.
+  keeping the answer from the new question and leaving the status to a later answer queued, a
+  graph that failed on the way carrying on, a finished graph left alone, a retried button press
+  handing over the press alone, a resume whose job was taken over handing over nothing; a retried
+  run of a finished report not starting over; abandoned jobs settled: a run or resume that reached
+  its pause left waiting on the person, one that didn't failing the report, a report that ended
+  left as it is, and a last attempt that paused but couldn't record success ending waiting, not
+  failed.
 - `backend/tests/test_interrupt_resume.py`: a pause and resume against the real checkpointer, and
   the checkpoint moving on only once the answered step completes.
 - `backend/tests/test_langgraph_checkpointer.py`, `backend/tests/test_pause_status.py`.
