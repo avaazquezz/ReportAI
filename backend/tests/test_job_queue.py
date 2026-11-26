@@ -102,14 +102,14 @@ async def test_a_failed_attempt_is_retried_later_then_abandoned(db: AsyncSession
 
     first = await claim_next("w")
     assert first is not None
-    assert await fail_or_retry(first, "w", "provider down", retryable=True) is True
+    assert await fail_or_retry(first, "w", "provider down", retryable=True) == "retrying"
     assert await claim_next("w") is None  # backing off, not hammering the provider
     await db.execute(update(Job).where(Job.id == job.id).values(run_after=datetime.now(UTC) - timedelta(seconds=1)))
     await db.commit()
 
     second = await claim_next("w")
     assert second is not None and second.attempts == 2
-    assert await fail_or_retry(second, "w", "provider still down", retryable=True) is False
+    assert await fail_or_retry(second, "w", "provider still down", retryable=True) == "failed"
     await db.refresh(job)
     assert job.status == "failed" and "still down" in (job.last_error or "")
 
@@ -121,9 +121,23 @@ async def test_a_permanent_failure_is_not_retried(db: AsyncSession, own_sessions
     claimed = await claim_next("w")
     assert claimed is not None
 
-    assert await fail_or_retry(claimed, "w", "template is gone", retryable=False) is False
+    assert await fail_or_retry(claimed, "w", "template is gone", retryable=False) == "failed"
     await db.refresh(job)
     assert job.status == "failed"
+
+
+async def test_a_worker_whose_job_was_taken_over_cannot_fail_it(db: AsyncSession, own_sessions: None) -> None:
+    report = await _report(db)
+    job = await enqueue(db, report_id=report.id, kind=RUN, max_attempts=2)
+    await db.commit()
+    stale = await claim_next("worker-1")
+    assert stale is not None
+    await _expire_lease(db, job.id)  # worker-1 stalled past its lease...
+    assert await claim_next("worker-2") is not None  # ...and worker-2 took the job
+
+    assert await fail_or_retry(stale, "worker-1", "provider down", retryable=False) == "not_ours"
+    await db.refresh(job)
+    assert (job.status, job.locked_by, job.last_error) == ("running", "worker-2", None)
 
 
 async def test_a_job_abandoned_on_its_last_attempt_is_reported_as_failed(

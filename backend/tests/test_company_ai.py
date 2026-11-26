@@ -54,7 +54,7 @@ from app.services.ai_providers import EXTRACTION_PROVIDERS, TRANSCRIPTION_PROVID
 from app.services.instance_settings import AIConfig, ProviderRejectedKeyError, TranscriptionConfig
 from app.services.jobs import runner
 from app.services.jobs.errors import PermanentJobError
-from app.services.jobs.queue import ClaimedJob
+from app.services.jobs.queue import ClaimedJob, FailOutcome
 from app.services.observability.execution_log import write_execution_log
 from app.services.settings_checks import CheckFailed, check_ai
 from app.services.templates import assistant as template_assistant
@@ -506,9 +506,9 @@ async def test_a_refused_key_is_not_retried_and_tells_the_sender_why(monkeypatch
     retried: list[bool] = []
     told: list[str] = []
 
-    async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryable: bool) -> bool:
+    async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryable: bool) -> FailOutcome:
         retried.append(retryable)
-        return False
+        return "failed"
 
     monkeypatch.setattr(runner, "execute", refused)
     monkeypatch.setattr(runner, "fail_or_retry", fail_or_retry)

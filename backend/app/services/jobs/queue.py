@@ -9,7 +9,7 @@ deploy" into "the report resumes from its last checkpoint".
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +24,10 @@ _BACKOFF_SECONDS = (30, 120, 300)
 RUN = "run"
 RESUME = "resume"
 DELIVER = "deliver"
+
+# What recording a failed attempt did. "not_ours": another worker holds the job now (this one
+# was presumed dead and its lease ran out), so nothing was recorded and the outcome is theirs.
+FailOutcome = Literal["retrying", "failed", "not_ours"]
 
 
 @dataclass(frozen=True)
@@ -113,8 +117,8 @@ async def complete(job_id: uuid.UUID, worker_id: str) -> None:
         await session.commit()
 
 
-async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryable: bool) -> bool:
-    """Puts the job back for another attempt, or gives up. True when it will be retried."""
+async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryable: bool) -> FailOutcome:
+    """Puts the job back for another attempt, or gives up — if this worker still holds it."""
     retry = retryable and job.attempts < job.max_attempts
     values: dict[str, Any] = {"last_error": error[:2000], "locked_by": None, "locked_until": None}
     if retry:
@@ -123,11 +127,14 @@ async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryabl
     else:
         values["status"] = "failed"
     async with AsyncSessionLocal() as session:
-        await session.execute(
-            update(Job).where(Job.id == job.id, Job.locked_by == worker_id).values(**values)
+        result = await session.execute(
+            update(Job).where(Job.id == job.id, Job.locked_by == worker_id).values(**values).returning(Job.id)
         )
+        held = result.scalar_one_or_none() is not None
         await session.commit()
-    return retry
+    if not held:
+        return "not_ours"
+    return "retrying" if retry else "failed"
 
 
 async def fail_abandoned() -> list[tuple[uuid.UUID, uuid.UUID]]:

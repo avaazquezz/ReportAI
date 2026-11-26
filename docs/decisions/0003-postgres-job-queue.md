@@ -5,7 +5,7 @@
 - **Evidence:** `PROJECT_ROADMAP.md` §3 ("Postgres as the job queue (`SKIP LOCKED`, lease and
   heartbeat), no Redis or Celery") and the 2026-08-11 log entry (`BackgroundTasks`, with its
   upgrade trigger); commits `792900e` (`BackgroundTasks`, 2026-08-11) and `fa3f4a9` ("durable job
-  queue with leases in Postgres", 2026-10-01)
+  queue with leases in Postgres", 2026-10-01); revised by the 2026-11-26 log entry (lease loss)
 
 ## Context
 
@@ -34,6 +34,17 @@ heartbeat, retries with backoff, and resumes a retried run from its last LangGra
 - A worker that dies delays its job by at most the lease; a job that dies on its last attempt is
   failed by the maintenance round and the person is told.
 - Two jobs of one report never run at once (a clause of the claim query).
+- A lapsed lease can leave two workers on one job: the one that stalled and the one that took over.
+  (Revised 2026-11-26.) The old worker's heartbeat cancels its work when a renewal finds the lease
+  gone, and the old worker then records nothing about the job or its report; a failure it reaches
+  before noticing is dropped (`fail_or_retry` returns `"not_ours"`). The overlap lasts until its
+  next heartbeat, and the checkpointer and the delivery rows keep it from producing a second
+  document or email. A renewal that fails or hangs (the database unreachable) is retried every
+  10 seconds while the last good one still holds, and no attempt runs past two thirds of the lease.
+  If none succeeds by then, the heartbeat cancels the work, which keeps the last third of the lease
+  to wind down, and records nothing, since whether the lease is still held is unknown; it stops
+  the worker, whose container restarts, and the job is claimed again once the lease runs out (see
+  [lease and heartbeat](../how-it-works/job-queue-and-checkpoints.md#lease-and-heartbeat)).
 
 ## Revisit when
 
