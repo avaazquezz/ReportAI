@@ -4,6 +4,7 @@ voice), and on failure either try again or give up and tell the person."""
 import asyncio
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
@@ -18,10 +19,10 @@ from app.models.execution_log import ExecutionLog
 from app.models.job import Job
 from app.models.report import Report
 from app.models.tenant import Tenant
-from app.services.jobs import runner
+from app.services.jobs import queue, runner
 from app.services.jobs.errors import PermanentJobError
-from app.services.jobs.queue import RESUME, RUN, ClaimedJob, claim_next, enqueue
-from app.services.jobs.runner import execute, process
+from app.services.jobs.queue import RESUME, RUN, ClaimedJob, claim_abandoned, claim_next, enqueue
+from app.services.jobs.runner import execute, process, settle_abandoned
 from app.services.transcription import Transcript
 
 
@@ -906,3 +907,137 @@ async def test_the_worker_shutting_down_cancels_the_job_and_leaves_it_for_the_ne
     assert (stored.status, stored.locked_by) == ("running", "test-worker")  # its lease will run out
     await db.refresh(report)
     assert report.status == "pending"
+
+
+async def _abandoned(db: AsyncSession, report: Report, kind: str = RUN, payload: dict[str, Any] | None = None) -> ClaimedJob:
+    """A job whose worker died on its last attempt, as the maintenance round claims it."""
+    job = await _queued(db, report, kind, payload, max_attempts=1)
+    await db.execute(update(Job).where(Job.id == job.id).values(locked_until=datetime.now(UTC) - timedelta(seconds=1)))
+    await db.commit()
+    [abandoned] = await claim_abandoned("reaper")
+    return abandoned
+
+
+async def _job_status(db: AsyncSession, job: ClaimedJob) -> str:
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    return stored.status
+
+
+async def test_a_run_abandoned_once_it_reached_its_pause_leaves_the_report_waiting_on_the_person(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # The work got to the pause (the question is out); the worker died recording it. Failing the
+    # report here told the person it failed and deleted the checkpoint their answer resumes.
+    report = await _report(db, status="pending")
+    _use_graph(monkeypatch, FakeGraph(paused=True, pause_kind="confirm_report"))
+    job = await _abandoned(db, report)
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "awaiting_approval"
+    assert await _job_status(db, job) == "done"
+    adapter.send_message.assert_not_awaited()
+    checkpoints.assert_not_awaited()
+
+
+async def test_a_run_abandoned_before_its_pause_fails_the_report_and_tells_the_person(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph(values={"x": 1}, next_nodes=("extract",)))
+    job = await _abandoned(db, report)
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "failed"
+    assert await _job_status(db, job) == "failed"
+    assert "interrumpió" in adapter.send_message.await_args.args[0].text
+    checkpoints.assert_awaited_once_with(str(report.id))
+
+
+async def test_a_resume_abandoned_once_its_answer_led_to_the_next_pause_is_done(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db, status="awaiting_details")
+    _use_graph(monkeypatch, FakeGraph(paused=True, checkpoint="cp-next", pause_kind="confirm_report"))
+    job = await _abandoned(db, report, RESUME, {"text": "el martes", "resumed_from_checkpoint": "cp-paused"})
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "awaiting_approval"
+    assert await _job_status(db, job) == "done"
+    adapter.send_message.assert_not_awaited()
+
+
+async def test_a_resume_abandoned_before_its_answer_got_in_fails_the_report(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # Still paused where the job took it up: the pause is the question this job was to answer.
+    report = await _report(db, status="awaiting_details")
+    _use_graph(monkeypatch, FakeGraph(paused=True, checkpoint="cp-paused"))
+    job = await _abandoned(db, report, RESUME, {"text": "el martes", "resumed_from_checkpoint": "cp-paused"})
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "failed"
+    assert await _job_status(db, job) == "failed"
+
+
+async def test_a_resume_abandoned_before_noting_where_it_took_up_the_graph_fails_the_report(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db, status="awaiting_details")
+    _use_graph(monkeypatch, FakeGraph(paused=True, checkpoint="cp-paused"))
+    job = await _abandoned(db, report, RESUME, {"text": "el martes"})
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "failed"
+
+
+async def test_an_abandoned_job_of_a_report_that_ended_leaves_the_report_as_it_is(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # Cancelled while paused: recording the pause would bring a cancelled report back.
+    report = await _report(db, status="cancelled")
+    _use_graph(monkeypatch, FakeGraph(paused=True, pause_kind="confirm_report"))
+    job = await _abandoned(db, report)
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "cancelled"
+    assert await _job_status(db, job) == "failed"
+    adapter.send_message.assert_not_awaited()
+
+
+async def test_a_last_attempt_that_paused_but_could_not_record_success_ends_waiting_not_failed(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # The whole path: the worker stops on the failed bookkeeping, and the maintenance round that
+    # finds its job later keeps the report waiting on the person.
+    report = await _report(db)
+    pause = (SimpleNamespace(value={"kind": "confirm_report"}),)
+    _use_graph(monkeypatch, FakeGraph(paused=True, pause_kind="confirm_report", result={"__interrupt__": pause}))
+    job = await _queued(db, report, max_attempts=1)
+    monkeypatch.setattr(runner, "complete", AsyncMock(side_effect=ConnectionRefusedError("database unreachable")))
+    with pytest.raises(ConnectionRefusedError):
+        await process(job, "test-worker")
+    monkeypatch.setattr(runner, "complete", queue.complete)  # the database is back
+    await db.execute(update(Job).where(Job.id == job.id).values(locked_until=datetime.now(UTC) - timedelta(seconds=1)))
+    await db.commit()
+
+    [abandoned] = await claim_abandoned("reaper")
+    await settle_abandoned(abandoned, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "awaiting_approval"
+    assert await _job_status(db, job) == "done"
+    adapter.send_message.assert_not_awaited()

@@ -169,22 +169,23 @@ async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryabl
     return "retrying" if retry else "failed"
 
 
-async def fail_abandoned() -> list[tuple[uuid.UUID, uuid.UUID]]:
-    """Jobs whose worker died on their last allowed attempt: nobody will run them again.
-    Returns (job_id, report_id) of each, so the caller can tell the person."""
+async def claim_abandoned(worker_id: str) -> list[ClaimedJob]:
+    """Jobs whose worker died on their last allowed attempt: nobody will run them again. Leased to
+    `worker_id` to settle (not run: `attempts` stays), which it records with `complete` or
+    `fail_or_retry`; if it dies first, the lease runs out and the next round settles them."""
     async with AsyncSessionLocal() as session:
         rows = (
             await session.execute(
                 text(
                     """
-                    UPDATE jobs SET status = 'failed', locked_by = NULL, locked_until = NULL,
-                        last_error = 'The worker stopped before finishing and no attempts were left',
-                        updated_at = now()
+                    UPDATE jobs SET locked_by = :worker,
+                        locked_until = now() + make_interval(secs => :lease), updated_at = now()
                     WHERE status = 'running' AND locked_until < now() AND attempts >= max_attempts
-                    RETURNING id, report_id
+                    RETURNING id, report_id, kind, payload, attempts, max_attempts
                     """
-                )
+                ),
+                {"worker": worker_id, "lease": LEASE_SECONDS},
             )
         ).all()
         await session.commit()
-    return [(row.id, row.report_id) for row in rows]
+    return [ClaimedJob(row.id, row.report_id, row.kind, row.payload, row.attempts, row.max_attempts) for row in rows]

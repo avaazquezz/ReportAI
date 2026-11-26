@@ -13,10 +13,10 @@ from app.services.jobs import queue
 from app.services.jobs.queue import (
     RESUME,
     RUN,
+    claim_abandoned,
     claim_next,
     complete,
     enqueue,
-    fail_abandoned,
     fail_or_retry,
     note_in_payload,
 )
@@ -171,7 +171,24 @@ async def test_a_worker_whose_job_was_taken_over_cannot_note_in_its_payload(db: 
     assert job.payload == {"text": "CONFIRM", "resumed_from_checkpoint": "cp-1"}
 
 
-async def test_a_job_abandoned_on_its_last_attempt_is_reported_as_failed(
+async def test_a_job_abandoned_on_its_last_attempt_is_leased_to_be_settled_once(
+    db: AsyncSession, own_sessions: None
+) -> None:
+    report = await _report(db)
+    job = await enqueue(db, report_id=report.id, kind=RUN, payload={"text": "hola"}, max_attempts=1)
+    await db.commit()
+    assert await claim_next("w") is not None
+    await _expire_lease(db, job.id)
+
+    assert await claim_next("other") is None  # no attempts left to hand out
+    [abandoned] = await claim_abandoned("reaper")
+    assert (abandoned.id, abandoned.report_id, abandoned.kind, abandoned.payload, abandoned.attempts) == (
+        job.id, report.id, RUN, {"text": "hola"}, 1)  # settling is not another attempt
+    assert await claim_abandoned("reaper-2") == []  # leased: one worker settles it
+    assert await complete(job.id, "w") is False  # nor can the dead worker record anything late
+
+
+async def test_an_abandoned_job_whose_settling_worker_died_is_settled_by_the_next_round(
     db: AsyncSession, own_sessions: None
 ) -> None:
     report = await _report(db)
@@ -179,10 +196,11 @@ async def test_a_job_abandoned_on_its_last_attempt_is_reported_as_failed(
     await db.commit()
     assert await claim_next("w") is not None
     await _expire_lease(db, job.id)
+    assert len(await claim_abandoned("reaper")) == 1
+    await _expire_lease(db, job.id)
 
-    assert await claim_next("other") is None  # no attempts left to hand out
-    assert await fail_abandoned() == [(job.id, report.id)]
-    assert await fail_abandoned() == []  # reported once
+    [again] = await claim_abandoned("reaper-2")
+    assert again.id == job.id
 
 
 async def test_one_report_never_has_two_jobs_running(db: AsyncSession, own_sessions: None) -> None:

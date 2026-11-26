@@ -231,6 +231,48 @@ async def give_up(report_id: uuid.UUID, error: str, reason_key: str = "failure")
         await get_checkpointer().adelete_thread(str(report_id))
 
 
+async def _pause_reached(job: ClaimedJob) -> tuple[Any, ...]:
+    """The interrupts the report now waits on, if the job's work took it there: a run that got to
+    its first pause, or a resume whose answer got in and led to the next one. Empty otherwise."""
+    if job.kind not in (RUN, RESUME):
+        return ()
+    async with AsyncSessionLocal() as session:
+        report = await ReportRepository(session).get_by_id(job.report_id)
+    if report is None or report.status in TERMINAL_STATUSES:
+        return ()  # nothing to keep: give_up leaves an ended report as it is
+    config: RunnableConfig = {"configurable": {"thread_id": str(job.report_id)}}
+    snapshot = await get_compiled_graph().aget_state(config)
+    if not snapshot.interrupts:
+        return ()
+    if job.kind == RESUME:
+        resumed_from = job.payload.get(_RESUMED_FROM)
+        if resumed_from is None or resumed_from == snapshot.config["configurable"].get("checkpoint_id"):
+            return ()  # the answer never got in: the pause is the one this job was to answer
+    return tuple(snapshot.interrupts)
+
+
+async def settle_abandoned(job: ClaimedJob, worker_id: str) -> None:
+    """A job whose worker died on its last attempt (claimed by `claim_abandoned`). If the work got
+    to its pause and only recording it failed, the report waits on the person, as it should: the
+    pause is recorded and the job done. Otherwise the report fails and the person is told."""
+    with log_context(report_id=job.report_id, job=job.kind):
+        interrupts = await _pause_reached(job)
+        if interrupts:
+            logger.warning("Job %s was abandoned on its last attempt after its work was done", job.id)
+            # As in _resume: a later answer already queued records its own pause.
+            if not await another_job_queued(job.report_id, job.id, RESUME):
+                await _mark_paused_if_interrupted({"__interrupt__": interrupts}, job.report_id)
+            if not await complete(job.id, worker_id):
+                logger.error("Job %s was taken by another worker while being settled", job.id)
+            return
+        logger.error("Job %s was abandoned by a dead worker with no attempts left", job.id)
+        error = "The worker stopped before finishing and no attempts were left"
+        if await fail_or_retry(job, worker_id, error, retryable=False) == "failed":
+            await give_up(job.report_id, "The worker stopped before finishing the report", "interrupted")
+        else:
+            logger.error("Job %s was taken by another worker while being settled", job.id)
+
+
 async def _heartbeat(job_id: uuid.UUID, worker_id: str, work: asyncio.Task[None], lost: asyncio.Event) -> None:
     """Renews the lease while `work` runs, and cancels `work` once this worker can't count on
     holding it: two runs of one report would race each other. Lost (another worker holds the job):
