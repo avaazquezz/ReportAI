@@ -21,7 +21,7 @@ A job is one row in `jobs` (`backend/app/models/job.py`):
 | Column | Meaning |
 |---|---|
 | `kind` | `run` (start a report), `resume` (answer a pause), `deliver` (send copies that failed) |
-| `payload` | What the job needs: the text and media reference, the reply, the document type chosen in the app |
+| `payload` | What the job needs: the text and media reference, the reply, the document type chosen in the app; a `resume` adds the checkpoint it took the graph up from (see [Run, resume, retry](#run-resume-retry)) |
 | `status` | `queued`, `running`, `done`, `failed` |
 | `attempts`, `max_attempts` | Attempts so far; 3 by default |
 | `run_after` | Not claimed before this time (backoff, delayed delivery retries) |
@@ -165,8 +165,9 @@ purpose only to stop the worker, in three cases:
 - **Recording success fails.** `complete` runs in the `else` clause of the `try` statement, outside
   the failure handlers, so a database error there escapes `process` instead of counting as a
   failure of the job: no `fail_or_retry`, no `give_up`. The job stays `running` and `locked_by`
-  this worker, and once its lease runs out it is claimed again like any other retry (see
-  [Run, resume, retry](#run-resume-retry)).
+  this worker, and once its lease runs out it is claimed again like any other retry, which picks
+  up where the attempt left the report (see [Run, resume, retry](#run-resume-retry)); on a last
+  attempt the maintenance round fails it instead.
 
 A database error while `process` records a failure also escapes.
 When `execute` fails, or runs past `JOB_TIMEOUT_SECONDS`, and the worker still holds the lease:
@@ -212,13 +213,35 @@ A job whose worker died on its **last** attempt is never claimed again (the clai
 
 - **`run`, first attempt.** Builds a fresh `AgentState` from the report and the job's payload and
   calls `graph.ainvoke(state, config)` with `thread_id = str(report.id)`.
-- **`run`, a later attempt.** If the thread already has a checkpoint (`snapshot.values`), it calls
-  `ainvoke(None, config)`, which continues from the last completed node. If the snapshot has no
-  next node, the earlier attempt actually finished and nothing runs.
-- **`resume`.** If no task of the snapshot is waiting on an interrupt, an earlier attempt already
-  delivered this answer and the job does nothing. Otherwise it turns a voice reply into text first
-  (logged as `transcribe_reply`, since no node runs it) and calls
-  `ainvoke(Command(resume=reply), config)`.
+- **`run`, a later attempt.** If the report is already terminal, an earlier attempt finished it
+  but couldn't record that, and its checkpoints are gone by then (see
+  [Cleaning up checkpoints](#cleaning-up-checkpoints)): the job returns without starting the graph
+  over, which would transcribe, extract and deliver the report again. Otherwise, if the thread
+  already has a checkpoint (`snapshot.values`), it calls `ainvoke(None, config)`, which continues
+  from the last completed node. If the snapshot has no next node, the earlier attempt actually
+  finished and nothing runs.
+- **`resume`.** It turns a voice reply into text first (logged as `transcribe_reply`, since no node
+  runs it) and calls `ainvoke(Command(resume=reply), config)`. Before it first hands the answer
+  over, it notes the checkpoint it takes the graph up from in the job's payload
+  (`resumed_from_checkpoint`, through `note_in_payload` in `queue.py`, committed at once and only
+  while this worker holds the job), so a retry can tell where the answer got to. If no task of the
+  snapshot is waiting on an interrupt and the graph hasn't moved on from that checkpoint, the
+  report is no longer paused and the job does nothing.
+
+A retried `resume` relies on a property of the checkpointer: the checkpoint moves on once the
+answered node completes, and stays put if that node itself fails
+(`test_the_checkpoint_moves_on_only_once_the_answered_step_completes`, against the real
+`AsyncPostgresSaver`). The retry compares the note with the checkpoint the graph stands at:
+
+| The graph stands at… | Which means | The retry… |
+|---|---|---|
+| The noted checkpoint | The answered node itself failed | Hands the answer over again (a voice reply is transcribed again) |
+| Another checkpoint, with a question pending | The graph paused again | Only records the pause status; the old answer never reaches the new question |
+| Another checkpoint, with steps left | A later node failed | Carries on with `ainvoke(None, config)` |
+| Another checkpoint, with nothing left | The graph finished | Does nothing |
+
+With no note (a first attempt, or a job queued before the note existed), the retry behaves as on
+the noted checkpoint.
 - **`deliver`.** Runs `send_pending` outside the graph: it sends only the copies not yet `sent`
   and raises `DeliveryFailed` (retryable) when some still fail.
 
@@ -288,6 +311,10 @@ is logged and the loop carries on.
   found gone after the outcome is recorded reporting nothing, a failure after an unnoticed
   takeover, a failure to record success stopping the worker without failing the job, the job
   timeout, and the worker's own cancellation (also after a lost lease, while the heartbeat winds
-  down, and when the work turns it into an error).
-- `backend/tests/test_interrupt_resume.py`: a pause and resume against the real checkpointer.
+  down, and when the work turns it into an error); a resume noting where it took up the graph,
+  and its retries: an answer that never got in handed over again, a graph that paused again
+  keeping the answer from the new question, a graph that failed on the way carrying on, a
+  finished graph left alone; a retried run of a finished report not starting over.
+- `backend/tests/test_interrupt_resume.py`: a pause and resume against the real checkpointer, and
+  the checkpoint moving on only once the answered step completes.
 - `backend/tests/test_langgraph_checkpointer.py`, `backend/tests/test_pause_status.py`.
