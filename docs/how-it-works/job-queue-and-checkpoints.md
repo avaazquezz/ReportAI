@@ -103,18 +103,23 @@ maintenance round fails it with `fail_abandoned`, which clears `locked_by`, so a
 > the same report. The checkpointer and the delivery rows (one per copy, skipped once `sent`) keep
 > that overlap from producing a second document or email.
 
-If a renewal itself fails (`extend_lease` raises, for example because the database is
-unreachable), what `_heartbeat` does depends on how long ago it attempted the last renewal that
-succeeded (at first, the claim):
+If a renewal itself fails (`extend_lease` raises or hangs, for example because the database is
+unreachable), `_heartbeat` rides it out while the last renewal that succeeded still holds. On the
+event loop's clock (monotonic), it takes the time it attempted that renewal (at first, the claim)
+and sets a give-up point two thirds of `LEASE_SECONDS` later (80 seconds):
 
-- **Less than two thirds of `LEASE_SECONDS` ago (80 seconds).** That renewal still holds, so the
-  heartbeat logs a warning ("Couldn't renew the lease on job …; trying again") and tries again at
-  the next beat. A database blip shorter than that leaves the work running.
-- **Two thirds or more.** Nobody knows any more whether this worker holds the lease. `_heartbeat`
-  cancels the work and raises, which leaves at most about a third of the lease (40 seconds) for the
-  work to wind down before another worker may claim the job.
+- **Every renewal is bounded by the give-up point** (`asyncio.timeout_at`), so one that hangs or
+  is slow to fail never runs past it; a hang ends as a `TimeoutError`.
+- **A failure with more than one retry interval left before the give-up point** is logged as a
+  warning ("Couldn't renew the lease on job …; trying again") and retried after
+  `LEASE_SECONDS / 12` (10 seconds) instead of a full beat. A renewal that succeeds moves the
+  give-up point and puts the heartbeat back on its 40-second beat, so a database blip leaves the
+  work running as long as some renewal succeeds within 80 seconds of the last good one.
+- **A failure that leaves no more than one retry interval** means this worker can't count on
+  holding the lease any more. `_heartbeat` cancels the work and raises. That happens by the
+  give-up point at the latest, so the work always keeps the last third of the lease (40 seconds)
+  to wind down before another worker may claim the job.
 
-With a beat every 40 seconds, one failed renewal is tolerated and two in a row stop the worker.
 Once the heartbeat has raised, `process` re-raises its error instead of recording anything, also
 when the work turned the cancellation into an error of its own (`_renewal_error` and `process` in
 `runner.py`). The job stays `running` and `locked_by` this worker, and the report keeps its
@@ -261,7 +266,8 @@ is logged and the loop carries on.
 - `backend/tests/test_job_runner.py`: retry, permanent errors, giving up, resuming from a
   checkpoint; a lost lease cancelling the work and recording nothing, renewals that keep
   failing stopping the work and the worker (also when the work turns the cancellation into an
-  error), a database blip the lease outlasts leaving the work running, a failure after an unnoticed takeover, the job timeout, and the
-  worker's own cancellation, also after a lost lease.
+  error), renewals refused or hanging given up at two thirds of the lease, a database blip the
+  lease outlasts leaving the work running, a failure after an unnoticed takeover, the job timeout,
+  and the worker's own cancellation, also after a lost lease.
 - `backend/tests/test_interrupt_resume.py`: a pause and resume against the real checkpointer.
 - `backend/tests/test_langgraph_checkpointer.py`, `backend/tests/test_pause_status.py`.
