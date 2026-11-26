@@ -253,8 +253,8 @@ def _shutting_down() -> bool:
 async def process(job: ClaimedJob, worker_id: str) -> None:
     """Runs a job to completion, retry or surrender. It raises only to stop the worker: on its own
     cancellation, or when the lease can't be renewed, so that it runs out and another worker
-    claims the job, or when recording success fails (the job is claimed again and finds its work
-    done). Once the lease is lost it records nothing: the job and its report are the new owner's
+    claims the job, or when recording success fails (the job is claimed again, as one whose worker
+    died). Once the lease is lost it records nothing: the job and its report are the new owner's
     to finish or fail."""
     lease_lost = asyncio.Event()
     work = asyncio.create_task(execute(job))
@@ -287,8 +287,9 @@ async def process(job: ClaimedJob, worker_id: str) -> None:
             await give_up(job.report_id, error, exc.reason_key if isinstance(exc, PermanentJobError) else "failure")
     else:
         # Outside the handlers above: a failure to record success is not a failure of the job.
-        if not lease_lost.is_set():
-            await complete(job.id, worker_id)
+        if not lease_lost.is_set() and not await complete(job.id, worker_id):
+            # The lease ran out before the heartbeat noticed: another worker runs the job too.
+            logger.error("Job %s was taken by another worker before this one could record its success", job.id)
     finally:
         heartbeat.cancel()
         # Unlike awaiting the heartbeat, this lets the worker's own cancellation through.

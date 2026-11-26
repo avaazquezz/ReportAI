@@ -672,6 +672,32 @@ async def test_a_slow_good_renewal_does_not_eat_into_the_retries_after_it(
     assert [r for r in caplog.records if r.getMessage().startswith("Couldn't renew the lease")]
 
 
+async def test_a_success_after_an_unnoticed_takeover_is_logged_and_left_to_the_new_owner(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # The worker stalled past its lease and another took the job; the step ends well before the
+    # next heartbeat would have noticed. Two runs of one report must not pass unseen.
+    report = await _report(db)
+    job = await _queued(db, report)
+
+    async def taken_over_meanwhile(*_args: Any) -> dict[str, Any]:
+        await _taken_by_another_worker(db, job)
+        return {}
+
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = taken_over_meanwhile
+    with caplog.at_level(logging.ERROR, logger="app.services.jobs.runner"):
+        await process(job, "test-worker")
+
+    assert [r.getMessage() for r in caplog.records if r.name == runner.logger.name] == [
+        f"Job {job.id} was taken by another worker before this one could record its success"
+    ]
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.locked_by) == ("running", "other-worker")
+
+
 async def test_a_job_that_keeps_its_lease_is_marked_done_and_leaves_no_task_behind(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, quick_lease: None
 ) -> None:
