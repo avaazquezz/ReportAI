@@ -1041,3 +1041,83 @@ async def test_a_last_attempt_that_paused_but_could_not_record_success_ends_wait
     assert report.status == "awaiting_approval"
     assert await _job_status(db, job) == "done"
     adapter.send_message.assert_not_awaited()
+
+
+async def test_an_abandoned_job_whose_report_has_a_later_answer_queued_leaves_the_status_to_it(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db, status="pending")
+    _use_graph(monkeypatch, FakeGraph(paused=True, pause_kind="confirm_report"))
+    job = await _abandoned(db, report)
+    await enqueue(db, report_id=report.id, kind=RESUME, payload={"text": "CONFIRM"})
+    await db.commit()
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "pending"
+    assert await _job_status(db, job) == "done"
+
+
+async def test_an_abandoned_job_taken_over_before_it_is_settled_is_left_to_its_new_owner(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # The settling worker stalled past its lease and the next round took the job.
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph(values={"x": 1}, next_nodes=("extract",)))
+    job = await _abandoned(db, report)
+    await db.execute(update(Job).where(Job.id == job.id).values(locked_until=datetime.now(UTC) - timedelta(seconds=1)))
+    await db.commit()
+    assert len(await claim_abandoned("reaper-2")) == 1
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "pending"
+    assert await _job_status(db, job) == "running"
+    adapter.send_message.assert_not_awaited()
+    checkpoints.assert_not_awaited()
+
+
+async def test_an_abandoned_job_taken_over_while_being_failed_does_not_fail_the_report(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph(values={"x": 1}, next_nodes=("extract",)))
+    job = await _abandoned(db, report)
+    monkeypatch.setattr(runner, "fail_or_retry", AsyncMock(return_value="not_ours"))
+
+    await settle_abandoned(job, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "pending"
+    adapter.send_message.assert_not_awaited()
+    checkpoints.assert_not_awaited()
+
+
+async def test_a_job_whose_state_cannot_be_read_is_failed_after_a_few_rounds(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # Tried again every round for good, it would leave the report pending forever.
+    report = await _report(db)
+    graph = _use_graph(monkeypatch, FakeGraph(paused=True))
+    graph.aget_state.side_effect = ValueError("a checkpoint that no longer loads")
+    job = await _abandoned(db, report)
+
+    with pytest.raises(ValueError):
+        await settle_abandoned(job, "reaper")
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert stored.payload["settle_rounds"] == 1  # the round counts even when it fails
+
+    await db.execute(update(Job).where(Job.id == job.id).values(
+        payload=stored.payload | {"settle_rounds": 3}, locked_until=datetime.now(UTC) - timedelta(seconds=1)))
+    await db.commit()
+    [again] = await claim_abandoned("reaper")
+    await settle_abandoned(again, "reaper")
+
+    await db.refresh(report)
+    assert report.status == "failed"
+    assert await _job_status(db, job) == "failed"
+    assert graph.aget_state.await_count == 1  # not read again once the rounds are spent

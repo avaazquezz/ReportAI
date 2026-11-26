@@ -152,7 +152,12 @@ async def prune_oauth() -> None:
 
 async def maintenance(worker_id: str) -> None:
     for job in await claim_abandoned(worker_id):
-        await settle_abandoned(job, worker_id)
+        try:
+            await settle_abandoned(job, worker_id)
+        except Exception:
+            # One job must not hold back the rest of maintenance. Its lease runs out and a later
+            # round settles it (settle_abandoned caps how many try to read its state).
+            logger.exception("Couldn't settle abandoned job %s", job.id)
     cancelled = await cancel_abandoned_reports()
     if cancelled:
         logger.info("Cancelled %s reports that waited too long for an answer", cancelled)
