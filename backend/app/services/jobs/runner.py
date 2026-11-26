@@ -202,20 +202,30 @@ async def give_up(report_id: uuid.UUID, error: str, reason_key: str = "failure")
 
 
 async def _heartbeat(job_id: uuid.UUID, worker_id: str, work: asyncio.Task[None], lost: asyncio.Event) -> None:
-    """Renews the lease while `work` runs, and cancels `work` once it can't: two runs of one report
-    would race each other. Lost (another worker holds the job): sets `lost` and returns. Unknown
-    (the renewal itself failed): raises, for process() to stop the worker with."""
-    try:
-        while True:
-            await asyncio.sleep(LEASE_SECONDS / 3)
-            if not await extend_lease(job_id, worker_id):
-                logger.error("Lost the lease on job %s; another worker may have taken it", job_id)
-                lost.set()
-                work.cancel()
-                return
-    except Exception:
-        work.cancel()
-        raise
+    """Renews the lease while `work` runs, and cancels `work` once this worker can't count on
+    holding it: two runs of one report would race each other. Lost (another worker holds the job):
+    sets `lost` and returns. Unknown (renewals kept failing): raises, for process() to stop the
+    worker with. A renewal that fails while the last good one still holds (a database blip) is
+    retried at the next beat; the worker gives up with a third of the lease left, for the work to
+    wind down before another worker may claim the job."""
+    renewed_at = time.monotonic()  # the claim took the lease moments ago
+    while True:
+        await asyncio.sleep(LEASE_SECONDS / 3)
+        attempted_at = time.monotonic()
+        try:
+            held = await extend_lease(job_id, worker_id)
+        except Exception:
+            if attempted_at - renewed_at < LEASE_SECONDS * 2 / 3:
+                logger.warning("Couldn't renew the lease on job %s; trying again", job_id, exc_info=True)
+                continue
+            work.cancel()
+            raise
+        if not held:
+            logger.error("Lost the lease on job %s; another worker may have taken it", job_id)
+            lost.set()
+            work.cancel()
+            return
+        renewed_at = attempted_at
 
 
 def _renewal_error(heartbeat: asyncio.Task[None]) -> BaseException | None:

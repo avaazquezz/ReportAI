@@ -409,14 +409,15 @@ async def test_shutting_down_after_a_lost_lease_still_stops_the_worker(
     assert (stored.status, stored.locked_by) == ("running", "other-worker")
 
 
+@pytest.mark.parametrize("on_cancel", [asyncio.CancelledError, RuntimeError], ids=["cancelled", "cancel-as-error"])
 async def test_a_lease_that_cannot_be_renewed_stops_the_work_and_the_worker(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
-    adapter: AsyncMock, quick_lease: None,
+    adapter: AsyncMock, quick_lease: None, on_cancel: type[BaseException],
 ) -> None:
     # Whether the lease is still held is unknown: nothing is recorded, and the worker stops (its
     # container restarts) so that the lease runs out and the job is claimed again.
     report = await _report(db)
-    step = SlowStep(3)
+    step = SlowStep(3, on_cancel=on_cancel)
     _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
     job = await _queued(db, report, max_attempts=1)
 
@@ -441,6 +442,46 @@ async def test_a_lease_that_cannot_be_renewed_stops_the_work_and_the_worker(
     assert (report.status, report.error_detail) == ("pending", None)
     adapter.send_message.assert_not_awaited()
     checkpoints.assert_not_awaited()
+
+
+async def test_a_database_blip_while_the_lease_still_holds_does_not_stop_the_work(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock, caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Renewing every 100 ms: quick_lease's 10 ms is shorter than a real renewal takes here.
+    monkeypatch.setattr(runner, "LEASE_SECONDS", 0.3)
+    report = await _report(db)
+    started = asyncio.Event()
+
+    async def step(*_args: Any) -> dict[str, Any]:
+        started.set()
+        await asyncio.sleep(1)  # cancelled, it raises CancelledError and the job isn't "done"
+        return {}
+
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step
+    job = await _queued(db, report, max_attempts=1)
+    renew = runner.extend_lease
+    failed_once = False
+
+    async def unreachable_once(job_id: uuid.UUID, worker_id: str) -> bool:
+        nonlocal failed_once
+        if started.is_set() and not failed_once:
+            failed_once = True
+            raise ConnectionRefusedError("database unreachable")
+        return await renew(job_id, worker_id)
+
+    monkeypatch.setattr(runner, "extend_lease", unreachable_once)
+    with caplog.at_level(logging.WARNING, logger="app.services.jobs.runner"):
+        await asyncio.wait_for(process(job, "test-worker"), timeout=5)
+
+    assert failed_once
+    assert [r.getMessage() for r in caplog.records if r.name == runner.logger.name] == [
+        f"Couldn't renew the lease on job {job.id}; trying again"
+    ]
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert stored.status == "done"
 
 
 async def test_a_failure_after_an_unnoticed_takeover_leaves_the_job_and_report_to_their_new_owner(
