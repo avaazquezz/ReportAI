@@ -79,7 +79,8 @@ What each part guarantees:
 The lease lasts `LEASE_SECONDS` (120, `backend/app/services/jobs/queue.py`). `process`
 (`backend/app/services/jobs/runner.py`) runs `execute` as a task of its own and starts
 `_heartbeat` (same file) next to it, which calls `extend_lease` every 40 seconds
-(`LEASE_SECONDS / 3`). `extend_lease` (`queue.py`) only renews a row still `running` and still
+(`LEASE_SECONDS / 3`), counted from when the previous renewal began, so a slow renewal doesn't push
+the next one back. `extend_lease` (`queue.py`) only renews a row still `running` and still
 `locked_by` this worker. With the lease at three times the renewal interval, it lapses only when a
 worker goes 120 seconds without renewing: it died, or it stalled.
 
@@ -90,9 +91,14 @@ records nothing about either**. The following paths enforce it:
 
 | When the old worker… | It… | Code |
 |---|---|---|
-| …finds the lease gone at its next heartbeat (`extend_lease` returns false) | Logs an error, sets the `lease_lost` event `process` passed it, and cancels the work in hand. `process` checks that event, so it returns without calling `complete`, `fail_or_retry` or `give_up`, also when a library turns the cancellation into an error of its own. | `_heartbeat` and `process` (`runner.py`) |
+| …finds the lease gone at its next heartbeat (`extend_lease` returns false) while the work runs | Logs an error, sets the `lease_lost` event `process` passed it, and cancels the work in hand. `process` checks that event, so it returns without calling `complete`, `fail_or_retry` or `give_up`, also when a library turns the cancellation into an error of its own. | `_heartbeat` and `process` (`runner.py`) |
 | …sees the work fail before its heartbeat noticed the takeover | Calls `fail_or_retry`, which updates only a row still `locked_by` this worker and, finding none, returns `"not_ours"`. `process` logs an error and skips `give_up`, so the report is not failed under its new owner. | `fail_or_retry` and `FailOutcome` (`queue.py`); `process` (`runner.py`) |
 | …sees the work succeed before its heartbeat noticed the takeover | Calls `complete`, which also filters on `locked_by` and so changes nothing. | `complete` (`queue.py`) |
+
+A renewal that finds the lease gone after the work has ended returns quietly, without the error
+and without setting `lease_lost`. By then `process` is recording the outcome (the row may already
+be `done`, `queued` or `failed`, which `extend_lease` doesn't renew), and what it records checks
+the owner anyway.
 
 On a last attempt nobody claims the job again (the claim requires `attempts < max_attempts`); the
 maintenance round fails it with `fail_abandoned`, which clears `locked_by`, so a late
@@ -128,9 +134,10 @@ and Docker restarts the container (`restart: always` in `infra/docker-compose.pr
 `unless-stopped` in `infra/install/docker-compose.yml` and `infra/docker-compose.yml`). Once the
 lease runs out, a worker claims the job again and a retried run carries on from its last
 checkpoint; on a last attempt the maintenance round fails it instead. A heartbeat that gives up
-after the work has ended, while `process` records the outcome, still stops the worker: `process` awaits
-the heartbeat last, in its `finally` block, and so re-raises its error. This is deliberate: a worker
-that can't reach its database fails loud instead of carrying on.
+after the work has ended, while `process` records the outcome, still stops the worker: in its
+`finally` block `process` waits for the heartbeat with `asyncio.wait`, which, unlike awaiting it,
+lets the worker's own cancellation through, and then re-raises the heartbeat's error. This is
+deliberate: a worker that can't reach its database fails loud instead of carrying on.
 
 The worker's `id` is `<hostname>-<pid>` (`backend/app/worker.py`, `main`).
 
@@ -148,11 +155,21 @@ Three ceilings keep one stuck call from holding a worker:
 ### Retry or give up
 
 `process` turns a job's failure into a retry or a surrender instead of raising. It raises on
-purpose only to stop the worker, in two cases: a cancellation of its own task (the work is
-cancelled with it and the job stays `running` until its lease runs out), and a lease it can't
-renew (see [Lease and heartbeat](#lease-and-heartbeat)). A database error while it records the outcome also
-escapes. When `execute` fails, or runs past
-`JOB_TIMEOUT_SECONDS`, and the worker still holds the lease:
+purpose only to stop the worker, in three cases:
+
+- **Its own task is cancelled** (the worker stopping). The work is cancelled with it and the job
+  stays `running` until its lease runs out. Nothing is recorded as a failure, also when the work
+  turns that cancellation into an error of its own: `process` checks `_shutting_down` first and
+  raises `CancelledError`.
+- **The lease can't be renewed** (see [Lease and heartbeat](#lease-and-heartbeat)).
+- **Recording success fails.** `complete` runs in the `else` clause of the `try` statement, outside
+  the failure handlers, so a database error there escapes `process` instead of counting as a
+  failure of the job: no `fail_or_retry`, no `give_up`. The job stays `running` and `locked_by`
+  this worker, and once its lease runs out it is claimed again like any other retry (see
+  [Run, resume, retry](#run-resume-retry)).
+
+A database error while `process` records a failure also escapes.
+When `execute` fails, or runs past `JOB_TIMEOUT_SECONDS`, and the worker still holds the lease:
 
 1. `fail_or_retry` puts the job back as `queued` with a backoff when the error is retryable and
    attempts are left, and returns `"retrying"`. The backoff after attempt 1 is 30 s, after
@@ -267,7 +284,10 @@ is logged and the loop carries on.
   checkpoint; a lost lease cancelling the work and recording nothing, renewals that keep
   failing stopping the work and the worker (also when the work turns the cancellation into an
   error), renewals refused or hanging given up at two thirds of the lease, a database blip the
-  lease outlasts leaving the work running, a failure after an unnoticed takeover, the job timeout,
-  and the worker's own cancellation, also after a lost lease.
+  lease outlasts leaving the work running, a slow good renewal not delaying the next beat, a lease
+  found gone after the outcome is recorded reporting nothing, a failure after an unnoticed
+  takeover, a failure to record success stopping the worker without failing the job, the job
+  timeout, and the worker's own cancellation (also after a lost lease, while the heartbeat winds
+  down, and when the work turns it into an error).
 - `backend/tests/test_interrupt_resume.py`: a pause and resume against the real checkpointer.
 - `backend/tests/test_langgraph_checkpointer.py`, `backend/tests/test_pause_status.py`.
