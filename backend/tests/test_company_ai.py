@@ -500,7 +500,7 @@ async def test_a_transcription_says_whose_key_paid_for_it(monkeypatch: pytest.Mo
 
 
 async def test_a_refused_key_is_not_retried_and_tells_the_sender_why(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def refused(job: ClaimedJob) -> None:
+    async def refused(job: ClaimedJob, _worker_id: str) -> None:
         raise ProviderRejectedKeyError("The AI provider refused the key (AuthenticationError)")
 
     retried: list[bool] = []

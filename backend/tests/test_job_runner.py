@@ -27,9 +27,13 @@ from app.services.transcription import Transcript
 
 class FakeGraph:
     def __init__(self, *, values: dict[str, Any] | None = None, next_nodes: tuple[str, ...] = (),
-                 paused: bool = False, result: dict[str, Any] | None = None) -> None:
-        tasks = [SimpleNamespace(interrupts=("pause",) if paused else ())]
-        self.aget_state = AsyncMock(return_value=SimpleNamespace(values=values or {}, next=next_nodes, tasks=tasks))
+                 paused: bool = False, result: dict[str, Any] | None = None, checkpoint: str = "cp-1",
+                 pause_kind: str = "missing_fields") -> None:
+        interrupts = (SimpleNamespace(value={"kind": pause_kind}),) if paused else ()
+        tasks = [SimpleNamespace(interrupts=interrupts)]
+        config = {"configurable": {"thread_id": "t", "checkpoint_id": checkpoint}}
+        self.aget_state = AsyncMock(return_value=SimpleNamespace(
+            values=values or {}, next=next_nodes, tasks=tasks, interrupts=interrupts, config=config))
         self.ainvoke = AsyncMock(return_value=result or {})
 
 
@@ -89,7 +93,7 @@ async def test_a_run_starts_the_graph_with_the_tenants_language_and_clock(
     report = await _report(db, language="en")
     graph = _use_graph(monkeypatch, FakeGraph())
 
-    await execute(_job(report, RUN, {"text": "Visited the site", "sender_label": "Ana"}))
+    await execute(_job(report, RUN, {"text": "Visited the site", "sender_label": "Ana"}), "test-worker")
 
     state = graph.ainvoke.await_args.args[0]
     assert (state.language, state.timezone, state.sender_label) == ("en", "Europe/Madrid", "Ana")
@@ -108,7 +112,7 @@ async def test_a_report_in_its_own_language_is_read_in_it_not_in_the_company_s(
     await db.commit()
     graph = _use_graph(monkeypatch, FakeGraph())
 
-    await execute(_job(report, RUN, {"text": "Visited the site"}))
+    await execute(_job(report, RUN, {"text": "Visited the site"}), "test-worker")
 
     assert graph.ainvoke.await_args.args[0].language == "en"
 
@@ -119,7 +123,7 @@ async def test_a_run_that_pauses_records_what_the_report_waits_for(
     report = await _report(db)
     _use_graph(monkeypatch, FakeGraph(result={"__interrupt__": (SimpleNamespace(value={"kind": "confirm_report"}),)}))
 
-    await execute(_job(report, RUN, {"text": "x"}))
+    await execute(_job(report, RUN, {"text": "x"}), "test-worker")
 
     await db.refresh(report)
     assert report.status == "awaiting_approval"
@@ -132,7 +136,7 @@ async def test_a_retry_carries_on_from_the_last_checkpoint(
     report = await _report(db)
     graph = _use_graph(monkeypatch, FakeGraph(values={"transcript": "already paid for"}, next_nodes=("extract",)))
 
-    await execute(_job(report, RUN, {"text": "x"}, attempts=2))
+    await execute(_job(report, RUN, {"text": "x"}, attempts=2), "test-worker")
 
     assert graph.ainvoke.await_args.args[0] is None  # continue, don't start over
 
@@ -143,7 +147,7 @@ async def test_a_retry_of_a_run_that_already_finished_does_nothing(
     report = await _report(db)
     graph = _use_graph(monkeypatch, FakeGraph(values={"done": True}, next_nodes=()))
 
-    await execute(_job(report, RUN, {"text": "x"}, attempts=2))
+    await execute(_job(report, RUN, {"text": "x"}, attempts=2), "test-worker")
 
     graph.ainvoke.assert_not_awaited()
 
@@ -154,7 +158,7 @@ async def test_a_resume_hands_the_reply_to_the_paused_graph(
     report = await _report(db, status="pending")
     graph = _use_graph(monkeypatch, FakeGraph(paused=True))
 
-    await execute(_job(report, RESUME, {"text": "la fecha era el martes"}))
+    await execute(_job(report, RESUME, {"text": "la fecha era el martes"}), "test-worker")
 
     assert graph.ainvoke.await_args.args[0] == Command(resume="la fecha era el martes")
 
@@ -165,7 +169,7 @@ async def test_a_pressed_button_reaches_the_graph_as_a_structured_reply(
     report = await _report(db)
     graph = _use_graph(monkeypatch, FakeGraph(paused=True))
 
-    await execute(_job(report, RESUME, {"action": "doctype", "arg": "7f0c"}))
+    await execute(_job(report, RESUME, {"action": "doctype", "arg": "7f0c"}), "test-worker")
 
     assert graph.ainvoke.await_args.args[0] == Command(resume={"action": "doctype", "arg": "7f0c"})
 
@@ -179,7 +183,7 @@ async def test_a_voice_reply_is_transcribed_before_the_graph_sees_it(
     transcribe = AsyncMock(return_value=Transcript("  la fecha era el martes ", "whisper-large-v3-turbo"))
     monkeypatch.setattr(runner.transcription, "transcribe", transcribe)
 
-    await execute(_job(report, RESUME, {"text": None, "media_reference": "voice-9"}))
+    await execute(_job(report, RESUME, {"text": None, "media_reference": "voice-9"}), "test-worker")
 
     adapter.download_media.assert_awaited_once_with("voice-9")
     assert graph.ainvoke.await_args.args[0] == Command(resume="la fecha era el martes")
@@ -194,7 +198,7 @@ async def test_a_reply_said_and_typed_reaches_the_graph_whole(
     adapter.download_media.return_value = b"opus"
     monkeypatch.setattr(runner.transcription, "transcribe", AsyncMock(return_value=Transcript("la fecha era el martes", "m")))
 
-    await execute(_job(report, RESUME, {"text": "y el cliente es Norte", "media_reference": "voice-9"}))
+    await execute(_job(report, RESUME, {"text": "y el cliente es Norte", "media_reference": "voice-9"}), "test-worker")
 
     assert graph.ainvoke.await_args.args[0] == Command(resume="la fecha era el martes\n\ny el cliente es Norte")
 
@@ -208,7 +212,7 @@ async def test_a_voice_reply_is_metered_for_its_report(
     transcribe = AsyncMock(return_value=Transcript("vale", "whisper-large-v3-turbo", 30.0))
     monkeypatch.setattr(runner.transcription, "transcribe", transcribe)
 
-    await execute(_job(report, RESUME, {"text": None, "media_reference": "voice-9"}))
+    await execute(_job(report, RESUME, {"text": None, "media_reference": "voice-9"}), "test-worker")
 
     [row] = (await db.execute(select(ExecutionLog))).scalars().all()
     assert (row.step, row.status, row.tenant_id, row.report_id) == ("transcribe_reply", "success", report.tenant_id, report.id)
@@ -217,13 +221,94 @@ async def test_a_voice_reply_is_metered_for_its_report(
     assert transcribe.await_args.args[1].endswith(".ogg")  # a Telegram voice note is OGG Opus
 
 
+async def test_a_resume_notes_where_it_took_up_the_graph(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph(paused=True, checkpoint="cp-paused"))
+    job = await _queued(db, report, kind=RESUME)
+
+    await execute(job, "test-worker")
+
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert stored.payload == {"text": "hola", "resumed_from_checkpoint": "cp-paused"}
+
+
+async def test_a_retried_resume_whose_answer_never_got_in_hands_it_over_again(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # The answered node itself failed: the graph stands where the first attempt took it up.
+    report = await _report(db)
+    graph = _use_graph(monkeypatch, FakeGraph(paused=True, checkpoint="cp-paused"))
+    payload = {"text": "CONFIRM", "resumed_from_checkpoint": "cp-paused"}
+
+    await execute(_job(report, RESUME, payload, attempts=2), "test-worker")
+
+    assert graph.ainvoke.await_args.args[0] == Command(resume="CONFIRM")
+
+
+async def test_a_retried_resume_whose_graph_paused_again_keeps_the_answer_from_the_new_question(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # The answer got in and the graph reached its next pause, but the pause wasn't recorded.
+    report = await _report(db, status="pending")
+    graph = _use_graph(monkeypatch, FakeGraph(paused=True, checkpoint="cp-next", pause_kind="confirm_report"))
+    payload = {"text": "la fecha era el martes", "resumed_from_checkpoint": "cp-paused"}
+
+    await execute(_job(report, RESUME, payload, attempts=2), "test-worker")
+
+    graph.ainvoke.assert_not_awaited()
+    await db.refresh(report)
+    assert report.status == "awaiting_approval"
+
+
+async def test_a_retried_resume_that_failed_on_the_way_carries_on(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    # The answer got in and a later step failed (rendering, say): nothing awaits an answer, but
+    # the work isn't done. Doing nothing here left the report pending for good.
+    report = await _report(db)
+    graph = _use_graph(monkeypatch, FakeGraph(checkpoint="cp-later", next_nodes=("render",)))
+    payload = {"text": "CONFIRM", "resumed_from_checkpoint": "cp-paused"}
+
+    await execute(_job(report, RESUME, payload, attempts=2), "test-worker")
+
+    assert graph.ainvoke.await_args.args[0] is None  # carry on, don't answer anything
+
+
+async def test_a_retried_resume_whose_graph_finished_does_nothing(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
+) -> None:
+    report = await _report(db)
+    graph = _use_graph(monkeypatch, FakeGraph(checkpoint="cp-end"))
+    payload = {"text": "CONFIRM", "resumed_from_checkpoint": "cp-paused"}
+
+    await execute(_job(report, RESUME, payload, attempts=2), "test-worker")
+
+    graph.ainvoke.assert_not_awaited()
+
+
+async def test_a_retried_run_of_a_report_that_finished_does_not_start_over(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock
+) -> None:
+    # The finished report's checkpoints are gone, so the graph looks as if it never ran.
+    report = await _report(db, status="delivered")
+    graph = _use_graph(monkeypatch, FakeGraph(values={}))
+
+    await execute(_job(report, RUN, {"text": "x"}, attempts=2), "test-worker")
+
+    graph.ainvoke.assert_not_awaited()
+
+
 async def test_a_resume_for_a_report_that_is_no_longer_paused_is_a_no_op(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, adapter: AsyncMock
 ) -> None:
     report = await _report(db)
     graph = _use_graph(monkeypatch, FakeGraph(paused=False))
 
-    await execute(_job(report, RESUME, {"text": "CONFIRM"}))
+    await execute(_job(report, RESUME, {"text": "CONFIRM"}), "test-worker")
 
     graph.ainvoke.assert_not_awaited()  # an earlier attempt already delivered this answer
 
@@ -234,7 +319,7 @@ async def test_a_report_that_finished_loses_its_checkpoints(
     report = await _report(db, status="delivered")
     _use_graph(monkeypatch, FakeGraph())
 
-    await execute(_job(report, RUN, {"text": "x"}))
+    await execute(_job(report, RUN, {"text": "x"}), "test-worker")
 
     checkpoints.assert_awaited_once_with(str(report.id))
 

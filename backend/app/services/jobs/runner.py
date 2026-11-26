@@ -39,6 +39,7 @@ from app.services.jobs.queue import (
     complete,
     extend_lease,
     fail_or_retry,
+    note_in_payload,
 )
 from app.services.observability.execution_log import write_execution_log
 
@@ -92,6 +93,10 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
     graph = get_compiled_graph()
     config: RunnableConfig = {"configurable": {"thread_id": str(report.id)}}
 
+    if job.attempts > 1 and report.status in TERMINAL_STATUSES:
+        # An earlier attempt finished the report (and forgot its checkpoints) but couldn't record
+        # it: starting over would transcribe, extract and deliver it again.
+        return
     snapshot = await graph.aget_state(config)
     if job.attempts > 1 and snapshot.values:
         # An earlier attempt got somewhere: carry on from its last checkpoint instead of starting
@@ -153,25 +158,45 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant)
     return "\n\n".join(part for part in (transcript.text.strip(), text) if part)
 
 
-async def _resume(job: ClaimedJob, report: Report, connection: ChannelConnection, tenant: Tenant) -> None:
+# Where a resume took up its paused graph, noted in the job's payload: a retry compares it with
+# where the graph stands now to tell whether the answer was delivered. The checkpoint moves on
+# once the answered node completes, and stays put if that node itself fails.
+_RESUMED_FROM = "resumed_from_checkpoint"
+
+
+async def _resume(
+    job: ClaimedJob, worker_id: str, report: Report, connection: ChannelConnection, tenant: Tenant
+) -> None:
     graph = get_compiled_graph()
     config: RunnableConfig = {"configurable": {"thread_id": str(report.id)}}
 
     snapshot = await graph.aget_state(config)
-    if not any(task.interrupts for task in snapshot.tasks):
-        return  # an earlier attempt already delivered this answer
-
-    result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant)), config)
+    here = snapshot.config["configurable"].get("checkpoint_id")
+    resumed_from = job.payload.get(_RESUMED_FROM)
+    if resumed_from is not None and resumed_from != here:
+        # An earlier attempt delivered the answer and the graph moved on: finish what it left.
+        if snapshot.interrupts:
+            result: dict[str, Any] = {"__interrupt__": snapshot.interrupts}  # paused again: never hand it this answer
+        elif snapshot.next:
+            result = await graph.ainvoke(None, config)  # failed on the way: carry on
+        else:
+            return
+    elif not any(task.interrupts for task in snapshot.tasks):
+        return  # nothing awaits this answer (the report is no longer paused)
+    else:
+        if resumed_from is None:
+            await note_in_payload(job.id, worker_id, {_RESUMED_FROM: here})
+        result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant)), config)
     await _mark_paused_if_interrupted(result, report.id)
 
 
-async def execute(job: ClaimedJob) -> None:
+async def execute(job: ClaimedJob, worker_id: str) -> None:
     report, connection, tenant = await _load(job.report_id)
     with log_context(report_id=report.id, tenant_id=report.tenant_id, job=job.kind):
         if job.kind == RUN:
             await _run(job, report, connection, tenant)
         elif job.kind == RESUME:
-            await _resume(job, report, connection, tenant)
+            await _resume(job, worker_id, report, connection, tenant)
         elif job.kind == DELIVER:
             failures = await send_pending(report.id)
             if failures:
@@ -257,7 +282,7 @@ async def process(job: ClaimedJob, worker_id: str) -> None:
     died). Once the lease is lost it records nothing: the job and its report are the new owner's
     to finish or fail."""
     lease_lost = asyncio.Event()
-    work = asyncio.create_task(execute(job))
+    work = asyncio.create_task(execute(job, worker_id))
     heartbeat = asyncio.create_task(_heartbeat(job.id, worker_id, work, lease_lost))
     try:
         async with asyncio.timeout(settings.JOB_TIMEOUT_SECONDS):

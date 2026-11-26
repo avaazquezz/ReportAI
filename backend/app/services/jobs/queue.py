@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from sqlalchemy import text, update
+from sqlalchemy import literal, text, update
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
@@ -91,6 +92,18 @@ async def claim_next(worker_id: str) -> ClaimedJob | None:
     if row is None:
         return None
     return ClaimedJob(row.id, row.report_id, row.kind, row.payload, row.attempts, row.max_attempts)
+
+
+async def note_in_payload(job_id: uuid.UUID, worker_id: str, notes: dict[str, Any]) -> None:
+    """Merges `notes` into the job's payload, for a retry of it to read, while this worker still
+    holds it. Committed at once: the retry may come after this worker dies."""
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            update(Job)
+            .where(Job.id == job_id, Job.locked_by == worker_id)
+            .values(payload=Job.payload.op("||")(literal(notes, JSONB)))
+        )
+        await session.commit()
 
 
 async def extend_lease(job_id: uuid.UUID, worker_id: str) -> bool:
