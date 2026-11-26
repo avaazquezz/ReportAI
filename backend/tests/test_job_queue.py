@@ -140,6 +140,20 @@ async def test_a_worker_whose_job_was_taken_over_cannot_fail_it(db: AsyncSession
     assert (job.status, job.locked_by, job.last_error) == ("running", "worker-2", None)
 
 
+async def test_a_worker_whose_job_was_taken_over_cannot_complete_it(db: AsyncSession, own_sessions: None) -> None:
+    report = await _report(db)
+    job = await enqueue(db, report_id=report.id, kind=RUN)
+    await db.commit()
+    assert await claim_next("worker-1") is not None
+    await _expire_lease(db, job.id)
+    assert await claim_next("worker-2") is not None
+
+    assert await complete(job.id, "worker-1") is False
+    await db.refresh(job)
+    assert (job.status, job.locked_by) == ("running", "worker-2")
+    assert await complete(job.id, "worker-2") is True
+
+
 async def test_a_job_abandoned_on_its_last_attempt_is_reported_as_failed(
     db: AsyncSession, own_sessions: None
 ) -> None:

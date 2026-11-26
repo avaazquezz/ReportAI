@@ -107,14 +107,18 @@ async def extend_lease(job_id: uuid.UUID, worker_id: str) -> bool:
         return renewed
 
 
-async def complete(job_id: uuid.UUID, worker_id: str) -> None:
+async def complete(job_id: uuid.UUID, worker_id: str) -> bool:
+    """Marks the job done if this worker still holds it. False: another worker took it over."""
     async with AsyncSessionLocal() as session:
-        await session.execute(
+        result = await session.execute(
             update(Job)
             .where(Job.id == job_id, Job.locked_by == worker_id)
             .values(status="done", locked_by=None, locked_until=None)
+            .returning(Job.id)
         )
+        held = result.scalar_one_or_none() is not None
         await session.commit()
+    return held
 
 
 async def fail_or_retry(job: ClaimedJob, worker_id: str, error: str, *, retryable: bool) -> FailOutcome:

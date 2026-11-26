@@ -345,9 +345,9 @@ class SlowStep:
 
 @pytest.fixture
 def quick_lease(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Renew the lease every 200 ms instead of every 40 s: still time for a real renewal, which
-    must end before two thirds of the lease are gone."""
-    monkeypatch.setattr(runner, "LEASE_SECONDS", 0.6)
+    """Renew the lease every 400 ms instead of every 40 s: a real renewal here opens a session of
+    its own and can take 150 ms, and it must end before two thirds of the lease are gone."""
+    monkeypatch.setattr(runner, "LEASE_SECONDS", 1.2)
 
 
 async def _taken_by_another_worker(db: AsyncSession, job: ClaimedJob) -> None:
@@ -362,7 +362,7 @@ async def test_a_lost_lease_stops_the_work_and_leaves_the_job_and_report_to_thei
     adapter: AsyncMock, quick_lease: None, caplog: pytest.LogCaptureFixture, on_cancel: type[BaseException],
 ) -> None:
     report = await _report(db)
-    step = SlowStep(1, on_cancel=on_cancel)
+    step = SlowStep(2, on_cancel=on_cancel)
     _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
     # The last attempt: if this worker still did its bookkeeping, it would fail the report.
     job = await _queued(db, report, max_attempts=1)
@@ -430,7 +430,7 @@ async def test_a_lease_that_cannot_be_renewed_stops_the_work_and_the_worker(
     tasks_before = asyncio.all_tasks()
 
     running = asyncio.create_task(process(job, "test-worker"))
-    await asyncio.wait_for(step.cancelled.wait(), timeout=1)  # promptly, not after the step or the time limit
+    await asyncio.wait_for(step.cancelled.wait(), timeout=2.5)  # promptly, not after the step or the time limit
     with pytest.raises(ConnectionRefusedError):
         await asyncio.wait_for(running, timeout=5)
 
@@ -450,7 +450,7 @@ async def test_renewals_that_keep_failing_stop_the_work_with_a_third_of_the_leas
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
     adapter: AsyncMock, failure: str,
 ) -> None:
-    lease = 0.6
+    lease = 1.2  # as quick_lease, with the value at hand
     monkeypatch.setattr(runner, "LEASE_SECONDS", lease)
     report = await _report(db)
     step = SlowStep(5)
@@ -490,7 +490,7 @@ async def test_a_database_blip_while_the_lease_still_holds_does_not_stop_the_wor
 
     async def step(*_args: Any) -> dict[str, Any]:
         started.set()
-        await asyncio.sleep(1)  # cancelled, it raises CancelledError and the job isn't "done"
+        await asyncio.sleep(2)  # cancelled, it raises CancelledError and the job isn't "done"
         return {}
 
     _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step
@@ -545,13 +545,166 @@ async def test_a_failure_after_an_unnoticed_takeover_leaves_the_job_and_report_t
     assert [r.getMessage() for r in caplog.records].count(taken) == 1
 
 
+async def test_a_failure_to_record_success_stops_the_worker_instead_of_failing_the_job(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock,
+) -> None:
+    # The work ended well; only its bookkeeping failed. That is no failure of the job to record
+    # (nor to retry with backoff): the worker stops, and the job is claimed again once the lease
+    # runs out, like any job of a worker that died.
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph())
+    job = await _queued(db, report, max_attempts=1)
+    monkeypatch.setattr(runner, "complete", AsyncMock(side_effect=ConnectionRefusedError("database unreachable")))
+
+    with pytest.raises(ConnectionRefusedError):
+        await process(job, "test-worker")
+
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.locked_by, stored.last_error) == ("running", "test-worker", None)
+    adapter.send_message.assert_not_awaited()
+
+
+async def test_the_worker_shutting_down_still_stops_when_the_work_turns_it_into_an_error(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock,
+) -> None:
+    report = await _report(db)
+    step = SlowStep(10, on_cancel=RuntimeError)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
+    job = await _queued(db, report, max_attempts=1)
+
+    running = asyncio.create_task(process(job, "test-worker"))
+    await asyncio.wait_for(step.started.wait(), timeout=5)
+    running.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(running, timeout=5)
+
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.last_error) == ("running", None)  # left for its lease to run out
+    adapter.send_message.assert_not_awaited()
+
+
+async def test_the_worker_shutting_down_while_the_heartbeat_winds_down_still_stops(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    quick_lease: None,
+) -> None:
+    report = await _report(db)
+    renewing, winding_down = asyncio.Event(), asyncio.Event()
+
+    async def renewal_slow_to_stop(*_args: Any) -> bool:
+        renewing.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            winding_down.set()
+            await asyncio.sleep(0.1)
+            raise
+        raise AssertionError("unreachable")
+
+    async def step(*_args: Any) -> dict[str, Any]:
+        await renewing.wait()  # ends while a renewal is in flight
+        return {}
+
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step
+    monkeypatch.setattr(runner, "extend_lease", renewal_slow_to_stop)
+    job = await _queued(db, report)
+
+    running = asyncio.create_task(process(job, "test-worker"))
+    await asyncio.wait_for(winding_down.wait(), timeout=5)  # process() is stopping the heartbeat
+    running.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(running, timeout=5)
+
+
+async def test_a_heartbeat_after_the_outcome_is_recorded_reports_no_lost_lease(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock, quick_lease: None, caplog: pytest.LogCaptureFixture,
+) -> None:
+    # The job is failed (no longer "running") while give_up still tells the person: a beat in
+    # between finds no lease to renew, and that is not a takeover.
+    report = await _report(db)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = PermanentJobError("unreadable audio")
+    job = await _queued(db, report, max_attempts=1)
+
+    async def slow_to_tell(*_args: Any) -> None:
+        await asyncio.sleep(1)  # two beats of quick_lease
+
+    monkeypatch.setattr(runner, "give_up", slow_to_tell)
+    with caplog.at_level(logging.ERROR, logger="app.services.jobs.runner"):
+        await process(job, "test-worker")
+
+    assert not [r for r in caplog.records if r.getMessage().startswith("Lost the lease")]
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert stored.status == "failed"
+
+
+async def test_a_slow_good_renewal_does_not_eat_into_the_retries_after_it(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    adapter: AsyncMock, quick_lease: None, caplog: pytest.LogCaptureFixture,
+) -> None:
+    # The next beat keeps its place a third of the lease after the slow renewal began, so the
+    # failure that follows still has time to be retried before two thirds of the lease are gone.
+    report = await _report(db)
+    step = SlowStep(5)
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = step.run
+    job = await _queued(db, report, max_attempts=1)
+    calls = 0
+
+    async def slow_then_unreachable(*_args: Any) -> bool:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            await asyncio.sleep(0.3)  # most of a beat (0.4 s); the stored lease is the claim's 120 s
+            return True
+        raise ConnectionRefusedError("database unreachable")
+
+    monkeypatch.setattr(runner, "extend_lease", slow_then_unreachable)
+    with caplog.at_level(logging.WARNING, logger="app.services.jobs.runner"), pytest.raises(ConnectionRefusedError):
+        await asyncio.wait_for(process(job, "test-worker"), timeout=5)
+
+    assert [r for r in caplog.records if r.getMessage().startswith("Couldn't renew the lease")]
+
+
+async def test_a_success_after_an_unnoticed_takeover_is_logged_and_left_to_the_new_owner(
+    db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # The worker stalled past its lease and another took the job; the step ends well before the
+    # next heartbeat would have noticed. Two runs of one report must not pass unseen.
+    report = await _report(db)
+    job = await _queued(db, report)
+
+    async def taken_over_meanwhile(*_args: Any) -> dict[str, Any]:
+        await _taken_by_another_worker(db, job)
+        return {}
+
+    _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = taken_over_meanwhile
+    with caplog.at_level(logging.ERROR, logger="app.services.jobs.runner"):
+        await process(job, "test-worker")
+
+    assert [r.getMessage() for r in caplog.records if r.name == runner.logger.name] == [
+        f"Job {job.id} was taken by another worker before this one could record its success"
+    ]
+    stored = await db.get(Job, job.id)
+    assert stored is not None
+    await db.refresh(stored)
+    assert (stored.status, stored.locked_by) == ("running", "other-worker")
+
+
 async def test_a_job_that_keeps_its_lease_is_marked_done_and_leaves_no_task_behind(
     db: AsyncSession, own_sessions: None, monkeypatch: pytest.MonkeyPatch, checkpoints: AsyncMock, quick_lease: None
 ) -> None:
     report = await _report(db)
 
     async def a_few_renewals(*_args: Any) -> dict[str, Any]:
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(1)  # two beats of quick_lease
         return {}
 
     _use_graph(monkeypatch, FakeGraph()).ainvoke.side_effect = a_few_renewals
