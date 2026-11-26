@@ -45,7 +45,7 @@ is in Spanish and English; the code and these docs are in English.
 | Term | Meaning |
 |---|---|
 | Job | One unit of work for the worker: `run`, `resume` or `deliver` (`jobs`). See [job queue and checkpoints](how-it-works/job-queue-and-checkpoints.md). |
-| Lease | The time a worker holds a job (120 seconds), renewed by a heartbeat; when it lapses, another worker may take the job. |
+| Lease | The time a worker holds a job (120 seconds), renewed by a heartbeat; when it lapses, another worker may take the job, and the worker that lost it stops its work and records nothing about the job. |
 | Graph, node | The LangGraph state machine that processes a report (`backend/app/services/agent/graph.py`) and its 25 steps. |
 | Interrupt, pause | A node that stops the graph to wait for a person (`interrupt()`): which document type, missing fields, or approval. |
 | Checkpoint, thread | The graph's saved state after each node, in Postgres, under `thread_id` = the report's id. |
