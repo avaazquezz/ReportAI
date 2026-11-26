@@ -36,6 +36,7 @@ from app.services.jobs.queue import (
     RESUME,
     RUN,
     ClaimedJob,
+    another_job_queued,
     complete,
     extend_lease,
     fail_or_retry,
@@ -130,11 +131,17 @@ async def _run(job: ClaimedJob, report: Report, connection: ChannelConnection, t
     await _mark_paused_if_interrupted(result, report.id)
 
 
+# Where a resume took up its paused graph, noted in the job's payload: a retry compares it with
+# where the graph stands now to tell whether the answer was delivered. The checkpoint moves on
+# once the answered node completes, and stays put if that node itself fails.
+_RESUMED_FROM = "resumed_from_checkpoint"
+
+
 async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant) -> str | dict[str, Any]:
     """A pressed button or the panel answers with a structured reply, handed on as it is. A typed
     reply is text, and a voice note is turned into text before the graph sees it."""
     if job.payload.get("action"):
-        return job.payload
+        return {key: value for key, value in job.payload.items() if key != _RESUMED_FROM}
     text = (job.payload.get("text") or "").strip()
     media_reference = job.payload.get("media_reference")
     if not media_reference:
@@ -158,12 +165,6 @@ async def _reply(job: ClaimedJob, connection: ChannelConnection, tenant: Tenant)
     return "\n\n".join(part for part in (transcript.text.strip(), text) if part)
 
 
-# Where a resume took up its paused graph, noted in the job's payload: a retry compares it with
-# where the graph stands now to tell whether the answer was delivered. The checkpoint moves on
-# once the answered node completes, and stays put if that node itself fails.
-_RESUMED_FROM = "resumed_from_checkpoint"
-
-
 async def _resume(
     job: ClaimedJob, worker_id: str, report: Report, connection: ChannelConnection, tenant: Tenant
 ) -> None:
@@ -176,7 +177,11 @@ async def _resume(
     if resumed_from is not None and resumed_from != here:
         # An earlier attempt delivered the answer and the graph moved on: finish what it left.
         if snapshot.interrupts:
-            result: dict[str, Any] = {"__interrupt__": snapshot.interrupts}  # paused again: never hand it this answer
+            # Paused again: never hand it this answer. Nor record the pause over a later answer
+            # to it already queued (the report was claimed for that one): its job records its own.
+            if await another_job_queued(report.id, job.id, RESUME):
+                return
+            result: dict[str, Any] = {"__interrupt__": snapshot.interrupts}
         elif snapshot.next:
             result = await graph.ainvoke(None, config)  # failed on the way: carry on
         else:
@@ -184,8 +189,8 @@ async def _resume(
     elif not any(task.interrupts for task in snapshot.tasks):
         return  # nothing awaits this answer (the report is no longer paused)
     else:
-        if resumed_from is None:
-            await note_in_payload(job.id, worker_id, {_RESUMED_FROM: here})
+        if resumed_from is None and not await note_in_payload(job.id, worker_id, {_RESUMED_FROM: here}):
+            return  # another worker took the job over and answers in its stead (process() logs it)
         result = await graph.ainvoke(Command(resume=await _reply(job, connection, tenant)), config)
     await _mark_paused_if_interrupted(result, report.id)
 

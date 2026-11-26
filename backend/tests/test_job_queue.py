@@ -18,6 +18,7 @@ from app.services.jobs.queue import (
     enqueue,
     fail_abandoned,
     fail_or_retry,
+    note_in_payload,
 )
 
 
@@ -152,6 +153,22 @@ async def test_a_worker_whose_job_was_taken_over_cannot_complete_it(db: AsyncSes
     await db.refresh(job)
     assert (job.status, job.locked_by) == ("running", "worker-2")
     assert await complete(job.id, "worker-2") is True
+
+
+async def test_a_worker_whose_job_was_taken_over_cannot_note_in_its_payload(db: AsyncSession, own_sessions: None) -> None:
+    report = await _report(db)
+    job = await enqueue(db, report_id=report.id, kind=RESUME, payload={"text": "CONFIRM"})
+    await db.commit()
+    assert await claim_next("worker-1") is not None
+    await _expire_lease(db, job.id)
+    assert await claim_next("worker-2") is not None
+
+    assert await note_in_payload(job.id, "worker-1", {"resumed_from_checkpoint": "cp-1"}) is False
+    await db.refresh(job)
+    assert job.payload == {"text": "CONFIRM"}
+    assert await note_in_payload(job.id, "worker-2", {"resumed_from_checkpoint": "cp-1"}) is True
+    await db.refresh(job)
+    assert job.payload == {"text": "CONFIRM", "resumed_from_checkpoint": "cp-1"}
 
 
 async def test_a_job_abandoned_on_its_last_attempt_is_reported_as_failed(

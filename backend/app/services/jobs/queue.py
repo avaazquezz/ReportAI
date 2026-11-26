@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from sqlalchemy import literal, text, update
+from sqlalchemy import literal, select, text, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -94,16 +94,31 @@ async def claim_next(worker_id: str) -> ClaimedJob | None:
     return ClaimedJob(row.id, row.report_id, row.kind, row.payload, row.attempts, row.max_attempts)
 
 
-async def note_in_payload(job_id: uuid.UUID, worker_id: str, notes: dict[str, Any]) -> None:
+async def note_in_payload(job_id: uuid.UUID, worker_id: str, notes: dict[str, Any]) -> bool:
     """Merges `notes` into the job's payload, for a retry of it to read, while this worker still
-    holds it. Committed at once: the retry may come after this worker dies."""
+    holds it. Committed at once: the retry may come after this worker dies. False: another worker
+    took the job over."""
     async with AsyncSessionLocal() as session:
-        await session.execute(
+        result = await session.execute(
             update(Job)
             .where(Job.id == job_id, Job.locked_by == worker_id)
             .values(payload=Job.payload.op("||")(literal(notes, JSONB)))
+            .returning(Job.id)
         )
+        held = result.scalar_one_or_none() is not None
         await session.commit()
+    return held
+
+
+async def another_job_queued(report_id: uuid.UUID, job_id: uuid.UUID, kind: str) -> bool:
+    """Whether the report has a job of `kind` waiting besides `job_id`."""
+    async with AsyncSessionLocal() as session:
+        found = await session.scalar(
+            select(Job.id)
+            .where(Job.report_id == report_id, Job.kind == kind, Job.id != job_id, Job.status == "queued")
+            .limit(1)
+        )
+    return found is not None
 
 
 async def extend_lease(job_id: uuid.UUID, worker_id: str) -> bool:
