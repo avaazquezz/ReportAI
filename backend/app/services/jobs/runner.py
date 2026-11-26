@@ -201,19 +201,25 @@ async def give_up(report_id: uuid.UUID, error: str, reason_key: str = "failure")
         await get_checkpointer().adelete_thread(str(report_id))
 
 
-async def _heartbeat(job_id: uuid.UUID, worker_id: str, work: asyncio.Task[None]) -> None:
-    """Renews the lease while `work` runs. Returns only when the lease was lost, after cancelling
-    `work`: the job is another worker's now, and two runs of one report would race each other."""
-    while True:
-        await asyncio.sleep(LEASE_SECONDS / 3)
-        if not await extend_lease(job_id, worker_id):
-            logger.error("Lost the lease on job %s; another worker may have taken it", job_id)
-            work.cancel()
-            return
+async def _heartbeat(job_id: uuid.UUID, worker_id: str, work: asyncio.Task[None], lost: asyncio.Event) -> None:
+    """Renews the lease while `work` runs, and cancels `work` once it can't: two runs of one report
+    would race each other. Lost (another worker holds the job): sets `lost` and returns. Unknown
+    (the renewal itself failed): raises, for process() to stop the worker with."""
+    try:
+        while True:
+            await asyncio.sleep(LEASE_SECONDS / 3)
+            if not await extend_lease(job_id, worker_id):
+                logger.error("Lost the lease on job %s; another worker may have taken it", job_id)
+                lost.set()
+                work.cancel()
+                return
+    except Exception:
+        work.cancel()
+        raise
 
 
-def _lease_lost(heartbeat: asyncio.Task[None]) -> bool:
-    return heartbeat.done() and not heartbeat.cancelled() and heartbeat.exception() is None
+def _renewal_error(heartbeat: asyncio.Task[None]) -> BaseException | None:
+    return heartbeat.exception() if heartbeat.done() and not heartbeat.cancelled() else None
 
 
 def _shutting_down() -> bool:
@@ -223,21 +229,29 @@ def _shutting_down() -> bool:
 
 
 async def process(job: ClaimedJob, worker_id: str) -> None:
-    """Runs a job to completion, retry or surrender — never raises, except to let the worker's own
-    cancellation through. Once the lease is lost it records nothing: the job and its report are
-    the new owner's to finish or fail."""
+    """Runs a job to completion, retry or surrender. It raises only to stop the worker: on its own
+    cancellation, or when the lease can't be renewed, so that it runs out and another worker
+    claims the job. Once the lease is lost it records nothing: the job and its report are the new
+    owner's to finish or fail."""
+    lease_lost = asyncio.Event()
     work = asyncio.create_task(execute(job))
-    heartbeat = asyncio.create_task(_heartbeat(job.id, worker_id, work))
+    heartbeat = asyncio.create_task(_heartbeat(job.id, worker_id, work, lease_lost))
     try:
         async with asyncio.timeout(settings.JOB_TIMEOUT_SECONDS):
             await work
-        if not _lease_lost(heartbeat):
+        if not lease_lost.is_set():
             await complete(job.id, worker_id)
     except asyncio.CancelledError:
-        if _shutting_down() or not _lease_lost(heartbeat):
+        if _shutting_down():
+            raise
+        if (renewal_error := _renewal_error(heartbeat)) is not None:
+            raise renewal_error from None
+        if not lease_lost.is_set():
             raise
     except Exception as exc:
-        if _lease_lost(heartbeat):
+        if (renewal_error := _renewal_error(heartbeat)) is not None:
+            raise renewal_error from exc
+        if lease_lost.is_set():
             return  # e.g. a library that turned our cancellation into an error of its own
         error = describe_exception(exc)
         permanent = isinstance(exc, PermanentJobError)
@@ -250,5 +264,6 @@ async def process(job: ClaimedJob, worker_id: str) -> None:
             await give_up(job.report_id, error, exc.reason_key if isinstance(exc, PermanentJobError) else "failure")
     finally:
         heartbeat.cancel()
+        # Re-raises a renewal error, also one that came after the job had already ended.
         with contextlib.suppress(asyncio.CancelledError):
             await heartbeat
