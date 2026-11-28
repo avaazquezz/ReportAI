@@ -76,10 +76,10 @@ jobs:
       - name: Migrations match the models
         run: uv run --frozen alembic check
 
-      # The suite's time budget (it takes 4-8 min locally; the slowest steps are printed below): a
-      # fixture that makes every test slow fails the pull request instead of quietly costing minutes.
+      # The suite's time budget, ~3x the ~3 min it takes here (the slowest steps are printed below):
+      # a fixture that makes every test slow fails the pull request instead of quietly costing minutes.
       - name: Run tests
-        timeout-minutes: 20
+        timeout-minutes: 10
         run: uv run --frozen pytest -v -m "not eval" --durations=20
 
   backend-image:
