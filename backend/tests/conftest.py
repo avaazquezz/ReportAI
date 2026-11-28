@@ -1,4 +1,6 @@
+import hashlib
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -8,12 +10,22 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app import models  # noqa: F401  — registers all tables on Base.metadata
+from app.core import security
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, Base, get_db
 from app.main import app
 from app.services import company_ai, instance_settings
 
-TEST_DATABASE_URL = settings.DATABASE_URL.rsplit("/", 1)[0] + f"/{settings.POSTGRES_DB}_test"
+# bcrypt's minimum work factor: hashing or checking a password costs ~2 ms instead of ~0.4 s, and
+# the logins in the suite add up to minutes. Set at import, before test modules hash at theirs.
+assert security.BCRYPT_ROUNDS == 12, "production's bcrypt work factor changed"
+security.BCRYPT_ROUNDS = 4
+
+# One test database per checkout: runs in different worktrees against the same Postgres no longer
+# drop each other's database mid-suite. Two runs in the same checkout still share it.
+_CHECKOUT = hashlib.sha1(str(Path(__file__).resolve().parent).encode()).hexdigest()[:8]
+TEST_DATABASE_NAME = f"{settings.POSTGRES_DB}_test_{_CHECKOUT}"
+TEST_DATABASE_URL = settings.DATABASE_URL.rsplit("/", 1)[0] + f"/{TEST_DATABASE_NAME}"
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -21,9 +33,8 @@ async def _test_engine() -> AsyncGenerator:
     # NullPool avoids asyncpg's event-loop-binding issue across pytest-asyncio tests.
     admin_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool, isolation_level="AUTOCOMMIT")
     async with admin_engine.connect() as conn:
-        await conn.execute(text(f'DROP DATABASE IF EXISTS "{settings.POSTGRES_DB}_test"'))
-        await conn.execute(text(f'CREATE DATABASE "{settings.POSTGRES_DB}_test"'))
-    await admin_engine.dispose()
+        await conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DATABASE_NAME}"'))
+        await conn.execute(text(f'CREATE DATABASE "{TEST_DATABASE_NAME}"'))
 
     engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
     async with engine.begin() as conn:
@@ -32,6 +43,10 @@ async def _test_engine() -> AsyncGenerator:
     yield engine
 
     await engine.dispose()
+    # Each checkout has its own database: drop it, or every short-lived worktree leaves one behind.
+    async with admin_engine.connect() as conn:
+        await conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DATABASE_NAME}" WITH (FORCE)'))
+    await admin_engine.dispose()
 
 
 @pytest_asyncio.fixture
@@ -40,9 +55,12 @@ async def db(_test_engine) -> AsyncGenerator[AsyncSession, None]:
     async with session_factory() as session:
         yield session
         await session.rollback()
-        # TRUNCATE everything between tests so each test starts from a clean slate.
+        # Empty every table between tests, children first, in one transaction. DELETE, not
+        # TRUNCATE: on near-empty tables TRUNCATE pays a fixed cost per table (new files on disk),
+        # ~1.4 s per test for 25 tables against ~0.1 s here. Commits stay real, so tests that read
+        # from another connection (the worker, the queue) keep working.
         for table in reversed(Base.metadata.sorted_tables):
-            await session.execute(text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
+            await session.execute(table.delete())
         await session.commit()
 
 

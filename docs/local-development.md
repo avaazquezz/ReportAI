@@ -113,8 +113,11 @@ Backend, from `backend/`:
   `export POSTGRES_HOST=localhost UV_ENV_FILE=../.env` (shell variables win over the file; on the
   host also point `DOCUMENT_STORAGE_PATH` at a writable directory, since `.env` names the
   container's), then `uv run --extra dev alembic upgrade head && uv run --extra dev alembic check`
-  and `uv run --extra dev pytest -m "not eval"`. The suite creates and drops `<POSTGRES_DB>_test`,
-  so two runs against the same Postgres at once break each other.
+  and `uv run --extra dev pytest -m "not eval"`. The suite creates
+  `<POSTGRES_DB>_test_<checkout hash>` and drops it when it ends, one database per checkout: runs in different worktrees
+  against the same Postgres don't touch each other, two runs in the same checkout still do. Between
+  tests it empties every table with `DELETE` in one transaction (`tests/conftest.py`), which keeps
+  commits real for the tests that read from another connection.
 - ruff format is not enforced: don't reformat files you aren't otherwise changing.
 
 Frontend, from `frontend/`: `npm run lint`, `npm run typecheck`, `npm test`, and
