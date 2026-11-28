@@ -10,9 +10,13 @@ from app.core.config import settings
 # bcrypt used directly, not passlib — passlib's version-detection code breaks
 # on bcrypt>=4.0 (it reads a `__about__` attribute that no longer exists).
 
+# The work factor: each step doubles the cost of a guess, and of every login. The test suite
+# lowers it (tests/conftest.py); a stored hash carries its own factor, so verifying is unaffected.
+BCRYPT_ROUNDS = 12
+
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(12)).decode("utf-8")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(BCRYPT_ROUNDS)).decode("utf-8")
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
